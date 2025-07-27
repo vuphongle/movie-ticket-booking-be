@@ -42,6 +42,10 @@ public class User {
     Date createdAt;
     Date updatedAt;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "branch_id")
+    Cinema cinema;
+
     @PrePersist
     public void prePersist() {
         createdAt = new Date();
