@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Xác thực tài khoản</title>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap');
+
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: #f5f7fa;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 600px;
+            background-color: #ffffff;
+            margin: 0 auto;
+            border-radius: 8px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
+            overflow: hidden;
+        }
+
+        .header {
+            background-color: #7fad39;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .header h2 {
+            color: #ffffff;
+            font-size: 24px;
+            margin: 0;
+        }
+
+        .content {
+            padding: 30px 40px;
+        }
+
+        .content h3 {
+            font-size: 20px;
+            margin-bottom: 20px;
+            color: #333333;
+            text-align: center;
+        }
+
+        .content p {
+            font-size: 14px;
+            color: #555555;
+            line-height: 1.6;
+            margin-bottom: 16px;
+        }
+
+        .btn-action {
+            display: inline-block;
+            background-color: #7fad39;
+            color: #ffffff;
+            text-decoration: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            font-weight: 500;
+            font-size: 14px;
+            margin: 20px 0;
+        }
+
+        .footer {
+            text-align: center;
+            font-size: 12px;
+            color: #999999;
+            padding: 20px;
+            background-color: #f9f9f9;
+        }
+
+        /* Responsive */
+        @media (max-width: 600px) {
+            .content {
+                padding: 20px;
+            }
+
+            .btn-action {
+                width: 100%;
+                text-align: center;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <h2>PN CINEMA</h2>
+    </div>
+    <div class="content">
+        <h3>Xác thực tài khoản</h3>
+        <p>Chào <strong th:text="${username}">Bùi Hiên</strong>,</p>
+        <p>
+            Chúng tôi rất vui mừng thông báo rằng tài khoản của bạn đã được tạo thành công.
+        </p>
+        <p>
+            Để hoàn tất quá trình đăng ký và xác thực tài khoản, vui lòng nhấp vào nút bên dưới:
+        </p>
+
+        <p style="text-align: center;">
+            <a class="btn-action" th:href="@{{frontendDomain}/xac-thuc-tai-khoan (frontendDomain=${frontendDomain}, token=${token})}">
+                Xác thực tài khoản
+            </a>
+        </p>
+
+        <p>
+            Liên kết này sẽ hết hạn sau 24 giờ. Nếu bạn không xác thực trong thời gian này, bạn sẽ cần tạo một yêu cầu mới.
+        </p>
+        <p>
+            Nếu bạn không thực hiện yêu cầu này, vui lòng liên hệ với chúng tôi bằng cách trả lời email này.
+        </p>
+        <p>
+            Cảm ơn bạn đã đồng hành cùng PN Cinema. Chúng tôi rất mong được phục vụ bạn!
+        </p>
+    </div>
+    <div class="footer">
+        &copy; 2025 PN Cinema. Mọi quyền được bảo lưu.
+    </div>
+</div>
+</body>
+</html>
