@@ -27,9 +27,9 @@ public class AuthController {
             AuthResponse authResponse = authService.login(request);
             return ResponseEntity.ok(authResponse);
         } catch (DisabledException e) {
-            throw new BadRequestException("Tài khoản của bạn chưa được kích hoạt. Vui lòng kiểm tra email của bạn để kích hoạt tài khoản");
+            throw new BadRequestException("Tài khoản của bạn chưa được kích hoạt. Vui lòng kiểm tra email của bạn để kích hoạt tài khoản", "ACCOUNT_NOT_ACTIVATED");
         } catch (AuthenticationException e) {
-            throw new BadRequestException("Tài khoản hoặc mật khẩu không đúng");
+            throw new BadRequestException("Tài khoản hoặc mật khẩu không đúng", "INVALID_CREDENTIALS");
         }
     }
 
