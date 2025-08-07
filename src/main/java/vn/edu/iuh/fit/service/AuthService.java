@@ -76,18 +76,18 @@ public class AuthService {
     public void register(RegisterRequest request) {
         // check email exists
         if (userRepository.findByEmail(request.getEmail()).isPresent()) {
-            throw new BadRequestException("Email đã tồn tại");
+            throw new BadRequestException("Email đã tồn tại", "EMAIL_ALREADY_EXISTS");
         }
 
         // check password match
         if (!request.getPassword().equals(request.getConfirmPassword())) {
-            throw new BadRequestException("Mật khẩu không khớp");
+            throw new BadRequestException("Mật khẩu không khớp", "PASSWORD_MISMATCH");
         }
 
         String passwordRegex = "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[\\W_]).{8,}$";
 
         if (!request.getPassword().matches(passwordRegex)) {
-            throw new BadRequestException("Mật khẩu phải có ít nhất 8 ký tự, bao gồm chữ hoa, chữ thường, số và ký tự đặc biệt");
+            throw new BadRequestException("Mật khẩu phải có ít nhất 8 ký tự, bao gồm chữ hoa, chữ thường, số và ký tự đặc biệt", "INVALID_PASSWORD_FORMAT");
         }
 
         // create new user
