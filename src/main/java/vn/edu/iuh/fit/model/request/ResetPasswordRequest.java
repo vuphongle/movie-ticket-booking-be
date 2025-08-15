@@ -1,4 +1,4 @@
-package com.example.movie.ticket.booking.application.model.request;
+package vn.edu.iuh.fit.model.request;
 
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
