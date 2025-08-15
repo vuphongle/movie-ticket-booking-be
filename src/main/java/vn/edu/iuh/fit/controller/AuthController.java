@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.*;
 import vn.edu.iuh.fit.exception.BadRequestException;
 import vn.edu.iuh.fit.model.request.LoginRequest;
 import vn.edu.iuh.fit.model.request.RegisterRequest;
+import vn.edu.iuh.fit.model.request.ResetPasswordRequest;
 import vn.edu.iuh.fit.model.response.AuthResponse;
 import vn.edu.iuh.fit.model.response.VerifyTokenResponse;
 import vn.edu.iuh.fit.service.AuthService;
@@ -43,5 +44,23 @@ public class AuthController {
     public ResponseEntity<?> checkRegisterToken(@PathVariable String token) {
         VerifyTokenResponse response = authService.checkRegisterToken(token);
         return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/forgot-password")
+    public ResponseEntity<?> forgotPassword(@RequestParam String email) {
+        authService.forgotPassword(email);
+        return ResponseEntity.ok().build();
+    }
+
+    @GetMapping("/check-forgot-password-token/{token}")
+    public ResponseEntity<?> checkForgotPasswordToken(@PathVariable String token) {
+        VerifyTokenResponse response = authService.checkForgotPasswordToken(token);
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/change-password")
+    public ResponseEntity<?> confirmResetPassword(@Valid @RequestBody ResetPasswordRequest request) {
+        authService.changePassword(request);
+        return ResponseEntity.ok().build();
     }
 }

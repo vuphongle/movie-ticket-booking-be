@@ -55,4 +55,30 @@ public class MailService {
             throw new RuntimeException(e.getMessage());
         }
     }
+
+    // Send mail reset password
+    @Async
+    public void sendMailResetPassword(Map<String, String> data) {
+        try {
+            MimeMessage message = javaMailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+
+            helper.setTo(data.get("email"));
+            helper.setSubject("Xác nhận đặt lại mật khẩu");
+
+            // Create the Thymeleaf context
+            Context context = new Context();
+            context.setVariable("username", data.get("username"));
+            context.setVariable("token", data.get("token"));
+            context.setVariable("frontendDomain", "%s:%s".formatted(frontendHost, frontendPort));
+
+            // Use the template engine to process the template
+            String htmlContent = templateEngine.process("mail-template/reset-password", context);
+            helper.setText(htmlContent, true); // Enable HTML content
+
+            javaMailSender.send(message);
+        } catch (MessagingException e) {
+            throw new RuntimeException(e.getMessage());
+        }
+    }
 }
