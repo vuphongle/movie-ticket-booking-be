@@ -1,6 +1,7 @@
 package vn.edu.iuh.fit.security;
 
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.authentication.AuthenticationCredentialsNotFoundException;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -22,7 +23,7 @@ public class SecurityUtils {
             }
             return null;
         });
-        return userOptional.orElse(null);
+        return userOptional.orElseThrow(() -> new AuthenticationCredentialsNotFoundException("No authenticated user found"));
     }
 
     // Kiểm tra xem user đã đăng nhập chưa
