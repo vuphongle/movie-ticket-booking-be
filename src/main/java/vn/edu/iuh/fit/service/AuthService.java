@@ -26,6 +26,7 @@ import vn.edu.iuh.fit.model.response.VerifyTokenResponse;
 import vn.edu.iuh.fit.repository.TokenConfirmRepository;
 import vn.edu.iuh.fit.repository.UserRepository;
 import vn.edu.iuh.fit.security.JwtUtils;
+import vn.edu.iuh.fit.security.PasswordPolicy;
 import vn.edu.iuh.fit.utils.StringUtils;
 
 import java.util.*;
@@ -41,10 +42,7 @@ public class AuthService {
     private final UserMapper userMapper;
     private final JwtUtils jwtUtils;
     private final MailService mailService;
-
-    // Password policy (English-only comments inside code)
-    private static final String PASSWORD_REGEX =
-            "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[\\W_]).{8,}$";
+    private final PasswordPolicy passwordPolicy;
 
     public AuthResponse login(LoginRequest request) throws AuthenticationException {
         final String email = normalizeEmail(request.getEmail());
@@ -86,12 +84,7 @@ public class AuthService {
             throw new BadRequestException("Mật khẩu không khớp", "PASSWORD_MISMATCH");
         }
 
-        if (!request.getPassword().matches(PASSWORD_REGEX)) {
-            throw new BadRequestException(
-                    "Mật khẩu phải có ít nhất 8 ký tự, bao gồm chữ hoa, chữ thường, số và ký tự đặc biệt",
-                    "INVALID_PASSWORD_FORMAT"
-            );
-        }
+        passwordPolicy.validateOrThrow(request.getPassword());
 
         User user = new User();
         user.setName(request.getName());
@@ -165,12 +158,7 @@ public class AuthService {
             throw new BadRequestException("Mật khẩu mới và mật khẩu xác nhận không khớp", "PASSWORD_MISMATCH");
         }
 
-        if (!request.getNewPassword().matches(PASSWORD_REGEX)) {
-            throw new BadRequestException(
-                    "Mật khẩu phải có ít nhất 8 ký tự, bao gồm chữ hoa, chữ thường, số và ký tự đặc biệt",
-                    "INVALID_PASSWORD_FORMAT"
-            );
-        }
+        passwordPolicy.validateOrThrow(request.getNewPassword());
 
         Optional<TokenConfirm> tokenConfirmOptional =
                 tokenConfirmRepository.findByTokenAndType(request.getToken(), TokenType.PASSWORD_RESET);
