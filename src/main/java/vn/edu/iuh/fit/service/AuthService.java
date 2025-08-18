@@ -86,6 +86,17 @@ public class AuthService {
 
         passwordPolicy.validateOrThrow(request.getPassword());
 
+        if (request.getDob() != null) {
+            Calendar calendar = Calendar.getInstance();
+            calendar.add(Calendar.YEAR, -12);
+            Date twelveYearsAgo = calendar.getTime();
+            if (request.getDob().after(twelveYearsAgo)) {
+                throw new BadRequestException("Bạn phải lớn hơn 12 tuổi để đăng ký tài khoản", "AGE_RESTRICTION");
+            }
+        } else {
+            throw new BadRequestException("Ngày sinh không được để trống", "DOB_REQUIRED");
+        }
+
         User user = new User();
         user.setName(request.getName());
         user.setEmail(email);
@@ -94,6 +105,7 @@ public class AuthService {
         user.setRole(UserRole.USER);
         user.setAvatar(StringUtils.generateLinkImage(request.getName()));
         user.setEnabled(false);
+        user.setDob(request.getDob());
         userRepository.save(user);
 
         sendVerificationEmail(user);
