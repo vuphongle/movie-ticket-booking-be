@@ -1,10 +1,12 @@
 package vn.edu.iuh.fit.model.request;
 
-import jakarta.validation.constraints.Email;
-import jakarta.validation.constraints.NotEmpty;
-import jakarta.validation.constraints.Pattern;
+import jakarta.persistence.Temporal;
+import jakarta.persistence.TemporalType;
+import jakarta.validation.constraints.*;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
+
+import java.util.Date;
 
 @Getter
 @Setter
@@ -29,4 +31,6 @@ public class RegisterRequest {
 
     @NotEmpty(message = "Xác nhận mật khẩu không được để trống")
     String confirmPassword;
+
+    Date dob;
 }

@@ -23,6 +23,9 @@ public class User {
 
     String name;
 
+    @Temporal(TemporalType.DATE)
+    Date dob;
+
     @Column(unique = true)
     String email;
 
