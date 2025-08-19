@@ -7,6 +7,7 @@ import org.springframework.stereotype.Service;
 import vn.edu.iuh.fit.entity.User;
 import vn.edu.iuh.fit.exception.BadRequestException;
 import vn.edu.iuh.fit.model.request.UpdatePasswordRequest;
+import vn.edu.iuh.fit.model.request.UpdateProfileUserRequest;
 import vn.edu.iuh.fit.repository.UserRepository;
 import vn.edu.iuh.fit.security.PasswordPolicy;
 import vn.edu.iuh.fit.security.SecurityUtils;
@@ -38,5 +39,28 @@ public class UserService {
 
         user.setPassword(passwordEncoder.encode(request.getNewPassword()));
         userRepository.save(user);
+    }
+
+    public User updateProfile(UpdateProfileUserRequest request) {
+        User user = SecurityUtils.getCurrentUserLogin();
+        if (request.getName() == null || request.getName().isEmpty()) {
+            throw new BadRequestException("Tên không được để trống", "NAME_CANNOT_BE_EMPTY");
+        }
+
+        if (request.getPhone() == null || request.getPhone().isEmpty()) {
+            throw new BadRequestException("Số điện thoại không được để trống", "PHONE_CANNOT_BE_EMPTY");
+        }
+
+        if (request.getDob() == null) {
+            throw new BadRequestException("Ngày sinh không được để trống", "DOB_CANNOT_BE_EMPTY");
+        }
+
+        user.setName(request.getName());
+        user.setPhone(request.getPhone());
+        user.setDob(request.getDob());
+
+        userRepository.save(user);
+
+        return user;
     }
 }
