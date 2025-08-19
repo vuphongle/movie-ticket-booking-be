@@ -8,7 +8,9 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import vn.edu.iuh.fit.entity.User;
 import vn.edu.iuh.fit.model.request.UpdatePasswordRequest;
+import vn.edu.iuh.fit.model.request.UpdateProfileUserRequest;
 import vn.edu.iuh.fit.service.UserService;
 
 @Slf4j
@@ -24,4 +26,9 @@ public class UserController {
         return ResponseEntity.noContent().build();
     }
 
+    @PutMapping("/users/update-profile")
+    public ResponseEntity<?> updateProfile(@Valid @RequestBody UpdateProfileUserRequest request) {
+        User user = userService.updateProfile(request);
+        return ResponseEntity.ok(user);
+    }
 }
