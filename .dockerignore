@@ -1,0 +1,48 @@
+# Ignore files và folders không cần thiết trong Docker build
+.git
+.gitignore
+README.md
+README-Docker.md
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# IDE files
+.idea/
+.vscode/
+*.iml
+*.iws
+*.ipr
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Gradle build cache (sẽ build lại trong container)
+.gradle/
+build/
+!gradle/wrapper/gradle-wrapper.jar
+
+# Logs
+logs/
+*.log
+
+# Temporary files
+*.tmp
+*.temp
+
+# Environment files (sensitive data)
+.env
+.env.local
+.env.production
+application-*.properties
+
+# Documentation
+docs/
+*.md
+!README.md
