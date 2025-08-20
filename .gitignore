@@ -36,4 +36,26 @@ out/
 ### VS Code ###
 .vscode/
 
+### Environment and Security ###
 .env
+.env.prod
+.env.local
+.env.development
+.env.test
+.env.production
+
+### SSL Certificates ###
+ssl/
+*.pem
+*.key
+*.crt
+*.p12
+*.jks
+
+### Deployment ###
+deploy-logs/
+backups/
+*.sql
+
+### Docker ###
+.docker/
