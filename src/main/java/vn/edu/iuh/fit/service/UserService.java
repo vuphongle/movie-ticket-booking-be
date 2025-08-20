@@ -59,6 +59,10 @@ public class UserService {
         user.setPhone(request.getPhone());
         user.setDob(request.getDob());
 
+        if(request.getAvatar() != null && !request.getAvatar().isEmpty()) {
+            user.setAvatar(request.getAvatar());
+        }
+
         userRepository.save(user);
 
         return user;

@@ -22,4 +22,6 @@ public class UpdateProfileUserRequest {
     String phone;
 
     Date dob;
+
+    String avatar;
 }
