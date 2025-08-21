@@ -8,12 +8,12 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import vn.edu.iuh.fit.entity.Movie;
+import vn.edu.iuh.fit.entity.Review;
 import vn.edu.iuh.fit.entity.Schedule;
 import vn.edu.iuh.fit.repository.MovieRepository;
 import vn.edu.iuh.fit.repository.ScheduleRepository;
 
-import java.util.Date;
-import java.util.List;
+import java.util.*;
 
 @Slf4j
 @Service
@@ -38,18 +38,18 @@ public class MovieService {
         return schedules.stream().map(Schedule::getMovie).toList();
     }
 
-    public List<Movie> getAllMovies(Boolean status) {
-        log.info("Get all movies");
-        if (status != null) {
-            return movieRepository.findByStatusOrderByCreatedAtDesc(status);
-        }
-        return movieRepository.findAll(Sort.by("createdAt").descending());
-    }
+    public Page<Movie> getAllReviewsOfMovies(Integer page, Integer limit) {
+        Pageable pageable = PageRequest.of(page - 1, limit);
+        Page<Movie> pageData = movieRepository.findByStatus(true, pageable);
 
+        pageData.getContent().forEach(movie -> {
+            Set<Review> reviews = movie.getReviews();
+            List<Review> sortedReviews = reviews.stream()
+                    .sorted(Comparator.comparing(Review::getCreatedAt).reversed())
+                    .toList();
+            movie.setReviews(new LinkedHashSet<>(sortedReviews));
+        });
 
-    public Page<Movie> getAllMovies(Integer page, Integer limit) {
-        log.info("Get all movies");
-        Pageable pageable = PageRequest.of(page - 1, limit, Sort.by("showDate").descending());
-        return movieRepository.findByStatus(true, pageable);
+        return pageData;
     }
 }
