@@ -10,17 +10,17 @@ import vn.edu.iuh.fit.service.MovieService;
 
 @Slf4j
 @RestController
-@RequestMapping("api/public/movie")
+@RequestMapping("api/public/movies")
 @RequiredArgsConstructor
 public class MovieController {
     private final MovieService movieService;
 
-    @GetMapping("/public/movies/showing-now")
+    @GetMapping("/showing-now")
     public ResponseEntity<?> getShowingNowMovies() {
         return ResponseEntity.ok(movieService.getShowingNowMovies());
     }
 
-    @GetMapping("/public/movies/coming-soon")
+    @GetMapping("/coming-soon")
     public ResponseEntity<?> getComingSoonMovies() {
         return ResponseEntity.ok(movieService.getComingSoonMovies());
     }

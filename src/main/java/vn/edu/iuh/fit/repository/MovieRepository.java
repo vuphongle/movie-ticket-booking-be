@@ -10,5 +10,5 @@ import java.util.List;
 public interface MovieRepository extends JpaRepository<Movie, Long> {
     Page<Movie> findByStatus(boolean status, Pageable pageable);
 
-    List<Movie> findByStatusOrderByCreatedAtDesc(Boolean status);
+    boolean existsByIdAndStatus(Integer id, Boolean status);
 }
