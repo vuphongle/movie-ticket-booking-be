@@ -6,8 +6,10 @@ import vn.edu.iuh.fit.entity.Schedule;
 import java.util.Date;
 import java.util.List;
 
-public interface ScheduleRepository extends JpaRepository<Schedule, Long> {
+public interface ScheduleRepository extends JpaRepository<Schedule, Integer> {
     List<Schedule> findByMovie_StatusAndStartDateBeforeAndEndDateAfter(Boolean movieStatus, Date startDate, Date endDate);
 
     List<Schedule> findByMovie_StatusAndStartDateAfter(Boolean movieStatus, Date date);
+
+    List<Schedule> findByMovie_Id(Integer movieId);
 }
