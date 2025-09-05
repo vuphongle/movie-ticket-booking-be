@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 import vn.edu.iuh.fit.entity.Movie;
 import vn.edu.iuh.fit.entity.Review;
 import vn.edu.iuh.fit.entity.Schedule;
+import vn.edu.iuh.fit.exception.ResourceNotFoundException;
 import vn.edu.iuh.fit.repository.MovieRepository;
 import vn.edu.iuh.fit.repository.ScheduleRepository;
 
@@ -51,5 +52,11 @@ public class MovieService {
         });
 
         return pageData;
+    }
+
+    public Movie getMovieDetail(Integer id, String slug) {
+        log.info("Get movie detail by id = {}", id);
+        return movieRepository.findByIdAndSlugAndStatus(id, slug, true)
+                .orElseThrow(() -> new ResourceNotFoundException("Movie not found"));
     }
 }
