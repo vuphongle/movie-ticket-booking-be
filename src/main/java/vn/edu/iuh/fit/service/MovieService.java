@@ -1,11 +1,9 @@
 package vn.edu.iuh.fit.service;
 
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import vn.edu.iuh.fit.entity.Movie;
 import vn.edu.iuh.fit.entity.Review;
@@ -14,6 +12,8 @@ import vn.edu.iuh.fit.exception.ResourceNotFoundException;
 import vn.edu.iuh.fit.repository.MovieRepository;
 import vn.edu.iuh.fit.repository.ScheduleRepository;
 
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.*;
 
 @Slf4j
@@ -58,5 +58,18 @@ public class MovieService {
         log.info("Get movie detail by id = {}", id);
         return movieRepository.findByIdAndSlugAndStatus(id, slug, true)
                 .orElseThrow(() -> new ResourceNotFoundException("Movie not found"));
+    }
+    
+    public List<Movie> getAllMoviesInSchedule(String dateStr) {
+        SimpleDateFormat sdf = new SimpleDateFormat("dd-MM-yyyy");
+        Date date = null;
+        try {
+            date = sdf.parse(dateStr);
+        } catch (ParseException e) {
+            throw new RuntimeException(e.getMessage());
+        }
+        // Lấy danh sách movie trong schedule đang có lịch chiếu hoặc sắp chiếu
+        List<Schedule> schedules = scheduleRepository.findByMovie_StatusAndEndDateAfter(true, date);
+        return schedules.stream().map(Schedule::getMovie).toList();
     }
 }
