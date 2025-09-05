@@ -11,5 +11,7 @@ public interface ScheduleRepository extends JpaRepository<Schedule, Integer> {
 
     List<Schedule> findByMovie_StatusAndStartDateAfter(Boolean movieStatus, Date date);
 
+    List<Schedule> findByMovie_StatusAndEndDateAfter(Boolean movieStatus, Date date);
+
     List<Schedule> findByMovie_Id(Integer movieId);
 }
