@@ -4,6 +4,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import vn.edu.iuh.fit.entity.Movie;
 import vn.edu.iuh.fit.entity.Review;
@@ -71,5 +72,13 @@ public class MovieService {
         // Lấy danh sách movie trong schedule đang có lịch chiếu hoặc sắp chiếu
         List<Schedule> schedules = scheduleRepository.findByMovie_StatusAndEndDateAfter(true, date);
         return schedules.stream().map(Schedule::getMovie).toList();
+    }
+
+    public List<Movie> getAllMovies(Boolean status) {
+        log.info("Get all movies");
+        if (status != null) {
+            return movieRepository.findByStatusOrderByCreatedAtDesc(status);
+        }
+        return movieRepository.findAll(Sort.by("createdAt").descending());
     }
 }
