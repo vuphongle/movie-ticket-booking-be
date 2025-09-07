@@ -25,7 +25,7 @@ public class SeatService {
     private final SeatRepository seatRepository;
     private final SeatReservationRepository seatReservationRepository;
     private final BaseTicketPriceRepository baseTicketPriceRepository;
-    private final ShowTimeRepository showtimeRepository;
+    private final ShowtimeRepository showtimeRepository;
     private final ScheduleRepository scheduleRepository;
 
 
