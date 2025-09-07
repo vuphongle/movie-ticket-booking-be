@@ -54,4 +54,9 @@ public class MovieController {
     public ResponseEntity<?> getAllMoviesInSchedule(@RequestParam String date) {
         return ResponseEntity.ok(movieService.getAllMoviesInSchedule(date));
     }
+
+    @GetMapping("/admin/movies")
+    public ResponseEntity<?> getAllMovies(@RequestParam(required = false) Boolean status) {
+        return ResponseEntity.ok(movieService.getAllMovies(status));
+    }
 }

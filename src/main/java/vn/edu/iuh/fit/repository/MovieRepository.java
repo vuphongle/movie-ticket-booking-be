@@ -14,4 +14,6 @@ public interface MovieRepository extends JpaRepository<Movie, Integer> {
     boolean existsByIdAndStatus(Integer id, Boolean status);
 
     Optional<Movie> findByIdAndSlugAndStatus(Integer id, String slug, boolean status);
+
+    List<Movie> findByStatusOrderByCreatedAtDesc(Boolean status);
 }
