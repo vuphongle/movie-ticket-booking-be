@@ -5,8 +5,12 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import vn.edu.iuh.fit.entity.Movie;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 import vn.edu.iuh.fit.service.MovieService;
-import vn.edu.iuh.fit.service.ShowTimeService;
+import vn.edu.iuh.fit.service.ShowtimeService;
 
 @Slf4j
 @RestController
@@ -14,7 +18,7 @@ import vn.edu.iuh.fit.service.ShowTimeService;
 @RequiredArgsConstructor
 public class MovieController {
     private final MovieService movieService;
-    private final ShowTimeService showtimeService;
+    private final ShowtimeService showtimeService;
 
     @GetMapping("/public/movies/showing-now")
     public ResponseEntity<?> getShowingNowMovies() {
@@ -44,5 +48,15 @@ public class MovieController {
     @GetMapping("/public/movie-by-showtimeId/{id}")
     public Movie getMovieByShowtime(@PathVariable Integer id) {
         return showtimeService.getMovieByShowtimeId(id);
+    }
+    
+    @GetMapping("/admin/movies/in-schedule")
+    public ResponseEntity<?> getAllMoviesInSchedule(@RequestParam String date) {
+        return ResponseEntity.ok(movieService.getAllMoviesInSchedule(date));
+    }
+
+    @GetMapping("/admin/movies")
+    public ResponseEntity<?> getAllMovies(@RequestParam(required = false) Boolean status) {
+        return ResponseEntity.ok(movieService.getAllMovies(status));
     }
 }
