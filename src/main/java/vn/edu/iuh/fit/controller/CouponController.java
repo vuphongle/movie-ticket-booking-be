@@ -1,22 +1,43 @@
 package vn.edu.iuh.fit.controller;
 
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+import vn.edu.iuh.fit.model.request.UpsertCouponRequest;
 import vn.edu.iuh.fit.service.CouponService;
 
 @Slf4j
 @RestController
-@RequestMapping("api/public/coupons")
+@RequestMapping("api")
 @RequiredArgsConstructor
 public class CouponController {
     private final CouponService couponService;
 
-    @GetMapping()
+    @GetMapping("/public/coupons")
     public ResponseEntity<?> getAllCoupons() {
         return ResponseEntity.ok(couponService.getAllCoupons());
+    }
+
+    @GetMapping("/admin/coupons")
+    public ResponseEntity<?> getAllCouponsAdmin() {
+        return ResponseEntity.ok(couponService.getAllCoupons());
+    }
+
+    @PostMapping("/admin/coupons")
+    public ResponseEntity<?> createCoupon(@Valid @RequestBody UpsertCouponRequest request) {
+        return ResponseEntity.ok(couponService.createCoupon(request));
+    }
+
+    @PutMapping("/admin/coupons/{id}")
+    public ResponseEntity<?> updateCoupon(@PathVariable Integer id, @Valid @RequestBody UpsertCouponRequest request) {
+        return ResponseEntity.ok(couponService.updateCoupon(id, request));
+    }
+
+    @DeleteMapping("/admin/coupons/{id}")
+    public ResponseEntity<?> deleteCoupon(@PathVariable Integer id) {
+        couponService.deleteCoupon(id);
+        return ResponseEntity.ok().build();
     }
 }
