@@ -8,6 +8,7 @@ import org.springframework.stereotype.Service;
 import vn.edu.iuh.fit.entity.*;
 import vn.edu.iuh.fit.exception.BadRequestException;
 import vn.edu.iuh.fit.exception.ResourceNotFoundException;
+import vn.edu.iuh.fit.exception.SlotConflictException;
 import vn.edu.iuh.fit.model.request.UpsertShowtimeRequest;
 import vn.edu.iuh.fit.model.response.ShowtimeResponse;
 import vn.edu.iuh.fit.repository.*;
@@ -32,6 +33,7 @@ public class ShowtimeService {
     private final AuditoriumRepository auditoriumRepository;
     private final MovieRepository movieRepository;
     private final ScheduleRepository scheduleRepository;
+    private final SlotValidationService slotValidationService;
 
     public List<ShowtimeResponse> getAllShowtimes(Integer cinemaId, Integer auditoriumId, String showDate) {
         List<ShowtimeResponse> responses = new ArrayList<>();
@@ -84,6 +86,20 @@ public class ShowtimeService {
         Movie movie = movieRepository.findById(request.getMovieId())
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy phim có id = " + request.getMovieId()));
 
+        // === SLOT VALIDATION ===
+        // Validate slot-based showtime (start/end time, movie runtime, spans)
+        slotValidationService.validateSlotBasedShowtime(
+            request.getStartTime(), 
+            request.getEndTime(), 
+            movie.getDuration()
+        );
+        
+        log.info("Slot validation passed for movie '{}' ({}min) occupying {}", 
+            movie.getName(), 
+            movie.getDuration(),
+            slotValidationService.getOccupiedSlotsDescription(request.getStartTime(), request.getEndTime())
+        );
+
         // Kiểm tra xem movie có lịch chiếu trong ngày đã chọn chưa
         List<Schedule> schedules = scheduleRepository.findByMovie_Id(movie.getId());
         if (schedules.isEmpty()) {
@@ -100,12 +116,19 @@ public class ShowtimeService {
             }
         }
 
+        // === SLOT CONFLICT DETECTION ===
         // Kiểm tra xem ngày giờ trong request có nằm trong khoảng thời gian của showtime khác không
-        List<Showtime> showtimes = showtimeRepository.findByAuditorium_IdAndDate(auditorium.getId(), request.getDate());
-        for (Showtime showtime : showtimes) {
-            if (isTimeOverlap(request.getStartTime(), request.getEndTime(),
-                    showtime.getStartTime(), showtime.getEndTime())) {
-                throw new BadRequestException("Thời gian chiếu đã bị trùng");
+        List<Showtime> existingShowtimes = showtimeRepository.findByAuditorium_IdAndDate(auditorium.getId(), request.getDate());
+        for (Showtime existingShowtime : existingShowtimes) {
+            if (slotValidationService.isTimeOverlap(request.getStartTime(), request.getEndTime(),
+                    existingShowtime.getStartTime(), existingShowtime.getEndTime())) {
+                String conflictSlots = slotValidationService.getOccupiedSlotsDescription(
+                    existingShowtime.getStartTime(), existingShowtime.getEndTime()
+                );
+                throw new SlotConflictException(
+                    "Xung đột lịch chiếu! " + conflictSlots + " đã được phim '" + 
+                    existingShowtime.getMovie().getName() + "' sử dụng"
+                );
             }
         }
 
@@ -122,10 +145,9 @@ public class ShowtimeService {
         return showtimeRepository.save(showtime);
     }
 
+    // Legacy time overlap method - now delegated to SlotValidationService
     private boolean isTimeOverlap(String start1, String end1, String start2, String end2) {
-        // Kiểm tra xem hai khoảng thời gian có giao nhau không
-        return (start1.compareTo(start2) >= 0 && start1.compareTo(end2) <= 0) ||
-                (end1.compareTo(start2) >= 0 && end1.compareTo(end2) <= 0);
+        return slotValidationService.isTimeOverlap(start1, end1, start2, end2);
     }
 
     public List<Showtime> getShowtimesByMovie(Integer movieId, String showDateStr) {
