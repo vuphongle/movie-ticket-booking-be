@@ -1,7 +1,9 @@
 package vn.edu.iuh.fit.controller;
 
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import vn.edu.iuh.fit.entity.Movie;
@@ -9,6 +11,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import vn.edu.iuh.fit.model.request.UpsertMovieRequest;
 import vn.edu.iuh.fit.service.MovieService;
 import vn.edu.iuh.fit.service.ShowtimeService;
 
@@ -58,5 +61,26 @@ public class MovieController {
     @GetMapping("/admin/movies")
     public ResponseEntity<?> getAllMovies(@RequestParam(required = false) Boolean status) {
         return ResponseEntity.ok(movieService.getAllMovies(status));
+    }
+
+    @PostMapping("/admin/movies")
+    public ResponseEntity<?> createMovie(@Valid @RequestBody UpsertMovieRequest request) {
+        return new ResponseEntity<>(movieService.saveMovie(request), HttpStatus.CREATED);
+    }
+
+    @GetMapping("/admin/movies/{id}")
+    public ResponseEntity<?> getMovieById(@PathVariable Integer id) {
+        return ResponseEntity.ok(movieService.getMovieById(id));
+    }
+
+    @PutMapping("/admin/movies/{id}")
+    public ResponseEntity<?> updateMovie(@PathVariable Integer id, @Valid @RequestBody UpsertMovieRequest request) {
+        return ResponseEntity.ok(movieService.updateMovie(id, request));
+    }
+
+    @DeleteMapping("/admin/movies/{id}")
+    public ResponseEntity<?> deleteMovie(@PathVariable Integer id) {
+        movieService.deleteMovie(id);
+        return ResponseEntity.noContent().build();
     }
 }

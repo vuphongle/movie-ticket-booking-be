@@ -126,4 +126,36 @@ public class S3Service {
         }
         return UUID.randomUUID().toString() + extension;
     }
+
+    /**
+     * Xóa file từ S3 bằng URL
+     */
+    public void deleteFileByUrl(String fileUrl) {
+        try {
+            // Extract key từ URL
+            // URL format: https://bucket-name.s3.region.amazonaws.com/folder/filename
+            String key = extractKeyFromUrl(fileUrl);
+            
+            s3Client.deleteObject(builder -> builder
+                    .bucket(bucketName)
+                    .key(key));
+            
+            log.info("File deleted successfully: {}", fileUrl);
+        } catch (S3Exception e) {
+            log.error("Lỗi khi xóa file từ S3: {}", e.getMessage());
+            throw new RuntimeException("Không thể xóa file từ S3: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Trích xuất key từ S3 URL
+     */
+    private String extractKeyFromUrl(String fileUrl) {
+        // URL format: https://bucket-name.s3.region.amazonaws.com/folder/filename
+        String baseUrl = String.format("https://%s.s3.%s.amazonaws.com/", bucketName, region);
+        if (fileUrl.startsWith(baseUrl)) {
+            return fileUrl.substring(baseUrl.length());
+        }
+        throw new IllegalArgumentException("URL không hợp lệ: " + fileUrl);
+    }
 }
