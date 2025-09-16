@@ -22,6 +22,8 @@ public class UpsertCouponRequest {
 
     @NotNull(message = "Quantity không được để trống")
     Integer quantity;
+    
+    Integer maxDiscount;
 
     @NotNull(message = "Status không được để trống")
     Boolean status;

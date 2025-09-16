@@ -24,6 +24,9 @@ public class Coupon {
     Integer quantity;
     Integer used;
     Boolean status;
+    
+    @Column(name = "max_discount")
+    Integer maxDiscount;
 
     @Column(name = "start_date")
     Date startDate;
