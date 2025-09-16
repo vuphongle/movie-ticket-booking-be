@@ -35,6 +35,7 @@ public class CouponService {
                 .status(request.getStatus())
                 .startDate(request.getStartDate())
                 .endDate(request.getEndDate())
+                .maxDiscount(request.getMaxDiscount())
                 .build();
 
         return couponRepository.save(coupon);
@@ -58,6 +59,7 @@ public class CouponService {
         coupon.setStatus(request.getStatus());
         coupon.setStartDate(request.getStartDate());
         coupon.setEndDate(request.getEndDate());
+        coupon.setMaxDiscount(request.getMaxDiscount());
 
         return couponRepository.save(coupon);
     }
