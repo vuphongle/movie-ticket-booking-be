@@ -21,6 +21,7 @@ public class Image {
 
     String type;
     Double size;
+    String url; // S3 URL của ảnh
 
     LocalDateTime createdAt;
 
