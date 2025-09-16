@@ -104,4 +104,11 @@ public class AuditoriumService {
 
         auditoriumRepository.deleteById(id);
     }
+
+    public List<Seat> getSeatsByAuditorium(Integer id) {
+         auditoriumRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy phòng chiếu có id = " + id));
+
+        return seatRepository.findByAuditorium_Id(id);
+    }
 }
