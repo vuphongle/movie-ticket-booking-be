@@ -10,12 +10,28 @@ import vn.edu.iuh.fit.model.request.UpsertCinemaRequest;
 import vn.edu.iuh.fit.repository.CinemaRepository;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class CinemaService {
     private final CinemaRepository cinemaRepository;
+
+    public List<String> getAllCinemaNames() {
+        return cinemaRepository.findAllCinemaNames();
+    }
+
+    public List<String> getAllCities() {
+        List<String> addresses = cinemaRepository.findAllAddresses();
+        return addresses.stream()
+                .map(addr -> {
+                    String[] parts = addr.split(",");
+                    return parts[parts.length - 1].trim();
+                })
+                .distinct()
+                .collect(Collectors.toList());
+    }
 
     public List<Cinema> getAllCinemas() {
         return cinemaRepository.findAll(Sort.by("id").descending());
