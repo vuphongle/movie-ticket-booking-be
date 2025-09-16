@@ -16,6 +16,17 @@ import vn.edu.iuh.fit.service.CinemaService;
 public class CinemaController {
     private final CinemaService cinemaService;
     private final AuditoriumService auditoriumService;
+
+    @GetMapping("/public/cinemas/getAllNames")
+    public ResponseEntity<?> getShowingNowMovies() {
+        return ResponseEntity.ok(cinemaService.getAllCinemaNames());
+    }
+
+    @GetMapping("/public/cinemas/getAllCities")
+    public ResponseEntity<?> getAllCities() {
+        return ResponseEntity.ok(cinemaService.getAllCities());
+    }
+
     @GetMapping("/admin/cinemas")
     public ResponseEntity<?> getAllCinemasByAdmin() {
         return ResponseEntity.ok(cinemaService.getAllCinemas());
