@@ -8,6 +8,8 @@ import vn.edu.iuh.fit.exception.ResourceNotFoundException;
 import vn.edu.iuh.fit.model.enums.DayType;
 import vn.edu.iuh.fit.model.enums.ScreeningTimeType;
 import vn.edu.iuh.fit.model.enums.SeatReservationStatus;
+import vn.edu.iuh.fit.model.request.UpdateRowSeatRequest;
+import vn.edu.iuh.fit.model.request.UpsertSeatRequest;
 import vn.edu.iuh.fit.model.response.SeatResponse;
 import vn.edu.iuh.fit.repository.*;
 
@@ -79,5 +81,34 @@ public class SeatService {
             response.setPrice(matchedPrice.map(BaseTicketPrice::getPrice).orElse(70000)); // Mặc định giá nếu không tìm thấy
             return response;
         }).collect(Collectors.toList());
+    }
+
+    public Seat updateSeat(Integer id, UpsertSeatRequest request) {
+        Seat seat = seatRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy ghế"));
+
+        Auditorium auditorium = auditoriumRepository.findById(request.getAuditoriumId())
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy phòng chiếu"));
+
+        seat.setAuditorium(auditorium);
+        seat.setRowIndex(request.getRowIndex());
+        seat.setColIndex(request.getColIndex());
+        seat.setCode(request.getCode());
+        seat.setType(request.getType());
+        seat.setStatus(request.getStatus());
+
+        return seatRepository.save(seat);
+    }
+
+    public void updateRowSeat(UpdateRowSeatRequest request) {
+        // Get all seats in the row and auditorium
+        List<Seat> seats = seatRepository.findByAuditorium_IdAndRowIndex(request.getAuditoriumId(), request.getRowIndex());
+
+        // Update all seats in the row
+        seats.forEach(seat -> {
+            seat.setType(request.getType());
+            seat.setStatus(request.getStatus());
+            seatRepository.save(seat);
+        });
     }
 }

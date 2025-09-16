@@ -39,4 +39,9 @@ public class AuditoriumController {
         auditoriumService.deleteAuditorium(id);
         return ResponseEntity.noContent().build();
     }
+
+    @GetMapping("/admin/auditoriums/{id}/seats")
+    public ResponseEntity<?> getSeatsByAuditorium(@PathVariable Integer id) {
+        return ResponseEntity.ok(auditoriumService.getSeatsByAuditorium(id));
+    }
 }

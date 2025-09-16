@@ -9,4 +9,6 @@ public interface SeatRepository extends JpaRepository<Seat, Integer> {
     List<Seat> findByAuditorium_Id(Integer auditoriumId);
 
     void deleteByAuditorium_Id(Integer id);
+
+    List<Seat> findByAuditorium_IdAndRowIndex(Integer auditoriumId, Integer rowIndex);
 }
