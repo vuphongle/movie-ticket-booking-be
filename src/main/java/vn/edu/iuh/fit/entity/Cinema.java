@@ -25,6 +25,7 @@ public class Cinema {
 
     String name;
     String address;
+    @Column(name = "map_location", length = 1000)
     String mapLocation;
 
     Date createdAt;
