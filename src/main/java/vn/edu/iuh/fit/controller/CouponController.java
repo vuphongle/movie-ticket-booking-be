@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.*;
 import vn.edu.iuh.fit.model.request.CouponApplyRequest;
 import vn.edu.iuh.fit.model.request.CouponPreviewRequest;
 import vn.edu.iuh.fit.model.request.UpsertCouponRequest;
+import vn.edu.iuh.fit.service.CouponDuplicateValidator;
 import vn.edu.iuh.fit.service.CouponPreviewService;
 import vn.edu.iuh.fit.service.CouponService;
 
@@ -18,6 +19,7 @@ import vn.edu.iuh.fit.service.CouponService;
 public class CouponController {
     private final CouponService couponService;
     private final CouponPreviewService couponPreviewService;
+    private final CouponDuplicateValidator duplicateValidator;
 
     @GetMapping("/coupons")
     public ResponseEntity<?> getAllCoupons() {
@@ -64,5 +66,16 @@ public class CouponController {
     @PostMapping("/coupons/apply")
     public ResponseEntity<?> applyCoupon(@Valid @RequestBody CouponApplyRequest request) {
         return ResponseEntity.ok(couponPreviewService.applyCoupon(request));
+    }
+
+    // Validation endpoints for frontend
+    @PostMapping("/admin/coupons/{id}/validate-status")
+    public ResponseEntity<?> validateCouponStatusActivation(@PathVariable Integer id) {
+        try {
+            duplicateValidator.validateCouponNoDuplicateOrderDiscountPercent(id);
+            return ResponseEntity.ok().build();
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
     }
 }

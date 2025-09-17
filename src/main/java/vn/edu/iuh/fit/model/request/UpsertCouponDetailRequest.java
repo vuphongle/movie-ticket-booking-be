@@ -1,5 +1,6 @@
 package vn.edu.iuh.fit.model.request;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.PositiveOrZero;
 import lombok.*;
@@ -16,6 +17,7 @@ import java.math.BigDecimal;
 @AllArgsConstructor
 @ToString
 @FieldDefaults(level = AccessLevel.PRIVATE)
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class UpsertCouponDetailRequest {
     
     @NotNull(message = "Enabled không được để trống")

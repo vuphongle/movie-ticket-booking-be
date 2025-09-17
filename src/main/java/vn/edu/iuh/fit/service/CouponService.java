@@ -23,6 +23,7 @@ import java.util.stream.Collectors;
 public class CouponService {
     private final CouponRepository couponRepository;
     private final CouponDetailRepository couponDetailRepository;
+    private final CouponDuplicateValidator duplicateValidator;
 
     public List<CouponResponse> getAllCoupons() {
         List<Coupon> coupons = couponRepository.findAll(Sort.by("createdAt").descending());
@@ -75,6 +76,15 @@ public class CouponService {
         // Validate status activation
         if (request.getStatus() && !hasValidEnabledDetails(id)) {
             throw new BadRequestException(ValidationMessages.CANNOT_ACTIVATE_NO_ENABLED_DETAILS);
+        }
+
+        // Validate no duplicate ORDER + DISCOUNT_PERCENT details before activation
+        if (request.getStatus()) {
+            try {
+                duplicateValidator.validateCouponNoDuplicateOrderDiscountPercent(id);
+            } catch (IllegalArgumentException e) {
+                throw new BadRequestException("Cannot activate coupon: " + e.getMessage());
+            }
         }
 
         coupon.setCode(upperCaseCode);

@@ -27,6 +27,7 @@ public class CouponDetailService {
     private final CouponDetailRepository couponDetailRepository;
     private final CouponRepository couponRepository;
     private final SeatTypeService seatTypeService;
+    private final CouponDuplicateValidator duplicateValidator;
 
     public List<CouponDetailResponse> getCouponDetails(Integer couponId) {
         if (!couponRepository.existsById(couponId)) {
@@ -39,8 +40,13 @@ public class CouponDetailService {
                 .collect(Collectors.toList());
     }
 
+    public CouponDetail getCouponDetailById(Integer detailId) {
+        return couponDetailRepository.findById(detailId)
+                .orElseThrow(() -> new ResourceNotFoundException("Coupon detail không tồn tại"));
+    }
+
     @Transactional
-    public CouponDetail createCouponDetail(Integer couponId, UpsertCouponDetailRequest request) {
+    public CouponDetailResponse createCouponDetail(Integer couponId, UpsertCouponDetailRequest request) {
         Coupon coupon = couponRepository.findById(couponId)
                 .orElseThrow(() -> new ResourceNotFoundException("Coupon không tồn tại"));
 
@@ -68,13 +74,33 @@ public class CouponDetailService {
                 .notes(request.getNotes())
                 .build();
 
-        return couponDetailRepository.save(detail);
+        // Validate no duplicate ORDER + DISCOUNT_PERCENT details
+        try {
+            // Create temp detail with explicit fields for validation
+            CouponDetail tempDetail = CouponDetail.builder()
+                    .targetType(request.getTargetType())
+                    .benefitType(request.getBenefitType())
+                    .percent(request.getPercent())
+                    .lineMaxDiscount(request.getLineMaxDiscount())
+                    .minOrderTotal(request.getMinOrderTotal())
+                    .build();
+            
+            duplicateValidator.validateNoDuplicateOrderDiscountPercent(couponId, tempDetail, null);
+        } catch (IllegalArgumentException e) {
+            throw new BadRequestException(e.getMessage());
+        }
+
+        CouponDetail savedDetail = couponDetailRepository.save(detail);
+        return buildCouponDetailResponse(savedDetail);
     }
 
     @Transactional
-    public CouponDetail updateCouponDetail(Integer detailId, UpsertCouponDetailRequest request) {
+    public CouponDetailResponse updateCouponDetail(Integer detailId, UpsertCouponDetailRequest request) {
         CouponDetail detail = couponDetailRepository.findById(detailId)
                 .orElseThrow(() -> new ResourceNotFoundException("Coupon detail không tồn tại"));
+
+        // Get coupon ID directly from repository to avoid Hibernate proxy issues
+        Integer couponId = couponDetailRepository.findCouponIdByDetailId(detailId);
 
         // Validate business rules
         validateCouponDetailRequest(request);
@@ -85,6 +111,23 @@ public class CouponDetailService {
             throw new BadRequestException(ValidationMessages.CANNOT_REDUCE_USAGE_LIMIT);
         }
 
+        // Validate no duplicate ORDER + DISCOUNT_PERCENT details BEFORE setting new values
+        try {
+            // Create temp detail with explicit fields for validation
+            CouponDetail tempDetail = CouponDetail.builder()
+                    .targetType(request.getTargetType())
+                    .benefitType(request.getBenefitType())
+                    .percent(request.getPercent())
+                    .lineMaxDiscount(request.getLineMaxDiscount())
+                    .minOrderTotal(request.getMinOrderTotal())
+                    .build();
+            
+            duplicateValidator.validateNoDuplicateOrderDiscountPercent(couponId, tempDetail, detailId);
+        } catch (IllegalArgumentException e) {
+            throw new BadRequestException("Cannot update coupon detail: " + e.getMessage());
+        }
+
+        // Now set the new values
         detail.setEnabled(request.getEnabled());
         detail.setTargetType(request.getTargetType());
         detail.setTargetRefId(request.getTargetRefId());
@@ -102,7 +145,8 @@ public class CouponDetailService {
         detail.setSelectionStrategy(request.getSelectionStrategy());
         detail.setNotes(request.getNotes());
 
-        return couponDetailRepository.save(detail);
+        CouponDetail savedDetail = couponDetailRepository.save(detail);
+        return buildCouponDetailResponse(savedDetail);
     }
 
     @Transactional
@@ -118,9 +162,12 @@ public class CouponDetailService {
     }
 
     @Transactional
-    public CouponDetail duplicateCouponDetail(Integer detailId) {
+    public CouponDetailResponse duplicateCouponDetail(Integer detailId) {
         CouponDetail originalDetail = couponDetailRepository.findById(detailId)
                 .orElseThrow(() -> new ResourceNotFoundException("Coupon detail không tồn tại"));
+
+        // Get coupon ID directly from repository to avoid Hibernate proxy issues
+        Integer couponId = couponDetailRepository.findCouponIdByDetailId(detailId);
 
         CouponDetail duplicatedDetail = CouponDetail.builder()
                 .coupon(originalDetail.getCoupon())  // Use relationship instead of couponId
@@ -143,7 +190,24 @@ public class CouponDetailService {
                 .notes(originalDetail.getNotes() + " (Copy)")
                 .build();
 
-        return couponDetailRepository.save(duplicatedDetail);
+        // Validate no duplicate ORDER + DISCOUNT_PERCENT details
+        try {
+            // Create temp detail with explicit fields for validation
+            CouponDetail tempDetail = CouponDetail.builder()
+                    .targetType(duplicatedDetail.getTargetType())
+                    .benefitType(duplicatedDetail.getBenefitType())
+                    .percent(duplicatedDetail.getPercent())
+                    .lineMaxDiscount(duplicatedDetail.getLineMaxDiscount())
+                    .minOrderTotal(duplicatedDetail.getMinOrderTotal())
+                    .build();
+            
+            duplicateValidator.validateNoDuplicateOrderDiscountPercent(couponId, tempDetail, null);
+        } catch (IllegalArgumentException e) {
+            throw new BadRequestException("Cannot duplicate coupon detail: " + e.getMessage());
+        }
+
+        CouponDetail savedDetail = couponDetailRepository.save(duplicatedDetail);
+        return buildCouponDetailResponse(savedDetail);
     }
 
     private void validateCouponDetailRequest(UpsertCouponDetailRequest request) {

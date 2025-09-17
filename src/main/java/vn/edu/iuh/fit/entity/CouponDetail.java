@@ -129,12 +129,14 @@ public class CouponDetail {
         createdAt = now;
         updatedAt = now;
         validateBenefitTypeConstraints();
+        // Note: Duplicate validation is handled in service layer to avoid circular dependencies
     }
 
     @PreUpdate
     protected void onUpdate() {
         updatedAt = new Date();
         validateBenefitTypeConstraints();
+        // Note: Duplicate validation is handled in service layer to avoid circular dependencies
     }
 
     /**
