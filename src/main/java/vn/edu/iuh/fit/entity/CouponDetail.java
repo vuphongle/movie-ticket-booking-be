@@ -115,6 +115,14 @@ public class CouponDetail {
     @Column(length = 1000)
     String notes;
 
+    @Column(name = "start_date")
+    @Temporal(TemporalType.DATE)
+    Date startDate;
+
+    @Column(name = "end_date")
+    @Temporal(TemporalType.DATE)
+    Date endDate;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     @Temporal(TemporalType.TIMESTAMP)
     Date createdAt;

@@ -72,6 +72,8 @@ public class CouponDetailService {
                 .linePriority(request.getLinePriority())
                 .selectionStrategy(request.getSelectionStrategy())
                 .notes(request.getNotes())
+                .startDate(request.getStartDate())
+                .endDate(request.getEndDate())
                 .build();
 
         // Validate no duplicate ORDER + DISCOUNT_PERCENT details
@@ -101,10 +103,14 @@ public class CouponDetailService {
 
         // Get coupon ID directly from repository to avoid Hibernate proxy issues
         Integer couponId = couponDetailRepository.findCouponIdByDetailId(detailId);
+        
+        // Get parent coupon for date validation
+        Coupon coupon = couponRepository.findById(couponId)
+                .orElseThrow(() -> new ResourceNotFoundException("Coupon không tồn tại"));
 
         // Validate business rules
         validateCouponDetailRequest(request);
-
+        
         // Kiểm tra nếu đã có usage thì không được giảm usage limit xuống dưới used count
         if (request.getDetailUsageLimit() != null && 
             request.getDetailUsageLimit() < detail.getDetailUsedCount()) {
@@ -144,6 +150,8 @@ public class CouponDetailService {
         detail.setLinePriority(request.getLinePriority());
         detail.setSelectionStrategy(request.getSelectionStrategy());
         detail.setNotes(request.getNotes());
+        detail.setStartDate(request.getStartDate());
+        detail.setEndDate(request.getEndDate());
 
         CouponDetail savedDetail = couponDetailRepository.save(detail);
         return buildCouponDetailResponse(savedDetail);
@@ -188,6 +196,8 @@ public class CouponDetailService {
                 .linePriority(originalDetail.getLinePriority() + 1) // Đặt priority sau original
                 .selectionStrategy(originalDetail.getSelectionStrategy())
                 .notes(originalDetail.getNotes() + " (Copy)")
+                .startDate(originalDetail.getStartDate())
+                .endDate(originalDetail.getEndDate())
                 .build();
 
         // Validate no duplicate ORDER + DISCOUNT_PERCENT details
@@ -278,7 +288,23 @@ public class CouponDetailService {
             // Có thể throw exception nếu muốn block cứng
             // throw new BadRequestException("Limit quantity applied không thể nhỏ hơn min quantity");
         }
+
+        // Validate date range
+        if (request.getStartDate() != null && request.getEndDate() != null &&
+            request.getStartDate().after(request.getEndDate())) {
+            throw new BadRequestException("Start date phải trước end date");
+        }
+        
+        // Require startDate and endDate
+        if (request.getStartDate() == null) {
+            throw new BadRequestException("Start date là bắt buộc");
+        }
+        if (request.getEndDate() == null) {
+            throw new BadRequestException("End date là bắt buộc");
+        }
     }
+
+
 
     private CouponDetailResponse buildCouponDetailResponse(CouponDetail detail) {
         return CouponDetailResponse.builder()
@@ -301,6 +327,8 @@ public class CouponDetailService {
                 .linePriority(detail.getLinePriority())
                 .selectionStrategy(detail.getSelectionStrategy())
                 .notes(detail.getNotes())
+                .startDate(detail.getStartDate())
+                .endDate(detail.getEndDate())
                 .createdAt(detail.getCreatedAt())
                 .updatedAt(detail.getUpdatedAt())
                 .build();

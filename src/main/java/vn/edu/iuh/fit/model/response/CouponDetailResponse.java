@@ -44,6 +44,8 @@ public class CouponDetailResponse {
     SelectionStrategy selectionStrategy;
     
     String notes;
+    Date startDate;
+    Date endDate;
     Date createdAt;
     Date updatedAt;
 }
