@@ -1,9 +1,11 @@
 package vn.edu.iuh.fit.repository;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 import vn.edu.iuh.fit.entity.CouponDetail;
 
 import java.util.List;
@@ -26,6 +28,8 @@ public interface CouponDetailRepository extends JpaRepository<CouponDetail, Inte
     @Query("SELECT COALESCE(SUM(cd.detailUsedCount), 0) FROM CouponDetail cd WHERE cd.coupon.id = :couponId")
     Long sumUsedCountByCouponId(@Param("couponId") Integer couponId);
     
+    @Modifying
+    @Transactional
     @Query("DELETE FROM CouponDetail cd WHERE cd.coupon.id = :couponId")
     void deleteByCouponId(@Param("couponId") Integer couponId);
     
