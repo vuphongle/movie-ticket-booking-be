@@ -17,8 +17,8 @@ public class CouponResponse {
     String name;
     String description;
     Boolean status;
-    Date startAt;
-    Date endAt;
+    Date startDate;
+    Date endDate;
     Date createdAt;
     Date updatedAt;
 }

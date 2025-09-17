@@ -5,7 +5,7 @@ public class ValidationMessages {
     // Header validation messages
     public static final String CODE_DUPLICATE = "Mã đã tồn tại, vui lòng chọn mã khác.";
     public static final String INVALID_TIME_RANGE = "Thời gian áp dụng không hợp lệ (ngày bắt đầu phải trước ngày kết thúc).";
-    public static final String CANNOT_ACTIVATE_NO_ENABLED_DETAILS = "Không thể kích hoạt: cần ít nhất 1 dòng chi tiết bật 'enabled' và hợp lệ.";
+    public static final String CANNOT_ACTIVATE_NO_ENABLED_DETAILS = "Không thể kích hoạt: cần ít nhất 1 dòng chi tiết kích hoạt và hợp lệ.";
     
     // Detail validation messages
     public static final String ORDER_NO_TARGET_REF = "ORDER không cho phép chọn đối tượng.";

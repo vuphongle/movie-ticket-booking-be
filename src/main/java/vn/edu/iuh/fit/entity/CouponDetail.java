@@ -184,19 +184,4 @@ public class CouponDetail {
     public Integer getCouponId() {
         return coupon != null ? coupon.getId() : null;
     }
-
-    /**
-     * Convenience method to set coupon by ID
-     * Should be used carefully and typically only in data loading scenarios
-     */
-    public void setCouponId(Integer couponId) {
-        if (couponId != null) {
-            if (this.coupon == null) {
-                this.coupon = new Coupon();
-            }
-            this.coupon.setId(couponId);
-        } else {
-            this.coupon = null;
-        }
-    }
 }

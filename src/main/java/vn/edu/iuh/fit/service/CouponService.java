@@ -51,8 +51,8 @@ public class CouponService {
                 .name(request.getName())
                 .description(request.getDescription())
                 .status(request.getStatus())
-                .startAt(request.getStartAt())
-                .endAt(request.getEndAt())
+                .startDate(request.getStartDate())
+                .endDate(request.getEndDate())
                 .build();
 
         Coupon savedCoupon = couponRepository.save(coupon);
@@ -91,8 +91,8 @@ public class CouponService {
         coupon.setName(request.getName());
         coupon.setDescription(request.getDescription());
         coupon.setStatus(request.getStatus());
-        coupon.setStartAt(request.getStartAt());
-        coupon.setEndAt(request.getEndAt());
+        coupon.setStartDate(request.getStartDate());
+        coupon.setEndDate(request.getEndDate());
 
         Coupon savedCoupon = couponRepository.save(coupon);
         log.info("Updated coupon with code: {}", savedCoupon.getCode());
@@ -130,8 +130,8 @@ public class CouponService {
                 .name(originalCoupon.getName() + " (Copy)")
                 .description(originalCoupon.getDescription())
                 .status(false) // Mặc định tắt sau khi duplicate
-                .startAt(originalCoupon.getStartAt())
-                .endAt(originalCoupon.getEndAt())
+                .startDate(originalCoupon.getStartDate())
+                .endDate(originalCoupon.getEndDate())
                 .build();
 
         Coupon savedCoupon = couponRepository.save(duplicatedCoupon);
@@ -141,8 +141,8 @@ public class CouponService {
 
     private void validateCouponRequest(UpsertCouponRequest request) {
         // Validate time range
-        if (request.getStartAt().after(request.getEndAt()) || 
-            request.getStartAt().equals(request.getEndAt())) {
+        if (request.getStartDate().after(request.getEndDate()) ||
+            request.getStartDate().equals(request.getEndDate())) {
             throw new BadRequestException(ValidationMessages.INVALID_TIME_RANGE);
         }
     }
@@ -159,8 +159,8 @@ public class CouponService {
                 .name(coupon.getName())
                 .description(coupon.getDescription())
                 .status(coupon.getStatus())
-                .startAt(coupon.getStartAt())
-                .endAt(coupon.getEndAt())
+                .startDate(coupon.getStartDate())
+                .endDate(coupon.getEndDate())
                 .createdAt(coupon.getCreatedAt())
                 .updatedAt(coupon.getUpdatedAt())
                 .build();

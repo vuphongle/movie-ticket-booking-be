@@ -26,8 +26,8 @@ public class UpsertCouponRequest {
     Boolean status;
 
     @NotNull(message = "Start at không được để trống")
-    Date startAt;
+    Date startDate;
 
     @NotNull(message = "End at không được để trống")
-    Date endAt;
+    Date endDate;
 }
