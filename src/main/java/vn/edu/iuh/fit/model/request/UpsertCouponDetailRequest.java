@@ -10,6 +10,7 @@ import vn.edu.iuh.fit.model.enums.SelectionStrategy;
 import vn.edu.iuh.fit.model.enums.TargetType;
 
 import java.math.BigDecimal;
+import java.util.Date;
 
 @Getter
 @Setter
@@ -59,4 +60,10 @@ public class UpsertCouponDetailRequest {
     SelectionStrategy selectionStrategy = SelectionStrategy.HIGHEST_PRICE_FIRST;
 
     String notes;
+    
+    @NotNull(message = "Start date là bắt buộc")
+    Date startDate;
+    
+    @NotNull(message = "End date là bắt buộc")
+    Date endDate;
 }
