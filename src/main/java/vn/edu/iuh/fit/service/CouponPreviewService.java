@@ -92,11 +92,11 @@ public class CouponPreviewService {
             return ValidationMessages.COUPON_NOT_ACTIVE;
         }
 
-        if (now.before(coupon.getStartAt())) {
+        if (now.before(coupon.getStartDate())) {
             return ValidationMessages.COUPON_NOT_STARTED;
         }
 
-        if (now.after(coupon.getEndAt())) {
+        if (now.after(coupon.getEndDate())) {
             return ValidationMessages.COUPON_EXPIRED;
         }
 

@@ -30,11 +30,11 @@ public class Coupon {
     @Column(nullable = false)
     Boolean status;
 
-    @Column(name = "start_at", nullable = false)
-    Date startAt;
+    @Column(name = "start_date", nullable = false)
+    Date startDate;
 
-    @Column(name = "end_at", nullable = false)
-    Date endAt;
+    @Column(name = "end_date", nullable = false)
+    Date endDate;
 
     @Column(name = "created_at")
     Date createdAt;
