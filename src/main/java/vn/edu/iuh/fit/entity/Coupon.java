@@ -19,20 +19,22 @@ public class Coupon {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     Integer id;
 
+    @Column(unique = true, nullable = false)
     String code;
-    Integer discount;
-    Integer quantity;
-    Integer used;
-    Boolean status;
     
-    @Column(name = "max_discount")
-    Integer maxDiscount;
+    @Column(nullable = false)
+    String name;
+    
+    String description;
+    
+    @Column(nullable = false)
+    Boolean status;
 
-    @Column(name = "start_date")
-    Date startDate;
+    @Column(name = "start_at", nullable = false)
+    Date startAt;
 
-    @Column(name = "end_date")
-    Date endDate;
+    @Column(name = "end_at", nullable = false)
+    Date endAt;
 
     @Column(name = "created_at")
     Date createdAt;
@@ -42,12 +44,18 @@ public class Coupon {
 
     @PrePersist
     protected void onCreate() {
+        if (code != null) {
+            code = code.toUpperCase(); // Tự động chuyển code thành uppercase
+        }
         createdAt = new Date();
         updatedAt = new Date();
     }
 
     @PreUpdate
     protected void onUpdate() {
+        if (code != null) {
+            code = code.toUpperCase(); // Tự động chuyển code thành uppercase
+        }
         updatedAt = new Date();
     }
 }
