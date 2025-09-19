@@ -13,6 +13,8 @@ import vn.edu.iuh.fit.exception.ResourceNotFoundException;
 import vn.edu.iuh.fit.model.request.UpsertProductRequest;
 import vn.edu.iuh.fit.repository.ProductRepository;
 import vn.edu.iuh.fit.repository.AdditionalServiceItemRepository;
+import vn.edu.iuh.fit.repository.AdditionalServiceRepository;
+import vn.edu.iuh.fit.repository.CouponDetailRepository;
 
 import java.util.List;
 import java.util.Optional;
@@ -25,6 +27,8 @@ public class ProductService {
     
     private final ProductRepository productRepository;
     private final AdditionalServiceItemRepository additionalServiceItemRepository;
+    private final AdditionalServiceRepository additionalServiceRepository;
+    private final CouponDetailRepository couponDetailRepository;
     
     // Lấy tất cả sản phẩm với filter status
     public List<Product> getAllProducts(Boolean status) {
@@ -87,6 +91,7 @@ public class ProductService {
                 .name(request.getName())
                 .description(request.getDescription())
                 .unit(request.getUnit())
+                .quantity(request.getQuantity())
                 .thumbnail(request.getThumbnail())
                 .status(request.getStatus())
                 .build();
@@ -116,6 +121,7 @@ public class ProductService {
         existingProduct.setName(request.getName());
         existingProduct.setDescription(request.getDescription());
         existingProduct.setUnit(request.getUnit());
+        existingProduct.setQuantity(request.getQuantity());
         existingProduct.setThumbnail(request.getThumbnail());
         existingProduct.setStatus(request.getStatus());
 
@@ -135,6 +141,7 @@ public class ProductService {
         existingProduct.setName(productData.getName());
         existingProduct.setDescription(productData.getDescription());
         existingProduct.setUnit(productData.getUnit());
+        existingProduct.setQuantity(productData.getQuantity());
         existingProduct.setThumbnail(productData.getThumbnail());
         existingProduct.setStatus(productData.getStatus());
         
@@ -162,8 +169,43 @@ public class ProductService {
         Product product = productRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Product not found with id: " + id));
         
+        // Nếu đang chuyển từ active sang inactive, cần kiểm tra ràng buộc
+        if (product.getStatus() && !checkProductConstraints(id)) {
+            throw new IllegalArgumentException("Cannot deactivate product. It is being used in active promotions or additional services.");
+        }
+        
         product.setStatus(!product.getStatus());
         return productRepository.save(product);
+    }
+    
+    // Kiểm tra xem có thể vô hiệu hóa sản phẩm không
+    private boolean checkProductConstraints(Integer productId) {
+        // Kiểm tra sản phẩm có đang được dùng trong additional service đang hoạt động
+        if (additionalServiceItemRepository.existsByProductIdAndAdditionalServiceStatusTrue(productId)) {
+            log.warn("Product {} is being used in active additional services", productId);
+            return false;
+        }
+        
+        // Kiểm tra sản phẩm có đang được dùng trong coupon detail đang hoạt động
+        if (couponDetailRepository.existsByGiftServiceIdAndEnabledTrueAndCouponStatusTrue(productId)) {
+            log.warn("Product {} is being used in active coupon promotions", productId);
+            return false;
+        }
+        
+        return true;
+    }
+    
+    // Public method để kiểm tra có thể vô hiệu hóa sản phẩm không
+    public boolean canDeactivateProduct(Integer productId) {
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new ResourceNotFoundException("Product not found with id: " + productId));
+        
+        // Nếu sản phẩm đã inactive thì luôn return true
+        if (!product.getStatus()) {
+            return true;
+        }
+        
+        return checkProductConstraints(productId);
     }
 
     // Lấy tất cả sản phẩm active

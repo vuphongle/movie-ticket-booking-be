@@ -29,4 +29,9 @@ public interface AdditionalServiceItemRepository extends JpaRepository<Additiona
     // Kiểm tra xem product có được sử dụng trong additional service nào không
     @Query("SELECT COUNT(asi) > 0 FROM AdditionalServiceItem asi WHERE asi.product.id = :productId")
     boolean existsByProductId(@Param("productId") Integer productId);
+    
+    // Kiểm tra xem product có được sử dụng trong additional service đang hoạt động không
+    @Query("SELECT COUNT(asi) > 0 FROM AdditionalServiceItem asi " +
+           "WHERE asi.product.id = :productId AND asi.additionalService.status = true")
+    boolean existsByProductIdAndAdditionalServiceStatusTrue(@Param("productId") Integer productId);
 }

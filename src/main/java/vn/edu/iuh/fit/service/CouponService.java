@@ -42,6 +42,11 @@ public class CouponService {
         // Enhanced validation
         validateCouponRequest(request);
         
+        // Ràng buộc: Coupon mới tạo luôn phải có status = false
+        if (request.getStatus()) {
+            throw new BadRequestException("Coupon mới tạo phải có trạng thái ẩn. Sau khi tạo và thêm điều kiện chi tiết, bạn có thể kích hoạt coupon.");
+        }
+        
         if (couponRepository.existsByCode(request.getCode().toUpperCase())) {
             throw new BadRequestException(ValidationMessages.CODE_DUPLICATE);
         }
@@ -50,7 +55,7 @@ public class CouponService {
                 .code(request.getCode().toUpperCase())
                 .name(request.getName())
                 .description(request.getDescription())
-                .status(request.getStatus())
+                .status(false) // Force status to false for new coupons
                 .startDate(request.getStartDate())
                 .endDate(request.getEndDate())
                 .build();

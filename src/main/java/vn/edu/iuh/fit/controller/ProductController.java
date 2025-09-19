@@ -114,6 +114,16 @@ public class ProductController {
         return ResponseEntity.ok(Map.of("exists", exists));
     }
 
+    @GetMapping("/admin/products/{id}/can-deactivate")
+    public ResponseEntity<?> checkCanDeactivateProduct(@PathVariable Integer id) {
+        try {
+            boolean canDeactivate = productService.canDeactivateProduct(id);
+            return ResponseEntity.ok(Map.of("canDeactivate", canDeactivate));
+        } catch (Exception e) {
+            return ResponseEntity.ok(Map.of("canDeactivate", false, "message", e.getMessage()));
+        }
+    }
+
     @GetMapping("/admin/products/{id}/price")
     public ResponseEntity<?> getProductPrice(@PathVariable Integer id) {
         return pricingService.getPriceForProduct(id)
