@@ -17,6 +17,7 @@ public class ProductDto {
     String name;
     String description;
     String unit;
+    Integer quantity;
     String thumbnail;
     Boolean status;
     Date createdAt;

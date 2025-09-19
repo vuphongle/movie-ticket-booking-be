@@ -30,6 +30,8 @@ public class Product {
 
     String unit; // Đơn vị (box, bottle, piece, etc.)
 
+    Integer quantity; // Số lượng tồn kho
+
     String thumbnail; // Ảnh đại diện
 
     @Builder.Default

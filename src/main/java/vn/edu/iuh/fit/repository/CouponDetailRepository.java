@@ -35,4 +35,11 @@ public interface CouponDetailRepository extends JpaRepository<CouponDetail, Inte
     
     @Query("SELECT cd.coupon.id FROM CouponDetail cd WHERE cd.id = :detailId")
     Integer findCouponIdByDetailId(@Param("detailId") Integer detailId);
+    
+    // Kiểm tra xem product có đang được dùng làm gift trong coupon detail hoạt động không
+    @Query("SELECT COUNT(cd) > 0 FROM CouponDetail cd " +
+           "WHERE cd.giftServiceId = :productId " +
+           "AND cd.enabled = true " +
+           "AND cd.coupon.status = true")
+    boolean existsByGiftServiceIdAndEnabledTrueAndCouponStatusTrue(@Param("productId") Integer productId);
 }
