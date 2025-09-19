@@ -34,8 +34,9 @@ dependencies {
     implementation("org.modelmapper:modelmapper:3.1.1")
 
     implementation("io.hypersistence:hypersistence-utils-hibernate-60:3.5.2")
-    implementation("com.fasterxml.jackson.core:jackson-annotations:2.18.2")
-    implementation("com.fasterxml.jackson.datatype:jackson-datatype-hibernate5:2.18.2")
+    implementation("com.fasterxml.jackson.core:jackson-annotations")
+    implementation("com.fasterxml.jackson.datatype:jackson-datatype-hibernate6")
+    implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310")
 
     implementation 'org.springframework.boot:spring-boot-starter-security'
 
