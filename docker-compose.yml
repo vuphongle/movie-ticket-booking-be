@@ -1,0 +1,58 @@
+services:
+  mariadb:
+    image: mariadb:10.11
+    container_name: movie-booking-mariadb
+    environment:
+      TZ: Asia/Ho_Chi_Minh
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-rootpassword}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-db_movie_ticket_booking}
+      MYSQL_USER: ${MYSQL_USER:-movie_user}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-movie_password}
+    ports:
+      - "3307:3306"
+    volumes:
+      - mariadb_data:/var/lib/mysql
+      - ./docker/mariadb/init:/docker-entrypoint-initdb.d
+    networks:
+      - movie-booking-network
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      start_period: 10s
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: movie-booking-backend
+    environment:
+      TZ: Asia/Ho_Chi_Minh
+      SPRING_PROFILES_ACTIVE: docker
+      DB_USERNAME: ${MYSQL_USER:-movie_user}
+      DB_PASSWORD: ${MYSQL_PASSWORD:-movie_password}
+      JWT_SECRET: ${JWT_SECRET:-your-super-secret-jwt-key-for-development-only-32-chars}
+      MAIL_USERNAME: ${MAIL_USERNAME:-example_mail@gmail.com}
+      MAIL_PASSWORD: ${MAIL_PASSWORD:-your-app-password}
+      AWS_ACCESS_KEY: ${AWS_ACCESS_KEY:-your-aws-access-key}
+      AWS_SECRET_KEY: ${AWS_SECRET_KEY:-your-aws-secret-key}
+    ports:
+      - "8080:8080"
+    depends_on:
+      mariadb:
+        condition: service_healthy
+    networks:
+      - movie-booking-network
+    volumes:
+      - ./logs:/app/logs
+    stop_grace_period: 30s
+    restart: unless-stopped
+
+volumes:
+  mariadb_data:
+
+networks:
+  movie-booking-network:
+    driver: bridge
