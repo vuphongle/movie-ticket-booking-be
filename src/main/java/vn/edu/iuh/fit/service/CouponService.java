@@ -4,74 +4,170 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import vn.edu.iuh.fit.constant.ValidationMessages;
 import vn.edu.iuh.fit.entity.Coupon;
 import vn.edu.iuh.fit.exception.BadRequestException;
 import vn.edu.iuh.fit.exception.ResourceNotFoundException;
 import vn.edu.iuh.fit.model.request.UpsertCouponRequest;
+import vn.edu.iuh.fit.model.response.CouponResponse;
+import vn.edu.iuh.fit.repository.CouponDetailRepository;
 import vn.edu.iuh.fit.repository.CouponRepository;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class CouponService {
     private final CouponRepository couponRepository;
+    private final CouponDetailRepository couponDetailRepository;
+    private final CouponDuplicateValidator duplicateValidator;
 
-    public List<Coupon> getAllCoupons() {
-        return couponRepository.findAll(Sort.by("createdAt").descending());
+    public List<CouponResponse> getAllCoupons() {
+        List<Coupon> coupons = couponRepository.findAll(Sort.by("createdAt").descending());
+        return coupons.stream()
+                .map(this::buildCouponResponse)
+                .collect(Collectors.toList());
     }
 
+    public Coupon getCouponById(Integer id) {
+        return couponRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Coupon not found"));
+    }
+
+    @Transactional
     public Coupon createCoupon(UpsertCouponRequest request) {
-        if (couponRepository.existsByCode(request.getCode())) {
-            throw new BadRequestException("Mã coupon không được trùng nhau");
+        // Enhanced validation
+        validateCouponRequest(request);
+        
+        // Ràng buộc: Coupon mới tạo luôn phải có status = false
+        if (request.getStatus()) {
+            throw new BadRequestException("Coupon mới tạo phải có trạng thái ẩn. Sau khi tạo và thêm điều kiện chi tiết, bạn có thể kích hoạt coupon.");
+        }
+        
+        if (couponRepository.existsByCode(request.getCode().toUpperCase())) {
+            throw new BadRequestException(ValidationMessages.CODE_DUPLICATE);
         }
 
         Coupon coupon = Coupon.builder()
-                .code(request.getCode())
-                .discount(request.getDiscount())
-                .quantity(request.getQuantity())
-                .used(0)
-                .status(request.getStatus())
+                .code(request.getCode().toUpperCase())
+                .name(request.getName())
+                .description(request.getDescription())
+                .status(false) // Force status to false for new coupons
                 .startDate(request.getStartDate())
                 .endDate(request.getEndDate())
-                .maxDiscount(request.getMaxDiscount())
                 .build();
 
-        return couponRepository.save(coupon);
+        Coupon savedCoupon = couponRepository.save(coupon);
+        log.info("Created coupon with code: {}", savedCoupon.getCode());
+        return savedCoupon;
     }
 
+    @Transactional
     public Coupon updateCoupon(Integer id, UpsertCouponRequest request) {
         Coupon coupon = couponRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Coupon không tồn tại"));
 
-        if (couponRepository.existsByCode(request.getCode()) && !coupon.getCode().equals(request.getCode())) {
-            throw new BadRequestException("Mã coupon không được trùng nhau");
+        // Enhanced validation
+        validateCouponRequest(request);
+        
+        String upperCaseCode = request.getCode().toUpperCase();
+        if (couponRepository.existsByCode(upperCaseCode) && !coupon.getCode().equals(upperCaseCode)) {
+            throw new BadRequestException(ValidationMessages.CODE_DUPLICATE);
         }
 
-        if (coupon.getUsed() > request.getQuantity()) {
-            throw new BadRequestException("Số lượt sử dụng đã vượt quá số lượng coupon");
+        // Validate status activation
+        if (request.getStatus() && !hasValidEnabledDetails(id)) {
+            throw new BadRequestException(ValidationMessages.CANNOT_ACTIVATE_NO_ENABLED_DETAILS);
         }
 
-        coupon.setCode(request.getCode());
-        coupon.setDiscount(request.getDiscount());
-        coupon.setQuantity(request.getQuantity());
+        // Validate no duplicate ORDER + DISCOUNT_PERCENT details before activation
+        if (request.getStatus()) {
+            try {
+                duplicateValidator.validateCouponNoDuplicateOrderDiscountPercent(id);
+            } catch (IllegalArgumentException e) {
+                throw new BadRequestException("Cannot activate coupon: " + e.getMessage());
+            }
+        }
+
+        coupon.setCode(upperCaseCode);
+        coupon.setName(request.getName());
+        coupon.setDescription(request.getDescription());
         coupon.setStatus(request.getStatus());
         coupon.setStartDate(request.getStartDate());
         coupon.setEndDate(request.getEndDate());
-        coupon.setMaxDiscount(request.getMaxDiscount());
 
-        return couponRepository.save(coupon);
+        Coupon savedCoupon = couponRepository.save(coupon);
+        log.info("Updated coupon with code: {}", savedCoupon.getCode());
+        return savedCoupon;
     }
 
+    @Transactional
     public void deleteCoupon(Integer id) {
         Coupon coupon = couponRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Coupon không tồn tại"));
 
-        if (coupon.getUsed() > 0) {
-            throw new BadRequestException("Coupon đã được sử dụng không thể xóa");
+        // Kiểm tra xem có detail nào đã được sử dụng không
+        Long totalUsedCount = couponDetailRepository.sumUsedCountByCouponId(id);
+        if (totalUsedCount > 0) {
+            throw new BadRequestException(ValidationMessages.CANNOT_DELETE_USED_COUPON);
         }
 
+        // Xóa tất cả details trước
+        couponDetailRepository.deleteByCouponId(id);
+        // Xóa coupon
         couponRepository.delete(coupon);
+        log.info("Deleted coupon with code: {}", coupon.getCode());
+    }
+
+    @Transactional
+    public Coupon duplicateCoupon(Integer id) {
+        Coupon originalCoupon = couponRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Coupon không tồn tại"));
+
+        // Tạo code mới bằng cách thêm timestamp
+        String newCode = originalCoupon.getCode() + "_COPY_" + System.currentTimeMillis();
+
+        Coupon duplicatedCoupon = Coupon.builder()
+                .code(newCode)
+                .name(originalCoupon.getName() + " (Copy)")
+                .description(originalCoupon.getDescription())
+                .status(false) // Mặc định tắt sau khi duplicate
+                .startDate(originalCoupon.getStartDate())
+                .endDate(originalCoupon.getEndDate())
+                .build();
+
+        Coupon savedCoupon = couponRepository.save(duplicatedCoupon);
+        log.info("Duplicated coupon from {} to {}", originalCoupon.getCode(), savedCoupon.getCode());
+        return savedCoupon;
+    }
+
+    private void validateCouponRequest(UpsertCouponRequest request) {
+        // Validate time range
+        if (request.getStartDate().after(request.getEndDate()) ||
+            request.getStartDate().equals(request.getEndDate())) {
+            throw new BadRequestException(ValidationMessages.INVALID_TIME_RANGE);
+        }
+    }
+
+    private boolean hasValidEnabledDetails(Integer couponId) {
+        Long enabledCount = couponDetailRepository.countEnabledDetailsByCouponId(couponId);
+        return enabledCount != null && enabledCount > 0;
+    }
+
+    private CouponResponse buildCouponResponse(Coupon coupon) {
+        return CouponResponse.builder()
+                .id(coupon.getId())
+                .code(coupon.getCode())
+                .name(coupon.getName())
+                .description(coupon.getDescription())
+                .status(coupon.getStatus())
+                .startDate(coupon.getStartDate())
+                .endDate(coupon.getEndDate())
+                .createdAt(coupon.getCreatedAt())
+                .updatedAt(coupon.getUpdatedAt())
+                .build();
     }
 }

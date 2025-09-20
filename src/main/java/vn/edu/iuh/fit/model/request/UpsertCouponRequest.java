@@ -17,20 +17,17 @@ public class UpsertCouponRequest {
     @NotEmpty(message = "Code không được để trống")
     String code;
 
-    @NotNull(message = "Discount không được để trống")
-    Integer discount;
-
-    @NotNull(message = "Quantity không được để trống")
-    Integer quantity;
+    @NotEmpty(message = "Name không được để trống")
+    String name;
     
-    Integer maxDiscount;
+    String description; // optional
 
     @NotNull(message = "Status không được để trống")
     Boolean status;
 
-    @NotNull(message = "Start date không được để trống")
+    @NotNull(message = "Start at không được để trống")
     Date startDate;
 
-    @NotNull(message = "End date không được để trống")
+    @NotNull(message = "End at không được để trống")
     Date endDate;
 }
