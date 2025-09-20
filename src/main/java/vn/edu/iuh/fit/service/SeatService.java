@@ -26,7 +26,7 @@ public class SeatService {
     private final AuditoriumRepository auditoriumRepository;
     private final SeatRepository seatRepository;
     private final SeatReservationRepository seatReservationRepository;
-    private final BaseTicketPriceRepository baseTicketPriceRepository;
+    private final PricingService pricingService; // Thay thế BaseTicketPriceRepository
     private final ShowtimeRepository showtimeRepository;
     private final ScheduleRepository scheduleRepository;
 
@@ -51,8 +51,6 @@ public class SeatService {
 
         DayType dayType = showtime.getDate().getDayOfWeek().getValue() < 6 ? DayType.WEEKDAY : DayType.WEEKEND;
 
-        List<BaseTicketPrice> baseTicketPrices = baseTicketPriceRepository.findAll();
-
         Map<Integer, SeatReservationStatus> seatStatusMap = reservations.stream()
                 .collect(Collectors.toMap(reservation -> reservation.getSeat().getId(), SeatReservation::getStatus));
 
@@ -70,15 +68,16 @@ public class SeatService {
                     .reservationStatus(seatStatusMap.getOrDefault(seat.getId(), null))
                     .build();
 
-            Optional<BaseTicketPrice> matchedPrice = baseTicketPrices.stream().filter(price ->
-                    price.getSeatType() == seat.getType() &&
-                            price.getGraphicsType() == showtime.getGraphicsType() &&
-                            price.getScreeningTimeType() == screeningTimeType &&
-                            price.getDayType() == dayType &&
-                            price.getAuditoriumType() == auditorium.getType()
-            ).findFirst();
+            // Sử dụng PricingService thay vì BaseTicketPrice
+            Integer ticketPrice = pricingService.getPriceForTicket(
+                    seat.getType(),
+                    showtime.getGraphicsType(),
+                    screeningTimeType,
+                    dayType,
+                    auditorium.getType()
+            ).orElse(70000); // Giá mặc định nếu không tìm thấy
 
-            response.setPrice(matchedPrice.map(BaseTicketPrice::getPrice).orElse(70000)); // Mặc định giá nếu không tìm thấy
+            response.setPrice(ticketPrice);
             return response;
         }).collect(Collectors.toList());
     }

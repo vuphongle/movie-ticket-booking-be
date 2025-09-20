@@ -2,8 +2,11 @@ package vn.edu.iuh.fit.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import lombok.experimental.FieldDefaults;
+import vn.edu.iuh.fit.model.enums.AdditionalServiceType;
 
 import java.util.Date;
+import java.util.List;
 
 @Builder
 @AllArgsConstructor
@@ -12,21 +15,45 @@ import java.util.Date;
 @Setter
 @Entity
 @Table(name = "additional_services")
+@FieldDefaults(level = AccessLevel.PRIVATE)
 public class AdditionalService {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     Integer id;
 
+    @Column(nullable = false)
     String name;
+
+    @Column(length = 1000)
     String description;
-    Integer price;
+
     String thumbnail;
 
-    Boolean status; // Trang thai hien thi
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    AdditionalServiceType type; // SINGLE hoặc COMBO
 
+    // Chỉ sử dụng khi type = SINGLE
+    Integer productId; // Tham chiếu đến Product
+
+    // Chỉ sử dụng khi type = SINGLE
+    Integer defaultQuantity; // Số lượng mặc định
+
+    @Builder.Default
+    Boolean status = true; // Trạng thái hiển thị
+
+    @Temporal(TemporalType.TIMESTAMP)
     Date createdAt;
+
+    @Temporal(TemporalType.TIMESTAMP)
     Date updatedAt;
+
+    @Temporal(TemporalType.TIMESTAMP)
     Date publishedAt;
+
+    // Relationship với AdditionalServiceItem (cho COMBO)
+    @OneToMany(mappedBy = "additionalService", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    List<AdditionalServiceItem> items;
 
     @PrePersist
     protected void onCreate() {

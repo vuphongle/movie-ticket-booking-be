@@ -5,6 +5,11 @@ import lombok.*;
 import lombok.experimental.FieldDefaults;
 import vn.edu.iuh.fit.model.enums.*;
 
+/**
+ * @deprecated This entity is deprecated. Use PriceList/PriceItem with targetType=TICKET instead.
+ * Will be removed in future versions.
+ */
+@Deprecated
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor

@@ -12,50 +12,45 @@ import java.util.Date;
 @Getter
 @Setter
 @Entity
-@Table(name = "coupons")
+@Table(name = "products")
 @FieldDefaults(level = AccessLevel.PRIVATE)
-public class Coupon {
+public class Product {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     Integer id;
 
     @Column(unique = true, nullable = false)
-    String code;
-    
+    String sku; // Mã SKU duy nhất
+
     @Column(nullable = false)
-    String name;
-    
-    String description;
-    
-    @Column(nullable = false)
-    Boolean status;
+    String name; // Tên sản phẩm
 
-    @Column(name = "start_date", nullable = false)
-    Date startDate;
+    @Column(length = 1000)
+    String description; // Mô tả sản phẩm
 
-    @Column(name = "end_date", nullable = false)
-    Date endDate;
+    String unit; // Đơn vị (box, bottle, piece, etc.)
 
-    @Column(name = "created_at")
+    Integer quantity; // Số lượng tồn kho
+
+    String thumbnail; // Ảnh đại diện
+
+    @Builder.Default
+    Boolean status = true; // Trạng thái hiển thị
+
+    @Temporal(TemporalType.TIMESTAMP)
     Date createdAt;
 
-    @Column(name = "updated_at")
+    @Temporal(TemporalType.TIMESTAMP)
     Date updatedAt;
 
     @PrePersist
     protected void onCreate() {
-        if (code != null) {
-            code = code.toUpperCase(); // Tự động chuyển code thành uppercase
-        }
         createdAt = new Date();
         updatedAt = new Date();
     }
 
     @PreUpdate
     protected void onUpdate() {
-        if (code != null) {
-            code = code.toUpperCase(); // Tự động chuyển code thành uppercase
-        }
         updatedAt = new Date();
     }
 }
