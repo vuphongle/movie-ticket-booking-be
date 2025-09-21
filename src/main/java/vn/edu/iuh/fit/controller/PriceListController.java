@@ -9,6 +9,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import vn.edu.iuh.fit.entity.PriceList;
 import vn.edu.iuh.fit.entity.PriceItem;
+import vn.edu.iuh.fit.model.dto.ClonePriceListRequest;
 import vn.edu.iuh.fit.service.PriceListService;
 
 import java.util.Date;
@@ -59,6 +60,18 @@ public class PriceListController {
     public ResponseEntity<?> togglePriceListStatus(@PathVariable Integer id) {
         PriceList priceList = priceListService.togglePriceListStatus(id);
         return ResponseEntity.ok(priceList);
+    }
+    
+    @PostMapping("/admin/price-lists/{id}/clone")
+    public ResponseEntity<?> clonePriceList(@PathVariable Integer id, 
+                                          @Valid @RequestBody ClonePriceListRequest request) {
+        try {
+            PriceList clonedPriceList = priceListService.clonePriceList(id, request);
+            return new ResponseEntity<>(clonedPriceList, HttpStatus.CREATED);
+        } catch (RuntimeException e) {
+            log.error("Error cloning price list with id {}: {}", id, e.getMessage());
+            return ResponseEntity.badRequest().body("Error cloning price list: " + e.getMessage());
+        }
     }
     
     @GetMapping("/admin/price-lists/status/{status}")
