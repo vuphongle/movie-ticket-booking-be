@@ -5,6 +5,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import vn.edu.iuh.fit.entity.PriceList;
 import vn.edu.iuh.fit.entity.PriceItem;
+import vn.edu.iuh.fit.model.dto.ClonePriceListRequest;
 import vn.edu.iuh.fit.model.dto.PriceItemRequest;
 import vn.edu.iuh.fit.model.enums.TargetType;
 import vn.edu.iuh.fit.repository.PriceListRepository;
@@ -86,6 +87,50 @@ public class PriceListService {
         
         priceList.setStatus(!priceList.getStatus());
         return priceListRepository.save(priceList);
+    }
+    
+    // Nhân bản bảng giá cùng với tất cả price items
+    public PriceList clonePriceList(Integer sourceId, ClonePriceListRequest request) {
+        // Tìm bảng giá gốc
+        PriceList sourcePriceList = priceListRepository.findById(sourceId)
+                .orElseThrow(() -> new RuntimeException("PriceList not found with id: " + sourceId));
+        
+        // Tạo bảng giá mới
+        PriceList clonedPriceList = PriceList.builder()
+                .name(request.getName())
+                .priority(request.getPriority() != null ? request.getPriority() : sourcePriceList.getPriority())
+                .status(request.getStatus() != null ? request.getStatus() : false) // Default to inactive
+                .validFrom(request.getValidFrom() != null ? request.getValidFrom() : sourcePriceList.getValidFrom())
+                .validTo(request.getValidTo() != null ? request.getValidTo() : sourcePriceList.getValidTo())
+                .build();
+        
+        // Lưu bảng giá mới
+        PriceList savedPriceList = priceListRepository.save(clonedPriceList);
+        
+        // Lấy tất cả price items của bảng giá gốc
+        List<PriceItem> sourcePriceItems = priceItemRepository.findByPriceListId(sourceId);
+        
+        // Clone từng price item
+        for (PriceItem sourceItem : sourcePriceItems) {
+            PriceItem clonedItem = PriceItem.builder()
+                    .priceList(savedPriceList)
+                    .targetType(sourceItem.getTargetType())
+                    .targetId(sourceItem.getTargetId())
+                    .seatType(sourceItem.getSeatType())
+                    .graphicsType(sourceItem.getGraphicsType())
+                    .screeningTimeType(sourceItem.getScreeningTimeType())
+                    .dayType(sourceItem.getDayType())
+                    .auditoriumType(sourceItem.getAuditoriumType())
+                    .price(sourceItem.getPrice())
+                    .minQty(sourceItem.getMinQty())
+                    .priority(sourceItem.getPriority())
+                    .status(sourceItem.getStatus()) // Giữ nguyên status của từng item
+                    .build();
+            
+            priceItemRepository.save(clonedItem);
+        }
+        
+        return savedPriceList;
     }
     
     // Lấy các price item của bảng giá
