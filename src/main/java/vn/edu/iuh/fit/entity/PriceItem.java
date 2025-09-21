@@ -57,17 +57,12 @@ public class PriceItem {
     @Builder.Default
     Boolean status = true; // Trạng thái kích hoạt
 
-    @Temporal(TemporalType.TIMESTAMP)
-    Date effectiveFrom; // Thời gian bắt đầu hiệu lực (nullable)
-
-    @Temporal(TemporalType.TIMESTAMP)
-    Date effectiveTo; // Thời gian kết thúc hiệu lực (nullable)
-
     // Helper method để kiểm tra price item có hiệu lực tại thời điểm hiện tại không
     public boolean isValidAt(Date checkDate) {
         if (!status) return false;
-        if (effectiveFrom != null && checkDate.before(effectiveFrom)) return false;
-        if (effectiveTo != null && checkDate.after(effectiveTo)) return false;
+        // Sử dụng thời gian hiệu lực từ PriceList cha
+        if (priceList.getValidFrom() != null && checkDate.before(priceList.getValidFrom())) return false;
+        if (priceList.getValidTo() != null && checkDate.after(priceList.getValidTo())) return false;
         return true;
     }
 
