@@ -1,6 +1,7 @@
 package vn.edu.iuh.fit.controller;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -12,38 +13,39 @@ import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 
+@Slf4j
 @RestController
-@RequestMapping("/api/pricing")
+@RequestMapping("api")
 @RequiredArgsConstructor
 @CrossOrigin("*")
 public class PricingController {
     
     private final PricingService pricingService;
     
-    @GetMapping("/product/{productId}")
-    public ResponseEntity<Integer> getPriceForProduct(@PathVariable Integer productId) {
+    @GetMapping("/public/pricing/product/{productId}")
+    public ResponseEntity<?> getPriceForProduct(@PathVariable Integer productId) {
         Optional<Integer> price = pricingService.getPriceForProduct(productId);
         return price.map(ResponseEntity::ok)
                    .orElse(ResponseEntity.notFound().build());
     }
     
-    @GetMapping("/product/{productId}/quantity/{quantity}")
-    public ResponseEntity<Integer> getPriceForProductWithQuantity(@PathVariable Integer productId,
-                                                                @PathVariable Integer quantity) {
+    @GetMapping("/public/pricing/product/{productId}/quantity/{quantity}")
+    public ResponseEntity<?> getPriceForProductWithQuantity(@PathVariable Integer productId,
+                                                          @PathVariable Integer quantity) {
         Optional<Integer> price = pricingService.getPriceForProductWithQuantity(productId, quantity);
         return price.map(ResponseEntity::ok)
                    .orElse(ResponseEntity.notFound().build());
     }
     
-    @GetMapping("/additional-service/{serviceId}")
-    public ResponseEntity<Integer> getPriceForAdditionalService(@PathVariable Integer serviceId) {
+    @GetMapping("/public/pricing/additional-service/{serviceId}")
+    public ResponseEntity<?> getPriceForAdditionalService(@PathVariable Integer serviceId) {
         Optional<Integer> price = pricingService.getPriceForAdditionalService(serviceId);
         return price.map(ResponseEntity::ok)
                    .orElse(ResponseEntity.notFound().build());
     }
     
-    @GetMapping("/ticket")
-    public ResponseEntity<Integer> getPriceForTicket(
+    @GetMapping("/public/pricing/ticket")
+    public ResponseEntity<?> getPriceForTicket(
             @RequestParam SeatType seatType,
             @RequestParam GraphicsType graphicsType,
             @RequestParam ScreeningTimeType screeningTimeType,
@@ -57,8 +59,8 @@ public class PricingController {
                    .orElse(ResponseEntity.notFound().build());
     }
     
-    @GetMapping("/ticket/at/{date}")
-    public ResponseEntity<Integer> getPriceForTicketAt(
+    @GetMapping("/public/pricing/ticket/at/{date}")
+    public ResponseEntity<?> getPriceForTicketAt(
             @PathVariable @DateTimeFormat(pattern = "yyyy-MM-dd") Date date,
             @RequestParam SeatType seatType,
             @RequestParam GraphicsType graphicsType,
@@ -72,21 +74,21 @@ public class PricingController {
         return price.map(ResponseEntity::ok)
                    .orElse(ResponseEntity.notFound().build());
     }
-    
-    @GetMapping("/product/{productId}/price-items")
-    public ResponseEntity<List<PriceItem>> getAllValidPriceItemsForProduct(@PathVariable Integer productId) {
+
+    @GetMapping("/admin/pricing/product/{productId}/analysis")
+    public ResponseEntity<?> getAllValidPriceItemsForProduct(@PathVariable Integer productId) {
         List<PriceItem> priceItems = pricingService.getAllValidPriceItemsForProduct(productId);
         return ResponseEntity.ok(priceItems);
     }
     
-    @GetMapping("/additional-service/{serviceId}/price-items")
-    public ResponseEntity<List<PriceItem>> getAllValidPriceItemsForAdditionalService(@PathVariable Integer serviceId) {
+    @GetMapping("/admin/pricing/additional-service/{serviceId}/analysis")
+    public ResponseEntity<?> getAllValidPriceItemsForAdditionalService(@PathVariable Integer serviceId) {
         List<PriceItem> priceItems = pricingService.getAllValidPriceItemsForAdditionalService(serviceId);
         return ResponseEntity.ok(priceItems);
     }
     
-    @GetMapping("/ticket/price-items")
-    public ResponseEntity<List<PriceItem>> getAllValidPriceItemsForTicket(
+    @GetMapping("/admin/pricing/ticket/analysis")
+    public ResponseEntity<?> getAllValidPriceItemsForTicket(
             @RequestParam SeatType seatType,
             @RequestParam GraphicsType graphicsType,
             @RequestParam ScreeningTimeType screeningTimeType,
