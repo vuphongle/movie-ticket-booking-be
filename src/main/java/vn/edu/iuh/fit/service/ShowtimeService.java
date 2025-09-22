@@ -7,10 +7,16 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import vn.edu.iuh.fit.entity.*;
 import vn.edu.iuh.fit.exception.BadRequestException;
+import vn.edu.iuh.fit.exception.BulkShowtimeConflictException;
 import vn.edu.iuh.fit.exception.ResourceNotFoundException;
 import vn.edu.iuh.fit.exception.SlotConflictException;
 import vn.edu.iuh.fit.model.request.UpsertShowtimeRequest;
+import vn.edu.iuh.fit.model.request.BulkShowtimeRequest;
 import vn.edu.iuh.fit.model.response.ShowtimeResponse;
+import vn.edu.iuh.fit.model.response.BulkShowtimeResponse;
+import vn.edu.iuh.fit.model.enums.ConflictPolicy;
+import vn.edu.iuh.fit.model.enums.GraphicsType;
+import vn.edu.iuh.fit.model.enums.TranslationType;
 import vn.edu.iuh.fit.repository.*;
 import vn.edu.iuh.fit.specification.ShowtimeSpecification;
 
@@ -185,5 +191,203 @@ public class ShowtimeService {
         return showtimeRepository.findById(showtimeId)
                 .map(Showtime::getMovie)
                 .orElse(null);
+    }
+
+    /**
+     * Tạo nhiều suất chiếu theo khoảng ngày với xử lý conflict
+     */
+    public BulkShowtimeResponse createBulkShowtimes(BulkShowtimeRequest request) {
+        log.info("Creating bulk showtimes: {}", request);
+        
+        // Validate basic data
+        Auditorium auditorium = auditoriumRepository.findById(request.getAuditoriumId())
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy phòng chiếu có id = " + request.getAuditoriumId()));
+        
+        Movie movie = movieRepository.findById(request.getMovieId())
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy phim có id = " + request.getMovieId()));
+        
+        // Validate date range
+        if (request.getDateFrom().isAfter(request.getDateTo())) {
+            throw new BadRequestException("Ngày bắt đầu không thể sau ngày kết thúc");
+        }
+        
+        // Validate date range not too large (max 90 days)
+        if (request.getDateFrom().plusDays(90).isBefore(request.getDateTo())) {
+            throw new BadRequestException("Khoảng ngày tối đa là 90 ngày");
+        }
+        
+        // Validate slot-based showtime
+        slotValidationService.validateSlotBasedShowtime(
+            request.getStartTime(), 
+            request.getEndTime(), 
+            movie.getDuration()
+        );
+        
+        // Generate target dates based on date range and days of week
+        List<LocalDate> targetDates = generateTargetDates(
+            request.getDateFrom(), 
+            request.getDateTo(), 
+            request.getDaysOfWeek()
+        );
+        
+        // Check for conflicts
+        List<BulkShowtimeResponse.ConflictDetail> conflicts = new ArrayList<>();
+        List<LocalDate> validDates = new ArrayList<>();
+        
+        for (LocalDate date : targetDates) {
+            BulkShowtimeResponse.ConflictDetail conflict = checkDateConflict(
+                auditorium.getId(), 
+                date, 
+                request.getStartTime(), 
+                request.getEndTime(),
+                movie
+            );
+            
+            if (conflict != null) {
+                conflicts.add(conflict);
+            } else {
+                validDates.add(date);
+            }
+        }
+        
+        // Handle conflicts based on policy
+        if (!conflicts.isEmpty() && request.getConflictPolicy() == ConflictPolicy.FAIL) {
+            BulkShowtimeResponse response = BulkShowtimeResponse.builder()
+                .totalRequested(targetDates.size())
+                .successfullyCreated(0)
+                .conflictsDetected(conflicts.size())
+                .conflicts(conflicts)
+                .message("Phát hiện xung đột lịch chiếu. Vui lòng chọn chính sách bỏ qua hoặc chọn ngày khác.")
+                .build();
+            
+            throw new BulkShowtimeConflictException("Bulk showtime creation failed due to conflicts", response);
+        }
+        
+        // Create showtimes for valid dates
+        List<Showtime> createdShowtimes = new ArrayList<>();
+        for (LocalDate date : validDates) {
+            try {
+                Showtime showtime = createSingleShowtime(
+                    movie, auditorium, date, 
+                    request.getStartTime(), request.getEndTime(),
+                    request.getGraphicsType(), request.getTranslationType()
+                );
+                createdShowtimes.add(showtime);
+            } catch (Exception e) {
+                log.error("Failed to create showtime for date {}: {}", date, e.getMessage());
+                // Add to conflicts if individual creation fails
+                conflicts.add(BulkShowtimeResponse.ConflictDetail.builder()
+                    .date(date)
+                    .reason("Lỗi tạo suất chiếu: " + e.getMessage())
+                    .build());
+            }
+        }
+        
+        return BulkShowtimeResponse.builder()
+            .totalRequested(targetDates.size())
+            .successfullyCreated(createdShowtimes.size())
+            .conflictsDetected(conflicts.size())
+            .skipped(conflicts.size())
+            .createdShowtimes(createdShowtimes)
+            .conflicts(conflicts)
+            .skippedDates(conflicts.stream().map(BulkShowtimeResponse.ConflictDetail::getDate).toList())
+            .message(String.format("Đã tạo %d/%d suất chiếu thành công", 
+                    createdShowtimes.size(), targetDates.size()))
+            .build();
+    }
+    
+    /**
+     * Sinh danh sách ngày dựa trên khoảng thời gian và các ngày trong tuần
+     */
+    private List<LocalDate> generateTargetDates(LocalDate dateFrom, LocalDate dateTo, List<Integer> daysOfWeek) {
+        List<LocalDate> dates = new ArrayList<>();
+        LocalDate current = dateFrom;
+        
+        while (!current.isAfter(dateTo)) {
+            // Java DayOfWeek: 1=Monday, 7=Sunday
+            // Request format: 1=Sunday, 2=Monday, ..., 7=Saturday
+            int javaDayOfWeek = current.getDayOfWeek().getValue(); // 1-7 (Mon-Sun)
+            int requestDayOfWeek = javaDayOfWeek == 7 ? 1 : javaDayOfWeek + 1; // Convert to request format
+            
+            if (daysOfWeek == null || daysOfWeek.isEmpty() || daysOfWeek.contains(requestDayOfWeek)) {
+                dates.add(current);
+            }
+            current = current.plusDays(1);
+        }
+        
+        return dates;
+    }
+    
+    /**
+     * Kiểm tra conflict cho một ngày cụ thể
+     */
+    private BulkShowtimeResponse.ConflictDetail checkDateConflict(
+            Integer auditoriumId, LocalDate date, String startTime, String endTime, Movie movie) {
+        
+        // First check if date is within movie schedule range
+        List<Schedule> schedules = scheduleRepository.findByMovie_Id(movie.getId());
+        if (schedules.isEmpty()) {
+            return BulkShowtimeResponse.ConflictDetail.builder()
+                .date(date)
+                .reason("Phim chưa có lịch chiếu")
+                .build();
+        }
+        
+        // Check if date is within any valid schedule
+        Date dateRequest = Date.from(date.atStartOfDay(ZoneId.systemDefault()).toInstant());
+        boolean isDateValid = false;
+        for (Schedule schedule : schedules) {
+            if (!schedule.getStartDate().after(dateRequest) && !schedule.getEndDate().before(dateRequest)) {
+                isDateValid = true;
+                break;
+            }
+        }
+        
+        if (!isDateValid) {
+            return BulkShowtimeResponse.ConflictDetail.builder()
+                .date(date)
+                .reason("Ngày không nằm trong lịch chiếu của phim (từ " + 
+                       schedules.get(0).getStartDate() + " đến " + schedules.get(0).getEndDate() + ")")
+                .build();
+        }
+        
+        // Then check for time conflicts with existing showtimes
+        List<Showtime> existingShowtimes = showtimeRepository.findByAuditorium_IdAndDate(auditoriumId, date);
+        
+        for (Showtime existing : existingShowtimes) {
+            if (slotValidationService.isTimeOverlap(startTime, endTime, 
+                    existing.getStartTime(), existing.getEndTime())) {
+                
+                return BulkShowtimeResponse.ConflictDetail.builder()
+                    .date(date)
+                    .conflictMovie(existing.getMovie().getName())
+                    .conflictTimeRange(existing.getStartTime() + " - " + existing.getEndTime())
+                    .reason("Trùng với suất chiếu đã tồn tại")
+                    .build();
+            }
+        }
+        
+        return null; // No conflict
+    }
+    
+    /**
+     * Tạo một showtime đơn lẻ (helper method)
+     * Schedule validation should be done before calling this method
+     */
+    private Showtime createSingleShowtime(Movie movie, Auditorium auditorium, LocalDate date,
+                                        String startTime, String endTime,
+                                        GraphicsType graphicsType, TranslationType translationType) {
+        
+        Showtime showtime = Showtime.builder()
+                .movie(movie)
+                .auditorium(auditorium)
+                .graphicsType(graphicsType)
+                .translationType(translationType)
+                .date(date)
+                .startTime(startTime)
+                .endTime(endTime)
+                .build();
+        
+        return showtimeRepository.save(showtime);
     }
 }
