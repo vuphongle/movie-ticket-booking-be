@@ -69,6 +69,22 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(errorResponse, HttpStatus.UNPROCESSABLE_ENTITY);
     }
 
+    @ExceptionHandler(BulkShowtimeConflictException.class)
+    public ResponseEntity<Map<String, Object>> handleBulkShowtimeConflictException(
+            BulkShowtimeConflictException ex, WebRequest request) {
+
+        Map<String, Object> errorResponse = new LinkedHashMap<>();
+        errorResponse.put("timestamp", LocalDateTime.now());
+        errorResponse.put("status", HttpStatus.CONFLICT.value());
+        errorResponse.put("error", HttpStatus.CONFLICT.getReasonPhrase());
+        errorResponse.put("message", ex.getMessage());
+        errorResponse.put("code", "409_BULK_SHOWTIME_CONFLICT");
+        errorResponse.put("conflicts", ex.getConflictDetails());
+        errorResponse.put("path", request.getDescription(false).replace("uri=", ""));
+
+        return new ResponseEntity<>(errorResponse, HttpStatus.CONFLICT);
+    }
+
     @ExceptionHandler(ResourceNotFoundException.class)
     public ResponseEntity<Map<String, Object>> handleResourceNotFoundException(
             ResourceNotFoundException ex, WebRequest request) {
