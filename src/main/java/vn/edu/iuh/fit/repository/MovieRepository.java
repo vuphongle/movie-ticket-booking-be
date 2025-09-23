@@ -22,4 +22,6 @@ public interface MovieRepository extends JpaRepository<Movie, Integer> {
     long countByCountry_Id(Integer countryId);
 
     long countByActors_Id(Integer actorId);
+
+    long countByDirectors_Id(Integer directorId);
 }
