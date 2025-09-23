@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Vé điện tử Go Cinema</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap');
+    body { font-family: 'Roboto', sans-serif; background-color: #f5f7fa; margin: 0; padding: 20px; }
+    .container { max-width: 600px; background-color: #ffffff; margin: 0 auto; border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,0.06); overflow: hidden; }
+    .header { background-color: #7fad39; padding: 20px; text-align: center; }
+    .header h2 { color: #ffffff; font-size: 24px; margin: 0; }
+    .content { padding: 30px 40px; }
+    .content h3 { font-size: 20px; margin-bottom: 20px; color: #333333; text-align: center; }
+    .content p { font-size: 14px; color: #555555; line-height: 1.6; margin-bottom: 16px; }
+    table { width: 100%; border-collapse: collapse; margin-bottom: 16px; }
+    table th, table td { border: 1px solid #ddd; padding: 8px; text-align: left; font-size: 14px; }
+    table th { background-color: #f2f2f2; }
+    .qr-code { text-align: center; margin: 10px 0; }
+    .footer { text-align: center; font-size: 12px; color: #999999; padding: 20px; background-color: #f9f9f9; }
+    @media (max-width: 600px) { .content { padding: 20px; } }
+  </style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <h2>GO CINEMA</h2>
+  </div>
+  <div class="content">
+    <h3>Vé điện tử của bạn</h3>
+    <div class="qr-code" th:if="${qrCodePath != null}">
+      <img th:src="@{'cid:ticketQr'}" alt="QR Code"/>
+    </div>
+
+    <p>Vui lòng giữ QR code này để xuất trình khi đến rạp.</p>
+  </div>
+  <p>
+    Xin chào
+    <strong th:text="${userName} + ' (' + ${userPhone} + ')'">Khách hàng</strong>,
+  </p>
+  <p>Thông tin đơn hàng của bạn:</p>
+
+  <ul>
+    <li>Mã đơn hàng: <strong th:text="${orderId}"></strong></li>
+    <li>Phim: <strong th:text="${movieTitle}"></strong></li>
+    <li>Loại chiếu:
+      <strong th:text="${graphicsType == '_2D' ? '2D' : (graphicsType == '_3D' ? '3D' : graphicsType)} + ' / ' + (translationType == 'DUBBING' ? 'Lồng tiếng' : (translationType == 'SUBTITLING' ? 'Phụ đề' : translationType))"></strong>
+    </li>
+    <li>Ngày/giờ chiếu: <strong th:text="${showDate} + ' | ' + ${startTime} + ' - ' + ${endTime}"></strong></li>
+    <li>Rạp / Phòng: <strong th:text="${cinemaName} + ' / ' + ${auditoriumName}"></strong></li>
+    <li>Trạng thái:
+      <span th:classappend="${status == 'CONFIRMED'} ? 'status-confirmed' : 'status-cancelled'"
+            th:text="${status == 'CONFIRMED' ? 'Đã xác nhận' : (status == 'CANCELLED' ? 'Đã hủy' : status)}"></span>
+    </li>
+  </ul>
+
+    <h4>Danh sách ghế:</h4>
+    <table>
+      <thead>
+      <tr>
+        <th>Ghế</th>
+        <th>Loại</th>
+        <th>Giá (VNĐ)</th>
+      </tr>
+      </thead>
+      <tbody>
+      <tr th:each="ticket : ${ticketItems}">
+        <td th:text="${ticket.seat.code}"></td>
+        <td th:text="${ticket.seat.type}"></td>
+        <td th:text="${#numbers.formatInteger(ticket.price, 0)}"></td>
+      </tr>
+      </tbody>
+    </table>
+
+    <h4>Combo/Dịch vụ:</h4>
+    <table th:if="${serviceItems != null and !serviceItems.isEmpty()}">
+      <thead>
+      <tr>
+        <th>Sản phẩm</th>
+        <th>Số lượng</th>
+        <th>Giá (VNĐ)</th>
+      </tr>
+      </thead>
+      <tbody>
+      <tr th:each="service : ${serviceItems}">
+        <td th:text="${service.additionalService.name}"></td>
+        <td th:text="${service.quantity}"></td>
+        <td th:text="${#numbers.formatInteger(service.price,0)}"></td>
+      </tr>
+      </tbody>
+    </table>
+    <p th:if="${serviceItems == null || serviceItems.isEmpty()}">Không có combo/dịch vụ đi kèm.</p>
+
+    <h4>Tổng giá:</h4>
+    <p>Giảm giá: <strong th:text="${#numbers.formatInteger(discountPrice,0)} + ' VNĐ'"></strong></p>
+    <p>Tổng thanh toán: <strong th:text="${#numbers.formatInteger(totalPrice,0)} + ' VNĐ'"></strong></p>
+  </div>
+  <div class="footer">
+    &copy; 2025 Go Cinema. Mọi quyền được bảo lưu.
+  </div>
+</div>
+</body>
+</html>
