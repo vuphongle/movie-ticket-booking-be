@@ -18,4 +18,6 @@ public interface MovieRepository extends JpaRepository<Movie, Integer> {
     List<Movie> findByStatusOrderByCreatedAtDesc(Boolean status);
 
     long countByGenres_Id(Integer genreId);
+
+    long countByCountry_Id(Integer countryId);
 }
