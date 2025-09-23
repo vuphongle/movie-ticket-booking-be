@@ -16,4 +16,12 @@ public interface MovieRepository extends JpaRepository<Movie, Integer> {
     Optional<Movie> findByIdAndSlugAndStatus(Integer id, String slug, boolean status);
 
     List<Movie> findByStatusOrderByCreatedAtDesc(Boolean status);
+
+    long countByGenres_Id(Integer genreId);
+
+    long countByCountry_Id(Integer countryId);
+
+    long countByActors_Id(Integer actorId);
+
+    long countByDirectors_Id(Integer directorId);
 }
