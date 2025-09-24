@@ -12,6 +12,8 @@ import vn.edu.iuh.fit.repository.ImageRepository;
 import vn.edu.iuh.fit.security.SecurityUtils;
 
 import java.io.IOException;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -66,6 +68,38 @@ public class ImageService {
             throw new RuntimeException("Cannot upload file: " + e.getMessage());
         }
     }
+    public ImageResponse uploadQRCodeImage(byte[] data) {
+        String imageId = UUID.randomUUID().toString();
+        Path rootPath = Paths.get(uploadDir);
+        Path filePath = rootPath.resolve(imageId);
+
+        try {
+            Files.write(filePath, data);
+
+            // Tính toán kích thước file theo MB
+            double sizeInMB = BigDecimal.valueOf(data.length / 1024.0 / 1024.0)
+                    .setScale(2, RoundingMode.HALF_UP)
+                    .doubleValue();
+            Image image = Image.builder()
+                    .id(imageId)
+                    .type("image/png")
+                    .size(sizeInMB)
+                    .build();
+
+            imageRepository.save(image);
+
+            String url = "/api/public/images/" + image.getId();
+            return ImageResponse.builder()
+                    .id(imageId)
+                    .url(url)
+                    .build();
+        } catch (IOException e) {
+            log.error("Cannot upload file: " + filePath);
+            log.error(e.getMessage());
+            throw new RuntimeException("Cannot upload file: " + filePath);
+        }
+    }
+
 
     private void validateFile(MultipartFile file) {
         // Kiểm tra tên file
