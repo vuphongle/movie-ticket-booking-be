@@ -33,8 +33,8 @@ public class DirectorService {
     public Director saveDirector(UpsertDirectorRequest request) {
         Director director = Director.builder()
                 .name(request.getName())
-                .bio(request.getBio())
-                .birthDate(request.getBirthDate())
+                .description(request.getDescription())
+                .birthday(request.getBirthday())
                 .avatar(request.getAvatar() != null ? request.getAvatar() : StringUtils.generateLinkImage(request.getName()))
                 .build();
         return directorRepository.save(director);
@@ -45,8 +45,9 @@ public class DirectorService {
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy đạo diễn có id = " + id));
 
         existingDirector.setName(request.getName());
-        existingDirector.setBio(request.getBio());
-        existingDirector.setBirthDate(request.getBirthDate());
+        existingDirector.setDescription(request.getDescription());
+        existingDirector.setBirthday(request.getBirthday());
+        existingDirector.setAvatar(request.getAvatar());
         
         // Only update avatar if it's provided in the request
         if (request.getAvatar() != null) {
