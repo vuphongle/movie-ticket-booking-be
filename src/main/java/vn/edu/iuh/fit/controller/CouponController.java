@@ -26,6 +26,11 @@ public class CouponController {
         return ResponseEntity.ok(couponService.getAllCoupons());
     }
 
+    @GetMapping("/coupons/coupon-by-code")
+    public ResponseEntity<?> getAllCouponsByCOde(@RequestParam String code) {
+        return ResponseEntity.ok(couponService.getCouponByCode(code));
+    }
+
     @GetMapping("/admin/coupons")
     public ResponseEntity<?> getAllCouponsAdmin() {
         return ResponseEntity.ok(couponService.getAllCoupons());

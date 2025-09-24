@@ -53,14 +53,14 @@ public class OrderService {
         Showtime showtime = showtimeRepository.findById(request.getShowtimeId())
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy suất chiếu với id " + request.getShowtimeId()));
 
-        // Kiểm tra mã giảm giá
-        Coupon coupon = null;
-        if (request.getCouponCode() != null) {
-            coupon = couponRepository.findByCode(request.getCouponCode())
-                    .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy mã giảm giá " + request.getCouponCode()));
-            coupon.setUsed(coupon.getUsed() + 1);
-            couponRepository.save(coupon);
-        }
+//        // Kiểm tra mã giảm giá
+//        Coupon coupon = null;
+//        if (request.getCouponCode() != null) {
+//            coupon = couponRepository.findByCode(request.getCouponCode())
+//                    .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy mã giảm giá " + request.getCouponCode()));
+//            coupon.setUsed(coupon.getUsed() + 1);
+//            couponRepository.save(coupon);
+//        }
 
         // Tạo order
         Order order = Order.builder()
@@ -68,7 +68,7 @@ public class OrderService {
                 .user(currentUser)
                 .showtime(showtime)
                 .status(OrderStatus.PENDING)
-                .discount(coupon != null ? coupon.getDiscount() : null)
+                .discount(null)
                 .ticketItems(new ArrayList<>())
                 .serviceItems(new ArrayList<>())
                 .build();

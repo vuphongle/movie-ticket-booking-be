@@ -36,17 +36,21 @@ public class CouponService {
         return couponRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Coupon not found"));
     }
+    public Coupon getCouponByCode(String code) {
+        return couponRepository.findByCode(code)
+                .orElseThrow(() -> new ResourceNotFoundException("Coupon not found"));
+    }
 
     @Transactional
     public Coupon createCoupon(UpsertCouponRequest request) {
         // Enhanced validation
         validateCouponRequest(request);
-        
+
         // Ràng buộc: Coupon mới tạo luôn phải có status = false
         if (request.getStatus()) {
             throw new BadRequestException("Coupon mới tạo phải có trạng thái ẩn. Sau khi tạo và thêm điều kiện chi tiết, bạn có thể kích hoạt coupon.");
         }
-        
+
         if (couponRepository.existsByCode(request.getCode().toUpperCase())) {
             throw new BadRequestException(ValidationMessages.CODE_DUPLICATE);
         }
@@ -72,7 +76,7 @@ public class CouponService {
 
         // Enhanced validation
         validateCouponRequest(request);
-        
+
         String upperCaseCode = request.getCode().toUpperCase();
         if (couponRepository.existsByCode(upperCaseCode) && !coupon.getCode().equals(upperCaseCode)) {
             throw new BadRequestException(ValidationMessages.CODE_DUPLICATE);
@@ -147,7 +151,7 @@ public class CouponService {
     private void validateCouponRequest(UpsertCouponRequest request) {
         // Validate time range
         if (request.getStartDate().after(request.getEndDate()) ||
-            request.getStartDate().equals(request.getEndDate())) {
+                request.getStartDate().equals(request.getEndDate())) {
             throw new BadRequestException(ValidationMessages.INVALID_TIME_RANGE);
         }
     }

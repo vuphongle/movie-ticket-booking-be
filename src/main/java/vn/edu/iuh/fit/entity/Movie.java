@@ -59,7 +59,7 @@ public class Movie {
     @JoinColumn(name = "country_id")
     Country country;
 
-    @ManyToMany
+    @ManyToMany(fetch = FetchType.EAGER )
     @JoinTable(
             name = "movie_genre",
             joinColumns = @JoinColumn(name = "movie_id"),
@@ -68,21 +68,21 @@ public class Movie {
     @Fetch(FetchMode.SUBSELECT)
     Set<Genre> genres = new LinkedHashSet<>();
 
-    @ManyToMany
+    @ManyToMany(fetch = FetchType.EAGER )
     @JoinTable(name = "movie_director",
             joinColumns = @JoinColumn(name = "movie_id"),
             inverseJoinColumns = @JoinColumn(name = "director_id"))
     @Fetch(FetchMode.SUBSELECT)
     Set<Director> directors = new LinkedHashSet<>();
 
-    @ManyToMany
+    @ManyToMany(fetch = FetchType.EAGER )
     @JoinTable(name = "movie_actor",
             joinColumns = @JoinColumn(name = "movie_id"),
             inverseJoinColumns = @JoinColumn(name = "actor_id"))
     @Fetch(FetchMode.SUBSELECT)
     Set<Actor> actors = new LinkedHashSet<>();
 
-    @OneToMany(mappedBy = "movie", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "movie", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER )
     @Fetch(FetchMode.SUBSELECT)
     Set<Review> reviews = new LinkedHashSet<>();
 

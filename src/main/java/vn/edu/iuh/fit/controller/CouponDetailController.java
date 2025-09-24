@@ -20,6 +20,11 @@ public class CouponDetailController {
     private final CouponDuplicateValidator duplicateValidator;
     private final CouponDetailRepository couponDetailRepository;
 
+    @GetMapping("/coupon-details/{detailId}")
+    public ResponseEntity<?> getCouponDetailsByDetailId(@PathVariable Integer detailId) {
+        return ResponseEntity.ok(couponDetailService.getCouponDetailById(detailId));
+    }
+
     // Details endpoints
     @GetMapping("/admin/coupons/{id}/details")
     public ResponseEntity<?> getCouponDetails(@PathVariable Integer id) {
@@ -59,7 +64,7 @@ public class CouponDetailController {
                     .lineMaxDiscount(request.getLineMaxDiscount())
                     .minOrderTotal(request.getMinOrderTotal())
                     .build();
-            
+
             duplicateValidator.validateNoDuplicateOrderDiscountPercent(couponId, tempDetail, null);
             return ResponseEntity.ok().build();
         } catch (IllegalArgumentException e) {
@@ -75,7 +80,7 @@ public class CouponDetailController {
             if (couponId == null) {
                 return ResponseEntity.badRequest().body("Coupon detail not found");
             }
-            
+
             // Create a temporary detail object for validation
             CouponDetail tempDetail = CouponDetail.builder()
                     .targetType(request.getTargetType())
@@ -84,7 +89,7 @@ public class CouponDetailController {
                     .lineMaxDiscount(request.getLineMaxDiscount())
                     .minOrderTotal(request.getMinOrderTotal())
                     .build();
-            
+
             duplicateValidator.validateNoDuplicateOrderDiscountPercent(couponId, tempDetail, detailId);
             return ResponseEntity.ok().build();
         } catch (IllegalArgumentException e) {
