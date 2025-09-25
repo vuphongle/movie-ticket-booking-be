@@ -4,8 +4,12 @@ import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
+import vn.edu.iuh.fit.model.enums.CouponType;
+import vn.edu.iuh.fit.model.enums.CouponStatus;
+import vn.edu.iuh.fit.model.enums.CouponStackingPolicy;
 
-import java.util.Date;
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
 @Getter
 @Setter
@@ -14,7 +18,11 @@ import java.util.Date;
 @ToString
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class UpsertCouponRequest {
-    @NotEmpty(message = "Code không được để trống")
+    // Type is required - determines if code is needed
+    @NotNull(message = "Type không được để trống")
+    CouponType type;
+
+    // Code is nullable - PROMOTION=null, VOUCHER=required
     String code;
 
     @NotEmpty(message = "Name không được để trống")
@@ -23,11 +31,24 @@ public class UpsertCouponRequest {
     String description; // optional
 
     @NotNull(message = "Status không được để trống")
-    Boolean status;
+    CouponStatus status;
+
+    // Only meaningful for PROMOTION type
+    Boolean visible = true;
 
     @NotNull(message = "Start at không được để trống")
-    Date startDate;
+    LocalDateTime startAt;
 
     @NotNull(message = "End at không được để trống")
-    Date endDate;
+    LocalDateTime endAt;
+
+    @NotNull(message = "Stacking policy không được để trống")
+    CouponStackingPolicy stackingPolicy = CouponStackingPolicy.EXCLUSIVE;
+
+    // Order-level constraints
+    BigDecimal orderMinTotal;
+    BigDecimal orderMaxDiscount;
+    
+    // Usage tracking (optional - for updates)
+    Integer usageLimit;
 }

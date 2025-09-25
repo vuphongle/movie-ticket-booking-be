@@ -2,8 +2,9 @@ package vn.edu.iuh.fit.model.response;
 
 import lombok.*;
 import lombok.experimental.FieldDefaults;
-import vn.edu.iuh.fit.model.enums.CouponTargetType;
+import vn.edu.iuh.fit.model.enums.CouponBenefitType;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Getter
@@ -12,12 +13,12 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @Builder
 @FieldDefaults(level = AccessLevel.PRIVATE)
-public class CouponDetailResponse {
+public class CouponDetailRuleResponse {
     Integer id;
-    Integer couponId;
-    CouponTargetType targetType;
-    Integer giftServiceId; // ID tham chiếu cho target (movie_id, product_id, cinema_id...)
-    
+    Integer couponDetailId;
+    CouponBenefitType benefitType;
+    BigDecimal percent;
+    BigDecimal amount;
     LocalDateTime createdAt;
     LocalDateTime updatedAt;
 }

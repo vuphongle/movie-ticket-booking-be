@@ -1,20 +1,28 @@
 package vn.edu.iuh.fit.service;
 
-import lombok.RequiredArgsConstructor;
+import vn.edu.iuh.fit.entity.Product;
+import vn.edu.iuh.fit.exception.BadRequestException;
+import vn.edu.iuh.fit.exception.ResourceNotFoundException;
+import vn.edu.iuh.fit.model.request.UpsertProductRequest;
+import vn.edu.iuh.fit.repository.AdditionalServiceRepository;
+// import vn.edu.iuh.fit.repository.CouponDetailRepository; // TODO: Re-add when coupon system is rebuilt
+import vn.edu.iuh.fit.repository.ProductRepository;
+
+import java.util.List;
 import lombok.extern.slf4j.Slf4j;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import vn.edu.iuh.fit.entity.Product;
 import vn.edu.iuh.fit.exception.ResourceNotFoundException;
 import vn.edu.iuh.fit.model.request.UpsertProductRequest;
 import vn.edu.iuh.fit.repository.ProductRepository;
 import vn.edu.iuh.fit.repository.AdditionalServiceItemRepository;
 import vn.edu.iuh.fit.repository.AdditionalServiceRepository;
-import vn.edu.iuh.fit.repository.CouponDetailRepository;
+// import vn.edu.iuh.fit.repository.CouponDetailRepository; // TODO: Re-add when coupon system is rebuilt
 
 import java.util.List;
 import java.util.Optional;
@@ -28,7 +36,7 @@ public class ProductService {
     private final ProductRepository productRepository;
     private final AdditionalServiceItemRepository additionalServiceItemRepository;
     private final AdditionalServiceRepository additionalServiceRepository;
-    private final CouponDetailRepository couponDetailRepository;
+    // private final CouponDetailRepository couponDetailRepository; // TODO: Re-add when coupon system is rebuilt
     
     // Lấy tất cả sản phẩm với filter status
     public List<Product> getAllProducts(Boolean status) {
@@ -186,11 +194,13 @@ public class ProductService {
             return false;
         }
         
+        // TODO: Re-implement coupon check when coupon system is rebuilt
         // Kiểm tra sản phẩm có đang được dùng trong coupon detail đang hoạt động
-        if (couponDetailRepository.existsByGiftServiceIdAndEnabledTrueAndCouponStatusTrue(productId)) {
-            log.warn("Product {} is being used in active coupon promotions", productId);
-            return false;
-        }
+        // TODO: Re-implement when coupon system is rebuilt
+        // if (couponDetailRepository.existsByGiftServiceIdAndCouponStatus(productId, CouponStatus.ACTIVE)) {
+        //     log.warn("Product {} is being used in active coupon promotions", productId);
+        //     return false;
+        // }
         
         return true;
     }
