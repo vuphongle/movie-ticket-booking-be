@@ -53,23 +53,9 @@ public class CouponDetail {
     @NotNull
     BenefitType benefitType;
 
-    // Giá trị theo loại benefit - được validate bởi custom constraint
-    @Column(precision = 5, scale = 2)
-    @DecimalMin(value = "0.01", message = "Percent must be greater than 0")
-    @DecimalMax(value = "100.00", message = "Percent must not exceed 100")
-    BigDecimal percent;
-
-    @Column(precision = 15, scale = 2)
-    @DecimalMin(value = "0.01", message = "Amount must be greater than 0")
-    BigDecimal amount;
-
-    @Column(name = "gift_service_id")
-    @Min(value = 1, message = "Gift service ID must be positive when provided")
-    Integer giftServiceId;
-
-    @Column(name = "gift_quantity")
-    @Min(value = 1, message = "Gift quantity must be positive when provided")
-    Integer giftQuantity;
+    // One-to-one relationship with terms table
+    @OneToOne(mappedBy = "couponDetail", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    CouponDetailTerms terms;
 
     // Điều kiện/giới hạn
     @Column(name = "line_max_discount", precision = 15, scale = 2)
@@ -80,10 +66,6 @@ public class CouponDetail {
     @Min(value = 0, message = "Min quantity must not be negative")
     Integer minQuantity;
 
-    @Column(name = "limit_quantity_applied")
-    @Min(value = 0, message = "Limit quantity applied must not be negative")
-    Integer limitQuantityApplied;
-
     @Column(name = "min_order_total", precision = 15, scale = 2)
     @DecimalMin(value = "0.00", message = "Min order total must not be negative")
     BigDecimal minOrderTotal;
@@ -92,12 +74,6 @@ public class CouponDetail {
     @Column(name = "detail_usage_limit")
     @Min(value = 0, message = "Detail usage limit must not be negative")
     Integer detailUsageLimit; // >= 0, 0 = hết lượt
-
-    @Column(name = "detail_used_count", nullable = false)
-    @NotNull
-    @Min(value = 0, message = "Detail used count must not be negative")
-    @Builder.Default
-    Integer detailUsedCount = 0; // system managed
 
     // Thứ tự & chọn item
     @Column(name = "line_priority", nullable = false)
@@ -150,39 +126,16 @@ public class CouponDetail {
     /**
      * Custom validation for benefit type constraints
      * P1: CHECK theo BenefitType/TargetType
+     * Note: Terms validation is handled in CouponDetailTerms entity
      */
     private void validateBenefitTypeConstraints() {
-        switch (benefitType) {
-            case DISCOUNT_PERCENT:
-                if (percent == null || percent.compareTo(BigDecimal.ZERO) <= 0 || percent.compareTo(new BigDecimal("100")) > 0) {
-                    throw new IllegalArgumentException("PERCENT benefit type requires percent in range (0, 100]");
-                }
-                if (amount != null || giftServiceId != null || giftQuantity != null) {
-                    throw new IllegalArgumentException("PERCENT benefit type must have amount and gift fields as null");
-                }
-                break;
-                
-            case DISCOUNT_AMOUNT:
-                if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
-                    throw new IllegalArgumentException("AMOUNT benefit type requires amount > 0");
-                }
-                if (percent != null || giftServiceId != null || giftQuantity != null) {
-                    throw new IllegalArgumentException("AMOUNT benefit type must have percent and gift fields as null");
-                }
-                break;
-                
-            case FREE_PRODUCT:
-                if (giftServiceId == null || giftServiceId <= 0 || giftQuantity == null || giftQuantity <= 0) {
-                    throw new IllegalArgumentException("GIFT benefit type requires giftServiceId and giftQuantity > 0");
-                }
-                if (percent != null || amount != null) {
-                    throw new IllegalArgumentException("GIFT benefit type must have percent and amount as null");
-                }
-                break;
-                
-            default:
-                throw new IllegalArgumentException("Unknown benefit type: " + benefitType);
+        // Basic validation - detailed validation is in CouponDetailTerms
+        if (benefitType == null) {
+            throw new IllegalArgumentException("Benefit type is required");
         }
+        
+        // Terms-specific validation will be handled in CouponDetailTerms entity
+        // when the terms object is persisted
     }
 
     /**

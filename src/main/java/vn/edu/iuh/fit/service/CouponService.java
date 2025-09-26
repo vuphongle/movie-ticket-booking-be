@@ -9,6 +9,7 @@ import vn.edu.iuh.fit.constant.ValidationMessages;
 import vn.edu.iuh.fit.entity.Coupon;
 import vn.edu.iuh.fit.exception.BadRequestException;
 import vn.edu.iuh.fit.exception.ResourceNotFoundException;
+import vn.edu.iuh.fit.model.enums.CouponKind;
 import vn.edu.iuh.fit.model.request.UpsertCouponRequest;
 import vn.edu.iuh.fit.model.response.CouponResponse;
 import vn.edu.iuh.fit.repository.CouponDetailRepository;
@@ -51,12 +52,16 @@ public class CouponService {
             throw new BadRequestException("Coupon mới tạo phải có trạng thái ẩn. Sau khi tạo và thêm điều kiện chi tiết, bạn có thể kích hoạt coupon.");
         }
 
-        if (couponRepository.existsByCode(request.getCode().toUpperCase())) {
-            throw new BadRequestException(ValidationMessages.CODE_DUPLICATE);
+        // Check code duplication only for VOUCHER types with codes
+        if (request.getKind() == CouponKind.VOUCHER && request.getCode() != null) {
+            if (couponRepository.existsByCode(request.getCode().toUpperCase())) {
+                throw new BadRequestException(ValidationMessages.CODE_DUPLICATE);
+            }
         }
 
         Coupon coupon = Coupon.builder()
-                .code(request.getCode().toUpperCase())
+                .kind(request.getKind())
+                .code(request.getCode() != null ? request.getCode().toUpperCase() : null)
                 .name(request.getName())
                 .description(request.getDescription())
                 .status(false) // Force status to false for new coupons
@@ -77,9 +82,12 @@ public class CouponService {
         // Enhanced validation
         validateCouponRequest(request);
 
-        String upperCaseCode = request.getCode().toUpperCase();
-        if (couponRepository.existsByCode(upperCaseCode) && !coupon.getCode().equals(upperCaseCode)) {
-            throw new BadRequestException(ValidationMessages.CODE_DUPLICATE);
+        // Check code duplication only for VOUCHER types with codes
+        if (request.getKind() == CouponKind.VOUCHER && request.getCode() != null) {
+            String upperCaseCode = request.getCode().toUpperCase();
+            if (couponRepository.existsByCode(upperCaseCode) && !upperCaseCode.equals(coupon.getCode())) {
+                throw new BadRequestException(ValidationMessages.CODE_DUPLICATE);
+            }
         }
 
         // Validate status activation
@@ -96,7 +104,8 @@ public class CouponService {
             }
         }
 
-        coupon.setCode(upperCaseCode);
+        coupon.setKind(request.getKind());
+        coupon.setCode(request.getCode() != null ? request.getCode().toUpperCase() : null);
         coupon.setName(request.getName());
         coupon.setDescription(request.getDescription());
         coupon.setStatus(request.getStatus());
@@ -154,6 +163,14 @@ public class CouponService {
                 request.getStartDate().equals(request.getEndDate())) {
             throw new BadRequestException(ValidationMessages.INVALID_TIME_RANGE);
         }
+        
+        // Validate CouponKind business rules
+        if (request.getKind() == CouponKind.VOUCHER) {
+            if (request.getCode() == null || request.getCode().trim().isEmpty()) {
+                throw new BadRequestException("VOUCHER coupon must have a code");
+            }
+        }
+        // DISPLAY coupons can have null code - this is allowed
     }
 
     private boolean hasValidEnabledDetails(Integer couponId) {
@@ -164,6 +181,7 @@ public class CouponService {
     private CouponResponse buildCouponResponse(Coupon coupon) {
         return CouponResponse.builder()
                 .id(coupon.getId())
+                .kind(coupon.getKind())
                 .code(coupon.getCode())
                 .name(coupon.getName())
                 .description(coupon.getDescription())

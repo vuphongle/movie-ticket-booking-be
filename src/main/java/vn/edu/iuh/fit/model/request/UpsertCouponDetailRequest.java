@@ -32,24 +32,18 @@ public class UpsertCouponDetailRequest {
     @NotNull(message = "Benefit type không được để trống")
     BenefitType benefitType;
 
-    // Giá trị theo loại benefit
-    BigDecimal percent; // 0 < % <= 100
-    BigDecimal amount; // > 0
-    Integer giftServiceId;
-    @PositiveOrZero
-    Integer giftQuantity;
+    // Terms data (will be saved to CouponDetailTerms table)
+    TermsData terms;
 
-    // Điều kiện/giới hạn
+    // Điều kiện/giới hạn (remaining in CouponDetail)
     @PositiveOrZero
     BigDecimal lineMaxDiscount; // >= 0
     @PositiveOrZero
     Integer minQuantity; // >= 0
     @PositiveOrZero
-    Integer limitQuantityApplied; // >= 0
-    @PositiveOrZero
     BigDecimal minOrderTotal; // >= 0
 
-    // Hạn mức theo dòng
+    // Hạn mức theo dòng (remaining in CouponDetail)
     @PositiveOrZero
     Integer detailUsageLimit; // >= 0, 0 = hết lượt
 
@@ -66,4 +60,24 @@ public class UpsertCouponDetailRequest {
     
     @NotNull(message = "End date là bắt buộc")
     Date endDate;
+    
+    // Inner class for terms data
+    @Getter
+    @Setter
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @ToString
+    @FieldDefaults(level = AccessLevel.PRIVATE)
+    public static class TermsData {
+        // Benefit values (moved from CouponDetail)
+        BigDecimal percent; // 0 < % <= 100
+        BigDecimal amount; // > 0
+        Integer giftServiceId;
+        @PositiveOrZero
+        Integer giftQuantity;
+        
+        // Limit conditions (moved from CouponDetail)
+        @PositiveOrZero
+        Integer limitQuantityApplied; // >= 0
+    }
 }

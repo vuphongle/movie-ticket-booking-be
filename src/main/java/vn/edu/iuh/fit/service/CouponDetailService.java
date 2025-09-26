@@ -7,6 +7,7 @@ import org.springframework.transaction.annotation.Transactional;
 import vn.edu.iuh.fit.constant.ValidationMessages;
 import vn.edu.iuh.fit.entity.Coupon;
 import vn.edu.iuh.fit.entity.CouponDetail;
+import vn.edu.iuh.fit.entity.CouponDetailTerms;
 import vn.edu.iuh.fit.exception.BadRequestException;
 import vn.edu.iuh.fit.exception.ResourceNotFoundException;
 import vn.edu.iuh.fit.model.enums.BenefitType;
@@ -14,6 +15,7 @@ import vn.edu.iuh.fit.model.enums.TargetType;
 import vn.edu.iuh.fit.model.request.UpsertCouponDetailRequest;
 import vn.edu.iuh.fit.model.response.CouponDetailResponse;
 import vn.edu.iuh.fit.repository.CouponDetailRepository;
+import vn.edu.iuh.fit.repository.CouponDetailTermsRepository;
 import vn.edu.iuh.fit.repository.CouponRepository;
 
 import java.math.BigDecimal;
@@ -25,6 +27,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class CouponDetailService {
     private final CouponDetailRepository couponDetailRepository;
+    private final CouponDetailTermsRepository couponDetailTermsRepository;
     private final CouponRepository couponRepository;
     private final SeatTypeService seatTypeService;
     private final CouponDuplicateValidator duplicateValidator;
@@ -59,16 +62,10 @@ public class CouponDetailService {
                 .targetType(request.getTargetType())
                 .targetRefId(request.getTargetRefId())
                 .benefitType(request.getBenefitType())
-                .percent(request.getPercent())
-                .amount(request.getAmount())
-                .giftServiceId(request.getGiftServiceId())
-                .giftQuantity(request.getGiftQuantity())
                 .lineMaxDiscount(request.getLineMaxDiscount())
                 .minQuantity(request.getMinQuantity())
-                .limitQuantityApplied(request.getLimitQuantityApplied())
                 .minOrderTotal(request.getMinOrderTotal())
                 .detailUsageLimit(request.getDetailUsageLimit())
-                .detailUsedCount(0)
                 .linePriority(request.getLinePriority())
                 .selectionStrategy(request.getSelectionStrategy())
                 .notes(request.getNotes())
@@ -76,13 +73,31 @@ public class CouponDetailService {
                 .endDate(request.getEndDate())
                 .build();
 
+        // Save detail first to get ID for terms
+        CouponDetail savedDetail = couponDetailRepository.save(detail);
+
+        // Create and save terms if provided
+        if (request.getTerms() != null) {
+            CouponDetailTerms terms = CouponDetailTerms.builder()
+                    .couponDetail(savedDetail)
+                    .percent(request.getTerms().getPercent())
+                    .amount(request.getTerms().getAmount())
+                    .giftServiceId(request.getTerms().getGiftServiceId())
+                    .giftQuantity(request.getTerms().getGiftQuantity())
+                    .limitQuantityApplied(request.getTerms().getLimitQuantityApplied())
+                    .detailUsedCount(0)
+                    .build();
+
+            couponDetailTermsRepository.save(terms);
+            savedDetail.setTerms(terms);
+        }
+
         // Validate no duplicate ORDER + DISCOUNT_PERCENT details
         try {
             // Create temp detail with explicit fields for validation
             CouponDetail tempDetail = CouponDetail.builder()
                     .targetType(request.getTargetType())
                     .benefitType(request.getBenefitType())
-                    .percent(request.getPercent())
                     .lineMaxDiscount(request.getLineMaxDiscount())
                     .minOrderTotal(request.getMinOrderTotal())
                     .build();
@@ -92,7 +107,6 @@ public class CouponDetailService {
             throw new BadRequestException(e.getMessage());
         }
 
-        CouponDetail savedDetail = couponDetailRepository.save(detail);
         return buildCouponDetailResponse(savedDetail);
     }
 
@@ -111,9 +125,13 @@ public class CouponDetailService {
         // Validate business rules
         validateCouponDetailRequest(request);
         
+        // Get existing terms to check usage count
+        CouponDetailTerms existingTerms = couponDetailTermsRepository.findByCouponDetailId(detailId);
+        Integer currentUsedCount = existingTerms != null ? existingTerms.getDetailUsedCount() : 0;
+        
         // Kiểm tra nếu đã có usage thì không được giảm usage limit xuống dưới used count
         if (request.getDetailUsageLimit() != null && 
-            request.getDetailUsageLimit() < detail.getDetailUsedCount()) {
+            request.getDetailUsageLimit() < currentUsedCount) {
             throw new BadRequestException(ValidationMessages.CANNOT_REDUCE_USAGE_LIMIT);
         }
 
@@ -138,13 +156,8 @@ public class CouponDetailService {
         detail.setTargetType(request.getTargetType());
         detail.setTargetRefId(request.getTargetRefId());
         detail.setBenefitType(request.getBenefitType());
-        detail.setPercent(request.getPercent());
-        detail.setAmount(request.getAmount());
-        detail.setGiftServiceId(request.getGiftServiceId());
-        detail.setGiftQuantity(request.getGiftQuantity());
         detail.setLineMaxDiscount(request.getLineMaxDiscount());
         detail.setMinQuantity(request.getMinQuantity());
-        detail.setLimitQuantityApplied(request.getLimitQuantityApplied());
         detail.setMinOrderTotal(request.getMinOrderTotal());
         detail.setDetailUsageLimit(request.getDetailUsageLimit());
         detail.setLinePriority(request.getLinePriority());
@@ -154,6 +167,33 @@ public class CouponDetailService {
         detail.setEndDate(request.getEndDate());
 
         CouponDetail savedDetail = couponDetailRepository.save(detail);
+
+        // Update or create terms
+        if (request.getTerms() != null) {
+            if (existingTerms != null) {
+                // Update existing terms
+                existingTerms.setPercent(request.getTerms().getPercent());
+                existingTerms.setAmount(request.getTerms().getAmount());
+                existingTerms.setGiftServiceId(request.getTerms().getGiftServiceId());
+                existingTerms.setGiftQuantity(request.getTerms().getGiftQuantity());
+                existingTerms.setLimitQuantityApplied(request.getTerms().getLimitQuantityApplied());
+                couponDetailTermsRepository.save(existingTerms);
+                savedDetail.setTerms(existingTerms);
+            } else {
+                // Create new terms
+                CouponDetailTerms newTerms = CouponDetailTerms.builder()
+                        .couponDetail(savedDetail)
+                        .percent(request.getTerms().getPercent())
+                        .amount(request.getTerms().getAmount())
+                        .giftServiceId(request.getTerms().getGiftServiceId())
+                        .giftQuantity(request.getTerms().getGiftQuantity())
+                        .limitQuantityApplied(request.getTerms().getLimitQuantityApplied())
+                        .detailUsedCount(0)
+                        .build();
+                couponDetailTermsRepository.save(newTerms);
+                savedDetail.setTerms(newTerms);
+            }
+        }
         return buildCouponDetailResponse(savedDetail);
     }
 
@@ -241,26 +281,28 @@ public class CouponDetailService {
             throw new BadRequestException("SERVICE target type requires a valid service ID");
         }
 
-        // Validate benefit type values
-        switch (request.getBenefitType()) {
-            case DISCOUNT_PERCENT:
-                if (request.getPercent() == null || 
-                    request.getPercent().compareTo(BigDecimal.ZERO) <= 0 || 
-                    request.getPercent().compareTo(new BigDecimal("100")) > 0) {
-                    throw new BadRequestException(ValidationMessages.INVALID_PERCENT_VALUE);
-                }
-                break;
-            case DISCOUNT_AMOUNT:
-                if (request.getAmount() == null || request.getAmount().compareTo(BigDecimal.ZERO) <= 0) {
-                    throw new BadRequestException(ValidationMessages.INVALID_AMOUNT_VALUE);
-                }
-                break;
-            case FREE_PRODUCT:
-                if (request.getGiftServiceId() == null || request.getGiftQuantity() == null || 
-                    request.getGiftQuantity() <= 0) {
-                    throw new BadRequestException(ValidationMessages.INVALID_GIFT_CONFIG);
-                }
-                break;
+        // Validate benefit type values (now in terms)
+        if (request.getTerms() != null) {
+            switch (request.getBenefitType()) {
+                case DISCOUNT_PERCENT:
+                    if (request.getTerms().getPercent() == null || 
+                        request.getTerms().getPercent().compareTo(BigDecimal.ZERO) <= 0 || 
+                        request.getTerms().getPercent().compareTo(new BigDecimal("100")) > 0) {
+                        throw new BadRequestException(ValidationMessages.INVALID_PERCENT_VALUE);
+                    }
+                    break;
+                case DISCOUNT_AMOUNT:
+                    if (request.getTerms().getAmount() == null || request.getTerms().getAmount().compareTo(BigDecimal.ZERO) <= 0) {
+                        throw new BadRequestException(ValidationMessages.INVALID_AMOUNT_VALUE);
+                    }
+                    break;
+                case FREE_PRODUCT:
+                    if (request.getTerms().getGiftServiceId() == null || request.getTerms().getGiftQuantity() == null || 
+                        request.getTerms().getGiftQuantity() <= 0) {
+                        throw new BadRequestException(ValidationMessages.INVALID_GIFT_CONFIG);
+                    }
+                    break;
+            }
         }
 
         // Validate constraints
@@ -270,7 +312,7 @@ public class CouponDetailService {
         if (request.getMinQuantity() != null && request.getMinQuantity() < 0) {
             throw new BadRequestException("Min quantity phải >= 0");
         }
-        if (request.getLimitQuantityApplied() != null && request.getLimitQuantityApplied() < 0) {
+        if (request.getTerms() != null && request.getTerms().getLimitQuantityApplied() != null && request.getTerms().getLimitQuantityApplied() < 0) {
             throw new BadRequestException("Limit quantity applied phải >= 0");
         }
         if (request.getMinOrderTotal() != null && request.getMinOrderTotal().compareTo(BigDecimal.ZERO) < 0) {
@@ -281,10 +323,10 @@ public class CouponDetailService {
         }
 
         // Warning: limitQuantityApplied < minQuantity
-        if (request.getLimitQuantityApplied() != null && request.getMinQuantity() != null &&
-            request.getLimitQuantityApplied() < request.getMinQuantity()) {
+        if (request.getTerms() != null && request.getTerms().getLimitQuantityApplied() != null && request.getMinQuantity() != null &&
+            request.getTerms().getLimitQuantityApplied() < request.getMinQuantity()) {
             log.warn("limitQuantityApplied ({}) < minQuantity ({}). This may cause unexpected behavior.", 
-                     request.getLimitQuantityApplied(), request.getMinQuantity());
+                     request.getTerms().getLimitQuantityApplied(), request.getMinQuantity());
             // Có thể throw exception nếu muốn block cứng
             // throw new BadRequestException("Limit quantity applied không thể nhỏ hơn min quantity");
         }
