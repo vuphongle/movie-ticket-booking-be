@@ -17,4 +17,4 @@ public enum CouponKind {
      * Must have a code for users to redeem
      */
     VOUCHER
-}
+} 

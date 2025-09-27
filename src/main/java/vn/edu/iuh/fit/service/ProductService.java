@@ -14,7 +14,7 @@ import vn.edu.iuh.fit.model.request.UpsertProductRequest;
 import vn.edu.iuh.fit.repository.ProductRepository;
 import vn.edu.iuh.fit.repository.AdditionalServiceItemRepository;
 import vn.edu.iuh.fit.repository.AdditionalServiceRepository;
-import vn.edu.iuh.fit.repository.CouponDetailRepository;
+import vn.edu.iuh.fit.repository.CouponDetailTermsRepository;
 
 import java.util.List;
 import java.util.Optional;
@@ -28,7 +28,7 @@ public class ProductService {
     private final ProductRepository productRepository;
     private final AdditionalServiceItemRepository additionalServiceItemRepository;
     private final AdditionalServiceRepository additionalServiceRepository;
-    private final CouponDetailRepository couponDetailRepository;
+    private final CouponDetailTermsRepository couponDetailTermsRepository;
     
     // Lấy tất cả sản phẩm với filter status
     public List<Product> getAllProducts(Boolean status) {
@@ -187,7 +187,7 @@ public class ProductService {
         }
         
         // Kiểm tra sản phẩm có đang được dùng trong coupon detail đang hoạt động
-        if (couponDetailRepository.existsByGiftServiceIdAndEnabledTrueAndCouponStatusTrue(productId)) {
+        if (couponDetailTermsRepository.existsByGiftServiceIdAndEnabledTrueAndCouponStatusTrue(productId)) {
             log.warn("Product {} is being used in active coupon promotions", productId);
             return false;
         }

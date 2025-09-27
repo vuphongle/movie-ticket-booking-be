@@ -39,13 +39,9 @@ public class CouponDetailResponse {
     Integer detailUsageLimit;
     Integer detailUsedCount;
     
-    // Thứ tự & chọn item
-    Integer linePriority;
     SelectionStrategy selectionStrategy;
     
     String notes;
-    Date startDate;
-    Date endDate;
     Date createdAt;
     Date updatedAt;
 }

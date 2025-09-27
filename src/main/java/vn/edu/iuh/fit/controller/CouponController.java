@@ -72,15 +72,4 @@ public class CouponController {
     public ResponseEntity<?> applyCoupon(@Valid @RequestBody CouponApplyRequest request) {
         return ResponseEntity.ok(couponPreviewService.applyCoupon(request));
     }
-
-    // Validation endpoints for frontend
-    @PostMapping("/admin/coupons/{id}/validate-status")
-    public ResponseEntity<?> validateCouponStatusActivation(@PathVariable Integer id) {
-        try {
-            duplicateValidator.validateCouponNoDuplicateOrderDiscountPercent(id);
-            return ResponseEntity.ok().build();
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
-        }
-    }
 }

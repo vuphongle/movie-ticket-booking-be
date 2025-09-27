@@ -13,6 +13,7 @@ import vn.edu.iuh.fit.model.enums.CouponKind;
 import vn.edu.iuh.fit.model.request.UpsertCouponRequest;
 import vn.edu.iuh.fit.model.response.CouponResponse;
 import vn.edu.iuh.fit.repository.CouponDetailRepository;
+import vn.edu.iuh.fit.repository.CouponDetailTermsRepository;
 import vn.edu.iuh.fit.repository.CouponRepository;
 
 import java.util.List;
@@ -24,6 +25,7 @@ import java.util.stream.Collectors;
 public class CouponService {
     private final CouponRepository couponRepository;
     private final CouponDetailRepository couponDetailRepository;
+    private final CouponDetailTermsRepository couponDetailTermsRepository;
     private final CouponDuplicateValidator duplicateValidator;
 
     public List<CouponResponse> getAllCoupons() {
@@ -123,12 +125,15 @@ public class CouponService {
                 .orElseThrow(() -> new ResourceNotFoundException("Coupon không tồn tại"));
 
         // Kiểm tra xem có detail nào đã được sử dụng không
-        Long totalUsedCount = couponDetailRepository.sumUsedCountByCouponId(id);
+        Long totalUsedCount = couponDetailTermsRepository.sumUsedCountByCouponId(id);
         if (totalUsedCount > 0) {
             throw new BadRequestException(ValidationMessages.CANNOT_DELETE_USED_COUPON);
         }
 
-        // Xóa tất cả details trước
+        // Xóa theo đúng thứ tự: CouponDetailTerms → CouponDetails → Coupon
+        // Xóa tất cả terms trước
+        couponDetailTermsRepository.deleteByCouponId(id);
+        // Xóa tất cả details
         couponDetailRepository.deleteByCouponId(id);
         // Xóa coupon
         couponRepository.delete(coupon);

@@ -1,9 +1,11 @@
 package vn.edu.iuh.fit.repository;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 import vn.edu.iuh.fit.entity.CouponDetailTerms;
 
 @Repository
@@ -24,4 +26,9 @@ public interface CouponDetailTermsRepository extends JpaRepository<CouponDetailT
            "AND cd.enabled = true " +
            "AND cd.coupon.status = true")
     boolean existsByGiftServiceIdAndEnabledTrueAndCouponStatusTrue(@Param("productId") Integer productId);
+    
+    @Modifying
+    @Transactional
+    @Query("DELETE FROM CouponDetailTerms terms WHERE terms.couponDetail.coupon.id = :couponId")
+    void deleteByCouponId(@Param("couponId") Integer couponId);
 }

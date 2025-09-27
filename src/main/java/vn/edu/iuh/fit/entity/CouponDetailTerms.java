@@ -22,7 +22,9 @@ public class CouponDetailTerms {
 
     @OneToOne(fetch = FetchType.LAZY)
     @MapsId
-    @JoinColumn(name = "id")
+    @JoinColumn(name = "id", 
+                foreignKey = @ForeignKey(name = "fk_coupon_detail_terms_coupon_detail",
+                foreignKeyDefinition = "FOREIGN KEY (id) REFERENCES coupon_details(id) ON DELETE CASCADE"))
     CouponDetail couponDetail;
 
     // Benefit values (migrated from CouponDetail)

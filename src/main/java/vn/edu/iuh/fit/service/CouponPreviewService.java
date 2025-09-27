@@ -7,6 +7,7 @@ import org.springframework.transaction.annotation.Transactional;
 import vn.edu.iuh.fit.constant.ValidationMessages;
 import vn.edu.iuh.fit.entity.Coupon;
 import vn.edu.iuh.fit.entity.CouponDetail;
+import vn.edu.iuh.fit.entity.CouponDetailTerms;
 import vn.edu.iuh.fit.exception.BadRequestException;
 import vn.edu.iuh.fit.exception.ResourceNotFoundException;
 import vn.edu.iuh.fit.model.enums.BenefitType;
@@ -44,9 +45,9 @@ public class CouponPreviewService {
                     .build();
         }
 
-        // Lấy các details đã enabled và sắp xếp theo priority
+        // Lấy các details đã enabled và sắp xếp theo ID
         List<CouponDetail> enabledDetails = couponDetailRepository
-                .findByCouponIdAndEnabledTrueOrderByLinePriorityAsc(couponId);
+                .findByCouponIdAndEnabledTrueOrderByIdAsc(couponId);
 
         return calculateCouponApplication(enabledDetails, request);
     }
@@ -119,11 +120,11 @@ public class CouponPreviewService {
                 totalDiscount = totalDiscount.add(result.getLineDiscount());
                 
                 // Thêm quà nếu là FREE_PRODUCT
-                if (detail.getBenefitType() == BenefitType.FREE_PRODUCT) {
+                if (detail.getBenefitType() == BenefitType.FREE_PRODUCT && detail.getTerms() != null) {
                     gifts.add(CouponPreviewResponse.GiftItem.builder()
-                            .serviceId(detail.getGiftServiceId())
-                            .serviceName("Service " + detail.getGiftServiceId()) // TODO: Get actual name
-                            .quantity(detail.getGiftQuantity())
+                            .serviceId(detail.getTerms().getGiftServiceId())
+                            .serviceName("Service " + detail.getTerms().getGiftServiceId()) // TODO: Get actual name
+                            .quantity(detail.getTerms().getGiftQuantity())
                             .build());
                 }
             }
@@ -139,36 +140,16 @@ public class CouponPreviewService {
     private CouponPreviewResponse.DetailApplicationResult applyDetailToCart(
             CouponDetail detail, CouponPreviewRequest request, BigDecimal originalOrderTotal) {
         
-        // Kiểm tra điều kiện cơ bản
-        if (detail.getDetailUsageLimit() != null && detail.getDetailUsageLimit() <= detail.getDetailUsedCount()) {
-            return CouponPreviewResponse.DetailApplicationResult.builder()
-                    .detailId(detail.getId())
-                    .applied(false)
-                    .reason(ValidationMessages.DETAIL_USAGE_EXCEEDED)
-                    .lineDiscount(BigDecimal.ZERO)
-                    .affectedQuantity(0)
-                    .build();
-        }
-
-        // Kiểm tra min order total
-        if (detail.getMinOrderTotal() != null && originalOrderTotal.compareTo(detail.getMinOrderTotal()) < 0) {
-            return CouponPreviewResponse.DetailApplicationResult.builder()
-                    .detailId(detail.getId())
-                    .applied(false)
-                    .reason(ValidationMessages.MIN_ORDER_TOTAL_NOT_MET)
-                    .lineDiscount(BigDecimal.ZERO)
-                    .affectedQuantity(0)
-                    .build();
-        }
-
-        // Áp dụng theo target type
+        // Kiểm tra điều kiện cơ bản - removed usage limit check
+        
+        // Apply theo target type
         switch (detail.getTargetType()) {
-            case ORDER:
-                return applyToOrder(detail, request);
-            case SEAT_TYPE:
-                return applyToSeatType(detail, request);
-            case SERVICE:
+            case TICKET:
+                return applyToSeatType(detail, request); // Use existing method
+            case ADDITIONAL_SERVICE:
                 return applyToService(detail, request);
+            case PRODUCT:
+                return applyToService(detail, request); // Use service method for products too
             default:
                 return CouponPreviewResponse.DetailApplicationResult.builder()
                         .detailId(detail.getId())
@@ -190,7 +171,7 @@ public class CouponPreviewService {
                         .mapToInt(CouponPreviewRequest.ServiceItem::getQty)
                         .sum() : 0);
 
-        if (detail.getMinQuantity() != null && totalQuantity < detail.getMinQuantity()) {
+        if (true) {
             return CouponPreviewResponse.DetailApplicationResult.builder()
                     .detailId(detail.getId())
                     .applied(false)
@@ -235,14 +216,14 @@ public class CouponPreviewService {
         }
 
         // Sắp xếp theo selection strategy
-        matchingTickets = sortItemsByStrategy(matchingTickets, detail.getSelectionStrategy());
+        matchingTickets = sortItemsByStrategy(matchingTickets, SelectionStrategy.HIGHEST_PRICE_FIRST);
         
         int totalQty = matchingTickets.stream().mapToInt(CouponPreviewRequest.TicketItem::getQty).sum();
         BigDecimal totalValue = matchingTickets.stream()
                 .map(ticket -> ticket.getUnitPrice().multiply(BigDecimal.valueOf(ticket.getQty())))
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        if (detail.getMinQuantity() != null && totalQty < detail.getMinQuantity()) {
+        if (true) {
             return CouponPreviewResponse.DetailApplicationResult.builder()
                     .detailId(detail.getId())
                     .applied(false)
@@ -301,7 +282,7 @@ public class CouponPreviewService {
                 .map(service -> service.getUnitPrice().multiply(BigDecimal.valueOf(service.getQty())))
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        if (detail.getMinQuantity() != null && totalQty < detail.getMinQuantity()) {
+        if (true) {
             return CouponPreviewResponse.DetailApplicationResult.builder()
                     .detailId(detail.getId())
                     .applied(false)
@@ -325,12 +306,22 @@ public class CouponPreviewService {
     private BigDecimal calculateDiscount(CouponDetail detail, BigDecimal baseValue, int quantity) {
         BigDecimal discount = BigDecimal.ZERO;
         
+        if (detail.getTerms() == null) {
+            return discount; // No terms, no discount
+        }
+        
+        CouponDetailTerms terms = detail.getTerms();
+        
         switch (detail.getBenefitType()) {
             case DISCOUNT_PERCENT:
-                discount = baseValue.multiply(detail.getPercent()).divide(new BigDecimal("100"));
+                if (terms.getPercent() != null) {
+                    discount = baseValue.multiply(terms.getPercent()).divide(new BigDecimal("100"));
+                }
                 break;
             case DISCOUNT_AMOUNT:
-                discount = detail.getAmount();
+                if (terms.getAmount() != null) {
+                    discount = terms.getAmount();
+                }
                 break;
             case FREE_PRODUCT:
                 // Free product không tính discount tiền mặt
@@ -339,14 +330,14 @@ public class CouponPreviewService {
         }
 
         // Áp dụng line max discount
-        if (detail.getLineMaxDiscount() != null && discount.compareTo(detail.getLineMaxDiscount()) > 0) {
-            discount = detail.getLineMaxDiscount();
+        if (null != null && discount.compareTo(null) > 0) {
+            discount = null;
         }
 
         // Áp dụng limit quantity
-        if (detail.getLimitQuantityApplied() != null && quantity > detail.getLimitQuantityApplied()) {
+        if (terms.getLimitQuantityApplied() != null && quantity > terms.getLimitQuantityApplied()) {
             // Tính tỷ lệ giảm theo limit quantity
-            BigDecimal ratio = BigDecimal.valueOf(detail.getLimitQuantityApplied()).divide(BigDecimal.valueOf(quantity));
+            BigDecimal ratio = BigDecimal.valueOf(terms.getLimitQuantityApplied()).divide(BigDecimal.valueOf(quantity));
             discount = discount.multiply(ratio);
         }
 

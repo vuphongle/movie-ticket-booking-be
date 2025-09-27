@@ -47,19 +47,9 @@ public class UpsertCouponDetailRequest {
     @PositiveOrZero
     Integer detailUsageLimit; // >= 0, 0 = hết lượt
 
-    // Thứ tự & chọn item
-    @NotNull(message = "Line priority không được để trống")
-    Integer linePriority; // số nhỏ chạy trước
-
     SelectionStrategy selectionStrategy = SelectionStrategy.HIGHEST_PRICE_FIRST;
 
     String notes;
-    
-    @NotNull(message = "Start date là bắt buộc")
-    Date startDate;
-    
-    @NotNull(message = "End date là bắt buộc")
-    Date endDate;
     
     // Inner class for terms data
     @Getter
