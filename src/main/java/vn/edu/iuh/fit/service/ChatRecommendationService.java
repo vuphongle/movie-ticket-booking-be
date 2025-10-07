@@ -1,0 +1,603 @@
+package vn.edu.iuh.fit.service;
+
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import java.time.LocalDate;
+import java.time.Period;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.Date;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Locale;
+import java.util.Objects;
+import java.util.Set;
+import java.util.stream.Collectors;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.ai.openai.OpenAiChatOptions;
+import org.springframework.stereotype.Service;
+import org.springframework.util.CollectionUtils;
+import org.springframework.util.StringUtils;
+import vn.edu.iuh.fit.entity.Genre;
+import vn.edu.iuh.fit.entity.Movie;
+import vn.edu.iuh.fit.entity.Schedule;
+import vn.edu.iuh.fit.entity.User;
+import vn.edu.iuh.fit.model.enums.MovieAge;
+import vn.edu.iuh.fit.model.request.ChatRecommendationRequest;
+import vn.edu.iuh.fit.model.response.ChatRecommendationResponse;
+import vn.edu.iuh.fit.model.response.RecommendedMovieResponse;
+import vn.edu.iuh.fit.repository.MovieRepository;
+import vn.edu.iuh.fit.repository.ScheduleRepository;
+import vn.edu.iuh.fit.security.SecurityUtils;
+import vn.edu.iuh.fit.service.chat.AgeRestrictionService;
+import vn.edu.iuh.fit.service.chat.ChatMemoryService;
+import vn.edu.iuh.fit.service.chat.ChatMemoryService.ChatMessage;
+import vn.edu.iuh.fit.service.chat.ChatMemoryService.Role;
+import vn.edu.iuh.fit.service.chat.KeywordAnalyzer;
+import vn.edu.iuh.fit.service.chat.KeywordAnalyzer.KeywordContext;
+import vn.edu.iuh.fit.service.chat.RecommendationScoringService;
+import vn.edu.iuh.fit.service.chat.RecommendationScoringService.RecommendationScoringInput;
+import vn.edu.iuh.fit.service.chat.RecommendationScoringService.ScoredMovie;
+import vn.edu.iuh.fit.service.chat.TextNormalizer;
+
+@Slf4j
+@Service
+@RequiredArgsConstructor
+public class ChatRecommendationService {
+
+  private static final int MAX_RECOMMENDATIONS = 5;
+  private static final int MAX_SHOWTIMES = 3;
+  private static final DateTimeFormatter SHOWTIME_FORMATTER =
+      DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
+  private static final ZoneId DEFAULT_ZONE = ZoneId.of("Asia/Ho_Chi_Minh");
+  private static final String MISSING_AGE_MESSAGE =
+      "Chúng tôi cần biết độ tuổi của bạn hoặc người đi cùng để gợi ý phim phù hợp. Vui lòng cập"
+          + " nhật ngày sinh trong hồ sơ hoặc cung cấp trong tin nhắn.";
+
+  private final ChatClient chatClient;
+  private final ObjectMapper objectMapper;
+  private final MovieRepository movieRepository;
+  private final ScheduleRepository scheduleRepository;
+  private final KeywordAnalyzer keywordAnalyzer;
+  private final RecommendationScoringService scoringService;
+  private final AgeRestrictionService ageRestrictionService;
+  private final ChatMemoryService chatMemoryService;
+
+  public ChatRecommendationResponse generateRecommendations(ChatRecommendationRequest request) {
+    User currentUser = SecurityUtils.getCurrentUserLogin();
+    ChatMetadata metadata = enrichMetadataWithUser(extractMetadata(request), currentUser);
+    String conversationId = resolveConversationId(request, currentUser);
+    List<ChatMessage> recentHistory = chatMemoryService.getRecentMessages(conversationId);
+    String recentHistoryBlock = buildHistoryBlock(recentHistory);
+
+    List<Integer> allAges = collectAllAges(metadata);
+    if (allAges.isEmpty()) {
+      chatMemoryService.append(
+          conversationId,
+          new ChatMessage(Role.USER, request.getMessage()),
+          new ChatMessage(Role.ASSISTANT, MISSING_AGE_MESSAGE));
+      return ChatRecommendationResponse.builder()
+          .answer(MISSING_AGE_MESSAGE)
+          .recommendedMovies(Collections.emptyList())
+          .build();
+    }
+
+    int groupMinAge = ageRestrictionService.determineMinimumAge(allAges);
+    List<MovieAge> allowedRatings = ageRestrictionService.resolveAllowedRatings(groupMinAge);
+
+    List<Movie> candidateMovies = movieRepository.findByStatusOrderByCreatedAtDesc(true);
+
+    KeywordContext keywordContext = keywordAnalyzer.analyze(request.getMessage());
+    Set<String> preferredGenres =
+        new LinkedHashSet<>(TextNormalizer.normalizePreferredGenres(metadata.preferredGenres()));
+    preferredGenres.addAll(keywordContext.genreSlugs());
+
+    Set<String> immutablePreferredGenres = Collections.unmodifiableSet(preferredGenres);
+    Set<String> immutableKeywordPatterns =
+        Collections.unmodifiableSet(new LinkedHashSet<>(keywordContext.namePatterns()));
+
+    RecommendationScoringInput scoringInput =
+        new RecommendationScoringInput(
+            groupMinAge,
+            immutablePreferredGenres,
+            immutableKeywordPatterns,
+            request.getMessage(),
+            DEFAULT_ZONE);
+
+    List<ScoredMovie> scoredMovies = scoringService.scoreMovies(candidateMovies, scoringInput);
+    scoringService.logTopCandidates(scoredMovies);
+
+    List<Movie> topMovies =
+        scoredMovies.stream()
+            .filter(scored -> scored.breakdown().ageAllowed())
+            .sorted(
+                Comparator.comparingDouble((ScoredMovie scored) -> scored.breakdown().finalScore())
+                    .reversed()
+                    .thenComparing(
+                        scored -> scored.movie().getRating(),
+                        Comparator.nullsLast(Comparator.reverseOrder()))
+                    .thenComparing(
+                        scored -> scored.movie().getCreatedAt(),
+                        Comparator.nullsLast(Comparator.reverseOrder())))
+            .limit(MAX_RECOMMENDATIONS)
+            .map(ScoredMovie::movie)
+            .toList();
+
+    List<RecommendedMovieResponse> recommendationPayload =
+        topMovies.stream().map(this::buildRecommendedMovie).toList();
+
+    if (recommendationPayload.isEmpty()) {
+      String fallback =
+          "Hiện tại chúng tôi chưa tìm thấy phim phù hợp với độ tuổi và tiêu chí bạn yêu cầu. Bạn"
+              + " có thể thử lại với yêu cầu khác nhé.";
+    chatMemoryService.append(
+      conversationId,
+      new ChatMessage(Role.USER, request.getMessage()),
+      new ChatMessage(Role.ASSISTANT, fallback));
+      return ChatRecommendationResponse.builder()
+          .answer(fallback)
+          .recommendedMovies(Collections.emptyList())
+          .build();
+    }
+
+    String answer =
+        callOpenAiAssistant(
+            request,
+            metadata,
+            recommendationPayload,
+            allowedRatings,
+            immutablePreferredGenres,
+      immutableKeywordPatterns,
+      recentHistoryBlock);
+
+  chatMemoryService.append(
+    conversationId,
+    new ChatMessage(Role.USER, request.getMessage()),
+    new ChatMessage(Role.ASSISTANT, answer));
+
+    return ChatRecommendationResponse.builder()
+        .answer(answer)
+        .recommendedMovies(recommendationPayload)
+        .build();
+  }
+
+  private ChatMetadata enrichMetadataWithUser(ChatMetadata metadata, User currentUser) {
+    if (metadata == null) {
+      metadata = ChatMetadata.empty();
+    }
+
+    Integer effectiveUserAge = metadata.userAge();
+    if (effectiveUserAge == null) {
+      effectiveUserAge = calculateAge(currentUser == null ? null : currentUser.getDob());
+    }
+
+    List<Integer> companionAges =
+        metadata.companionAges() == null ? Collections.emptyList() : metadata.companionAges();
+
+    List<String> preferredGenres =
+        metadata.preferredGenres() == null ? Collections.emptyList() : metadata.preferredGenres();
+
+    return new ChatMetadata(effectiveUserAge, companionAges, preferredGenres);
+  }
+
+  private Integer calculateAge(Date dob) {
+    if (dob == null) {
+      return null;
+    }
+    LocalDate birthDate;
+    if (dob instanceof java.sql.Date sqlDate) {
+      birthDate = sqlDate.toLocalDate();
+    } else {
+      birthDate = dob.toInstant().atZone(DEFAULT_ZONE).toLocalDate();
+    }
+    LocalDate today = LocalDate.now(DEFAULT_ZONE);
+    if (birthDate.isAfter(today)) {
+      return null;
+    }
+    return Period.between(birthDate, today).getYears();
+  }
+
+  private String callOpenAiAssistant(
+      ChatRecommendationRequest request,
+      ChatMetadata metadata,
+      List<RecommendedMovieResponse> recommendations,
+      List<MovieAge> allowedRatings,
+      Set<String> preferredGenres,
+      Set<String> keywordNamePatterns,
+      String recentHistory) {
+    try {
+      String language =
+          (request.getLanguage() == null || request.getLanguage().isBlank())
+              ? "vi"
+              : request.getLanguage();
+
+      String systemPrompt =
+          "Bạn là trợ lý tư vấn phim cho rạp chiếu phim Việt Nam. Chỉ sử dụng danh sách phim do hệ"
+              + " thống cung cấp trong phiên này, tuyệt đối không bịa thêm phim hay thông tin mới."
+              + " Nếu không có phim phù hợp, hãy nói rõ 'chưa tìm thấy phim phù hợp' và gợi ý người"
+              + " dùng thay đổi tiêu chí (ví dụ: thể loại, thời gian chiếu, độ tuổi). Giữ giọng"
+              + " điệu thân thiện, súc tích và trả lời bằng ngôn ngữ người dùng yêu cầu. Luôn tôn"
+              + " trọng hệ thống phân loại độ tuổi Việt Nam (P, K, T13, T16, T18) và không gợi ý"
+              + " phim vượt giới hạn. Nếu câu hỏi lệch khỏi chủ đề phim, hãy khéo léo đưa người"
+              + " dùng trở lại với những gợi ý phim.";
+
+      String userPrompt =
+          buildUserPrompt(
+              request,
+              metadata,
+              recommendations,
+              allowedRatings,
+              language,
+              preferredGenres,
+        keywordNamePatterns,
+        recentHistory);
+
+      String content =
+          chatClient
+              .prompt()
+              .options(OpenAiChatOptions.builder().temperature(0.2).build())
+              .system(systemPrompt)
+              .user(userPrompt)
+              .call()
+              .content();
+
+      if (!StringUtils.hasText(content) || isLowQualityAnswer(content, recommendations)) {
+        log.warn("AI trả lời chưa đạt yêu cầu, sử dụng fallback được tổng hợp nội bộ");
+        return generateFallbackAnswer(recommendations, language);
+      }
+      return content;
+    } catch (Exception ex) {
+      log.error("AI assistant failed to answer", ex);
+      return generateFallbackAnswer(
+          recommendations,
+          (request.getLanguage() == null || request.getLanguage().isBlank())
+              ? "vi"
+              : request.getLanguage());
+    }
+  }
+
+  private String generateFallbackAnswer(
+      List<RecommendedMovieResponse> recommendations, String language) {
+    if (CollectionUtils.isEmpty(recommendations)) {
+      return "Hiện tại chúng tôi chưa tìm thấy phim phù hợp với độ tuổi và tiêu chí bạn yêu cầu."
+          + " Bạn có thể thử lại với yêu cầu khác nhé.";
+    }
+    boolean isEnglish =
+        StringUtils.hasText(language) && language.toLowerCase(Locale.ROOT).startsWith("en");
+    String intro =
+        isEnglish
+            ? "Here are some movies that fit your preferences:"
+            : "Dưới đây là những bộ phim mà chúng tôi thấy phù hợp với bạn:";
+    String body =
+        recommendations.stream()
+            .limit(3)
+            .map(movie -> formatFallbackLine(movie, isEnglish))
+            .collect(Collectors.joining("\n"));
+    String outro =
+        isEnglish
+            ? "Let me know if you want to book tickets or refine the search!"
+            : "Nếu bạn muốn đặt vé hoặc tìm thêm phim khác, hãy cho tôi biết nhé!";
+    return intro + "\n" + body + "\n" + outro;
+  }
+
+  private String formatFallbackLine(RecommendedMovieResponse movie, boolean isEnglish) {
+    StringBuilder builder = new StringBuilder();
+    builder.append(isEnglish ? "- " : "- ");
+    builder.append(movie.getName());
+    if (movie.getAgeRating() != null) {
+      builder.append(" (").append(movie.getAgeRating()).append(")");
+    }
+    if (movie.getRating() != null) {
+      builder
+          .append(isEnglish ? ", rating " : ", đánh giá ")
+          .append(String.format(Locale.US, "%.1f", movie.getRating()));
+    }
+    if (!CollectionUtils.isEmpty(movie.getGenreDisplayNames()) && !isEnglish) {
+      builder.append(", thể loại: ").append(String.join(", ", movie.getGenreDisplayNames()));
+    } else if (!CollectionUtils.isEmpty(movie.getGenreDisplayNames()) && isEnglish) {
+      builder.append(", genres: ").append(String.join(", ", movie.getGenreDisplayNames()));
+    }
+    return builder.toString();
+  }
+
+  private boolean isLowQualityAnswer(
+      String answer, List<RecommendedMovieResponse> recommendations) {
+    if (!StringUtils.hasText(answer)) {
+      return true;
+    }
+    String normalizedAnswer = normalizeForComparison(answer);
+    List<String> negativeSignals =
+        List.of("xin-loi", "khong-the-giup", "ngoai-pham-vi", "cannot-help", "sorry");
+    if (negativeSignals.stream().anyMatch(normalizedAnswer::contains)) {
+      return true;
+    }
+    if (CollectionUtils.isEmpty(recommendations)) {
+      return false;
+    }
+    return recommendations.stream()
+        .map(RecommendedMovieResponse::getName)
+        .filter(StringUtils::hasText)
+        .map(this::normalizeForComparison)
+        .noneMatch(normalizedAnswer::contains);
+  }
+
+  private String normalizeForComparison(String value) {
+    if (!StringUtils.hasText(value)) {
+      return "";
+    }
+    String slug = TextNormalizer.toSlug(value);
+    return slug == null ? "" : slug;
+  }
+
+  private ChatMetadata extractMetadata(ChatRecommendationRequest request) {
+    String systemPrompt =
+        "Bạn là chuyên gia trích xuất thông tin từ yêu cầu tư vấn phim. Hãy trả về JSON hợp lệ với"
+            + " khóa: userAge (number hoặc null), companionAges (array số), preferredGenres (array"
+            + " chuỗi viết hoa không dấu).";
+
+    String userPrompt = "Tin nhắn người dùng: " + request.getMessage();
+
+    try {
+      var response = chatClient.prompt().system(systemPrompt).user(userPrompt).call();
+
+      try {
+        ChatMetadata structured = response.entity(ChatMetadata.class);
+        if (structured != null) {
+          return structured;
+        }
+      } catch (Exception entityEx) {
+        log.debug(
+            "Structured metadata parsing thất bại, fallback sang phân tích thủ công", entityEx);
+      }
+
+      String raw = response.content();
+      String json = extractJsonBlock(raw);
+      ChatMetadata metadata = objectMapper.readValue(json, ChatMetadata.class);
+      return metadata == null ? ChatMetadata.empty() : metadata;
+    } catch (Exception ex) {
+      log.warn("Không thể phân tích metadata từ AI, sử dụng giá trị mặc định", ex);
+      return ChatMetadata.empty();
+    }
+  }
+
+  private String extractJsonBlock(String content) {
+    if (!StringUtils.hasText(content)) {
+      return "{}";
+    }
+    String trimmed = content.trim();
+    int start = -1;
+    int depth = 0;
+    boolean inString = false;
+    char prev = 0;
+    for (int i = 0; i < trimmed.length(); i++) {
+      char current = trimmed.charAt(i);
+      if (current == '"' && prev != '\\') {
+        inString = !inString;
+      }
+      if (!inString) {
+        if (current == '{') {
+          if (depth == 0) {
+            start = i;
+          }
+          depth++;
+        } else if (current == '}') {
+          if (depth > 0) {
+            depth--;
+            if (depth == 0 && start != -1) {
+              return trimmed.substring(start, i + 1);
+            }
+          }
+        }
+      }
+      prev = current;
+    }
+    return "{}";
+  }
+
+  private RecommendedMovieResponse buildRecommendedMovie(Movie movie) {
+    List<String> reasons = new ArrayList<>();
+    if (movie.getAge() != null) {
+      reasons.add("Phân loại độ tuổi: " + movie.getAge().name());
+    }
+    if (movie.getRating() != null) {
+      reasons.add(String.format(Locale.US, "Đánh giá trung bình: %.1f", movie.getRating()));
+    }
+    if (movie.getDuration() != null) {
+      reasons.add("Thời lượng: " + movie.getDuration() + " phút");
+    }
+
+    List<String> showtimes =
+        scheduleRepository.findByMovieIdAndEndDateAfter(movie.getId(), new Date()).stream()
+            .sorted(
+                Comparator.comparing(
+                    Schedule::getStartDate, Comparator.nullsLast(Comparator.naturalOrder())))
+            .limit(MAX_SHOWTIMES)
+            .map(schedule -> formatDate(schedule.getStartDate()))
+            .filter(Objects::nonNull)
+            .toList();
+
+    List<String> genreSlugs =
+        CollectionUtils.isEmpty(movie.getGenres())
+            ? Collections.emptyList()
+            : movie.getGenres().stream()
+                .map(
+                    genre ->
+                        StringUtils.hasText(genre.getSlug()) ? genre.getSlug() : genre.getName())
+                .filter(StringUtils::hasText)
+                .map(TextNormalizer::toSlug)
+                .filter(StringUtils::hasText)
+                .toList();
+
+    List<String> genreDisplayNames =
+        CollectionUtils.isEmpty(movie.getGenres())
+            ? Collections.emptyList()
+            : movie.getGenres().stream().map(Genre::getName).filter(StringUtils::hasText).toList();
+
+    return RecommendedMovieResponse.builder()
+        .movieId(movie.getId())
+        .name(movie.getName())
+        .poster(movie.getPoster())
+        .ageRating(movie.getAge())
+        .rating(movie.getRating())
+        .genres(genreSlugs)
+        .genreDisplayNames(genreDisplayNames)
+        .reasons(reasons)
+        .showtimes(showtimes)
+        .build();
+  }
+
+  private String buildUserPrompt(
+      ChatRecommendationRequest request,
+      ChatMetadata metadata,
+      List<RecommendedMovieResponse> recommendations,
+      List<MovieAge> allowedRatings,
+      String language,
+      Set<String> preferredGenreSlugs,
+    Set<String> keywordNamePatterns,
+    String recentHistory) {
+  String historySection =
+    StringUtils.hasText(recentHistory)
+      ? recentHistory
+      : "Không có hội thoại gần đây hoặc chưa lưu được.";
+    String moviesContext =
+        recommendations.stream()
+            .map(
+                movie -> {
+                  String genreSlugText =
+                      CollectionUtils.isEmpty(movie.getGenres())
+                          ? "không xác định"
+                          : String.join(", ", movie.getGenres());
+                  String genreNameText =
+                      CollectionUtils.isEmpty(movie.getGenreDisplayNames())
+                          ? ""
+                          : " | tên: " + String.join(", ", movie.getGenreDisplayNames());
+                  String ratingText =
+                      movie.getRating() != null
+                          ? String.format(Locale.US, ", rating %.1f", movie.getRating())
+                          : "";
+                  return "- "
+                      + movie.getName()
+                      + " ("
+                      + movie.getAgeRating()
+                      + ratingText
+                      + ", slug thể loại: "
+                      + genreSlugText
+                      + genreNameText
+                      + ")";
+                })
+            .collect(Collectors.joining("\n"));
+
+    List<Integer> companionAgeList =
+        metadata.companionAges() == null ? Collections.emptyList() : metadata.companionAges();
+
+    String companionAges =
+        CollectionUtils.isEmpty(companionAgeList)
+            ? "Không cung cấp"
+            : companionAgeList.stream().map(String::valueOf).collect(Collectors.joining(", "));
+
+    String userAge =
+        metadata.userAge() == null ? "Không cung cấp" : String.valueOf(metadata.userAge());
+
+    String allowedText = allowedRatings.stream().map(Enum::name).collect(Collectors.joining(", "));
+
+    String genreHintText =
+        CollectionUtils.isEmpty(preferredGenreSlugs)
+            ? "Không cung cấp"
+            : String.join(", ", preferredGenreSlugs);
+
+    String keywordHintText =
+        CollectionUtils.isEmpty(keywordNamePatterns)
+            ? "Không xác định"
+            : keywordNamePatterns.stream()
+                .map(pattern -> pattern.replace('-', ' '))
+                .collect(Collectors.joining(", "));
+
+  return "Lịch sử hội thoại gần đây (tối đa 5 lượt):\n"
+    + historySection
+    + "\n\nNgười dùng hỏi bằng ngôn ngữ: "
+        + language
+        + "\n"
+        + "Tin nhắn của người dùng: "
+        + request.getMessage()
+        + "\n"
+        + "Độ tuổi của người hỏi: "
+        + userAge
+        + "\n"
+        + "Độ tuổi người đi cùng: "
+        + companionAges
+        + "\n"
+        + "Các phân loại độ tuổi được phép: "
+        + allowedText
+        + "\n"
+        + "Các thể loại ưu tiên (bao gồm suy luận từ từ khóa): "
+        + genreHintText
+        + "\n"
+        + "Từ khóa nổi bật nhận được: "
+        + keywordHintText
+        + "\n"
+        + "Danh sách phim có thể gợi ý (tối đa "
+        + MAX_RECOMMENDATIONS
+        + "):"
+        + "\n"
+        + moviesContext
+        + "\n"
+        + "Hãy phản hồi tối đa 2 đoạn ngắn, giữ thân thiện, nhắc đến 2-3 phim tiêu biểu và khuyến"
+        + " khích người dùng đặt vé.\n"
+        + "Chỉ đề cập tới các phim trong danh sách, không bịa thêm nội dung. Nếu thông tin chưa đủ,"
+        + " hãy gợi ý người dùng cung cấp thêm tiêu chí.";
+  }
+
+  private List<Integer> collectAllAges(ChatMetadata metadata) {
+    List<Integer> ages = new ArrayList<>();
+    if (metadata.userAge() != null && metadata.userAge() > 0) {
+      ages.add(metadata.userAge());
+    }
+    List<Integer> companionAges =
+        metadata.companionAges() == null ? Collections.emptyList() : metadata.companionAges();
+    if (!CollectionUtils.isEmpty(companionAges)) {
+      ages.addAll(companionAges.stream().filter(Objects::nonNull).filter(age -> age > 0).toList());
+    }
+    return ages;
+  }
+
+  private String formatDate(Date date) {
+    if (date == null) {
+      return null;
+    }
+    ZonedDateTime zonedDateTime = ZonedDateTime.ofInstant(date.toInstant(), DEFAULT_ZONE);
+    return SHOWTIME_FORMATTER.format(zonedDateTime);
+  }
+
+  private String resolveConversationId(ChatRecommendationRequest request, User currentUser) {
+    if (request != null && StringUtils.hasText(request.getConversationId())) {
+      return request.getConversationId().trim();
+    }
+    if (currentUser != null && currentUser.getId() != null) {
+      return "user-" + currentUser.getId();
+    }
+    return null;
+  }
+
+  private String buildHistoryBlock(List<ChatMessage> history) {
+    if (CollectionUtils.isEmpty(history)) {
+      return null;
+    }
+    return history.stream()
+        .map(
+            entry ->
+                (entry.role() == Role.USER ? "Người dùng" : "Trợ lý") + ": " + entry.content())
+        .collect(Collectors.joining("\n"));
+  }
+  @JsonIgnoreProperties(ignoreUnknown = true)
+  record ChatMetadata(Integer userAge, List<Integer> companionAges, List<String> preferredGenres) {
+    static ChatMetadata empty() {
+      return new ChatMetadata(null, Collections.emptyList(), Collections.emptyList());
+    }
+  }
+}
