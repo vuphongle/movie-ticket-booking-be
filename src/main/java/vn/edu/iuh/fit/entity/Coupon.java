@@ -3,6 +3,7 @@ package vn.edu.iuh.fit.entity;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
+import vn.edu.iuh.fit.model.enums.CouponKind;
 
 import java.util.Date;
 
@@ -19,7 +20,12 @@ public class Coupon {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     Integer id;
 
-    @Column(unique = true, nullable = false)
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    @Builder.Default
+    CouponKind kind = CouponKind.VOUCHER; // Default to VOUCHER for backward compatibility
+
+    @Column(unique = true) // Removed nullable = false to allow null for DISPLAY coupons
     String code;
     
     @Column(nullable = false)
@@ -44,6 +50,9 @@ public class Coupon {
 
     @PrePersist
     protected void onCreate() {
+        // Validate business rules
+        validateCouponKindRules();
+        
         if (code != null) {
             code = code.toUpperCase(); // Tự động chuyển code thành uppercase
         }
@@ -53,9 +62,22 @@ public class Coupon {
 
     @PreUpdate
     protected void onUpdate() {
+        // Validate business rules
+        validateCouponKindRules();
+        
         if (code != null) {
             code = code.toUpperCase(); // Tự động chuyển code thành uppercase
         }
         updatedAt = new Date();
+    }
+
+    /**
+     * Validate business rules for coupon kind
+     */
+    private void validateCouponKindRules() {
+        if (kind == CouponKind.VOUCHER && (code == null || code.trim().isEmpty())) {
+            throw new IllegalArgumentException("VOUCHER coupon must have a code");
+        }
+        // DISPLAY coupons can have null code - this is allowed
     }
 }

@@ -14,18 +14,15 @@ import java.util.List;
 import java.util.Objects;
 
 /**
- * Service to validate duplicate ORDER + DISCOUNT_PERCENT coupon details
+ * Service to validate duplicate TICKET + DISCOUNT_PERCENT coupon details
  * 
  * This validator ensures that within a single coupon, there are no two CouponDetail entries
  * that have the exact same combination of:
- * - targetType = ORDER
- * - benefitType = DISCOUNT_PERCENT
+ * - targetType = TICKET
+ * - benefitType = DISCOUNT_PERCENT  
  * - percent (normalized to 2 decimal places)
- * - lineMaxDiscount (exact match, null != 0)
- * - minOrderTotal (exact match, null != 0)
  * 
- * Other fields like limitQuantityApplied, selectionStrategy, minQuantity are ignored
- * as they are not relevant for ORDER-level discounts.
+ * Other fields are ignored for simplicity after cleanup.
  */
 @Slf4j
 @Service
@@ -43,13 +40,13 @@ public class CouponDuplicateValidator {
      * @throws IllegalArgumentException if duplicate is found
      */
     public void validateNoDuplicateOrderDiscountPercent(Integer couponId, CouponDetail detail, Integer excludeDetailId) {
-        // Only validate ORDER + DISCOUNT_PERCENT combinations
-        if (detail.getTargetType() != TargetType.ORDER || detail.getBenefitType() != BenefitType.DISCOUNT_PERCENT) {
+        // Only validate TICKET + DISCOUNT_PERCENT combinations
+        if (detail.getTargetType() != TargetType.TICKET || detail.getBenefitType() != BenefitType.DISCOUNT_PERCENT) {
             return;
         }
 
         // Get all existing details for this coupon
-        List<CouponDetail> existingDetails = couponDetailRepository.findByCouponIdOrderByLinePriorityAsc(couponId);
+        List<CouponDetail> existingDetails = couponDetailRepository.findByCouponIdOrderByIdAsc(couponId);
         
         // Check for duplicates
         for (CouponDetail existing : existingDetails) {
@@ -58,20 +55,18 @@ public class CouponDuplicateValidator {
                 continue;
             }
             
-            // Skip non-ORDER or non-DISCOUNT_PERCENT details
-            if (existing.getTargetType() != TargetType.ORDER || existing.getBenefitType() != BenefitType.DISCOUNT_PERCENT) {
+            // Skip non-TICKET or non-DISCOUNT_PERCENT details
+            if (existing.getTargetType() != TargetType.TICKET || existing.getBenefitType() != BenefitType.DISCOUNT_PERCENT) {
                 continue;
             }
             
             // Check if this is a duplicate
             if (isDuplicateOrderDiscountPercent(detail, existing)) {
-                String message = "Không thể thêm điều kiện này vì đã tồn tại điều kiện giảm giá theo phần trăm tương tự cho tổng đơn hàng.";
-                log.warn("Duplicate ORDER + DISCOUNT_PERCENT coupon detail detected. " +
-                    "Existing detail ID: {}, percent: {}, lineMaxDiscount: {}, minOrderTotal: {}",
+                String message = "Không thể thêm điều kiện này vì đã tồn tại điều kiện giảm giá theo phần trăm tương tự cho vé.";
+                log.warn("Duplicate TICKET + DISCOUNT_PERCENT coupon detail detected. " +
+                    "Existing detail ID: {}, percent: {}",
                     existing.getId(),
-                    normalizePercent(existing.getPercent()),
-                    existing.getLineMaxDiscount(),
-                    existing.getMinOrderTotal());
+                    existing.getTerms() != null ? normalizePercent(existing.getTerms().getPercent()) : null);
                 throw new IllegalArgumentException(message);
             }
         }
@@ -84,30 +79,29 @@ public class CouponDuplicateValidator {
      * @throws IllegalArgumentException if any duplicates are found
      */
     public void validateCouponNoDuplicateOrderDiscountPercent(Integer couponId) {
-        List<CouponDetail> allDetails = couponDetailRepository.findByCouponIdOrderByLinePriorityAsc(couponId);
+        List<CouponDetail> allDetails = couponDetailRepository.findByCouponIdOrderByIdAsc(couponId);
         
-        // Filter to only ORDER + DISCOUNT_PERCENT details
-        List<CouponDetail> orderDiscountDetails = allDetails.stream()
-            .filter(detail -> detail.getTargetType() == TargetType.ORDER && 
+        // Filter to only TICKET + DISCOUNT_PERCENT details
+        List<CouponDetail> ticketDiscountDetails = allDetails.stream()
+            .filter(detail -> detail.getTargetType() == TargetType.TICKET && 
                             detail.getBenefitType() == BenefitType.DISCOUNT_PERCENT)
             .toList();
         
         // Check each detail against all others
-        for (int i = 0; i < orderDiscountDetails.size(); i++) {
-            CouponDetail detail1 = orderDiscountDetails.get(i);
+        for (int i = 0; i < ticketDiscountDetails.size(); i++) {
+            CouponDetail detail1 = ticketDiscountDetails.get(i);
             
-            for (int j = i + 1; j < orderDiscountDetails.size(); j++) {
-                CouponDetail detail2 = orderDiscountDetails.get(j);
+            for (int j = i + 1; j < ticketDiscountDetails.size(); j++) {
+                CouponDetail detail2 = ticketDiscountDetails.get(j);
                 
                 if (isDuplicateOrderDiscountPercent(detail1, detail2)) {
-                    String message = "Không thể kích hoạt coupon này vì tồn tại nhiều điều kiện giảm giá theo phần trăm tương tự cho tổng đơn hàng.";
-                    log.warn("Duplicate ORDER + DISCOUNT_PERCENT coupon details detected. " +
-                        "Detail IDs: {} and {}, percent: {}, lineMaxDiscount: {}, minOrderTotal: {}",
+                    String message = "Coupon không thể được kích hoạt vì có các điều kiện giảm giá theo phần trăm trùng lặp cho vé.";
+                    log.warn("Duplicate TICKET + DISCOUNT_PERCENT coupon details found in coupon {}. " +
+                        "Detail IDs: {} and {}, percent: {}",
+                        couponId,
                         detail1.getId(),
                         detail2.getId(),
-                        normalizePercent(detail1.getPercent()),
-                        detail1.getLineMaxDiscount(),
-                        detail1.getMinOrderTotal());
+                        detail1.getTerms() != null ? normalizePercent(detail1.getTerms().getPercent()) : null);
                     throw new IllegalArgumentException(message);
                 }
             }
@@ -115,37 +109,28 @@ public class CouponDuplicateValidator {
     }
 
     /**
-     * Checks if two ORDER + DISCOUNT_PERCENT details are duplicates
+     * Checks if two TICKET + DISCOUNT_PERCENT details are duplicates
      * 
      * @param detail1 First detail
      * @param detail2 Second detail
      * @return true if they are duplicates
      */
     private boolean isDuplicateOrderDiscountPercent(CouponDetail detail1, CouponDetail detail2) {
-        // Both should already be ORDER + DISCOUNT_PERCENT, but double-check
-        if (detail1.getTargetType() != TargetType.ORDER || detail1.getBenefitType() != BenefitType.DISCOUNT_PERCENT ||
-            detail2.getTargetType() != TargetType.ORDER || detail2.getBenefitType() != BenefitType.DISCOUNT_PERCENT) {
+        // Both should already be TICKET + DISCOUNT_PERCENT, but double-check
+        if (detail1.getTargetType() != TargetType.TICKET || detail1.getBenefitType() != BenefitType.DISCOUNT_PERCENT ||
+            detail2.getTargetType() != TargetType.TICKET || detail2.getBenefitType() != BenefitType.DISCOUNT_PERCENT) {
             return false;
         }
 
         // Compare normalized percent values
-        BigDecimal percent1 = normalizePercent(detail1.getPercent());
-        BigDecimal percent2 = normalizePercent(detail2.getPercent());
-        if (percent1.compareTo(percent2) != 0) {
+        BigDecimal percent1 = detail1.getTerms() != null ? normalizePercent(detail1.getTerms().getPercent()) : null;
+        BigDecimal percent2 = detail2.getTerms() != null ? normalizePercent(detail2.getTerms().getPercent()) : null;
+        
+        if (percent1 == null || percent2 == null || percent1.compareTo(percent2) != 0) {
             return false;
         }
 
-        // Compare lineMaxDiscount (null != 0, exact match required)
-        if (!isExactMatch(detail1.getLineMaxDiscount(), detail2.getLineMaxDiscount())) {
-            return false;
-        }
-
-        // Compare minOrderTotal (null != 0, exact match required)
-        if (!isExactMatch(detail1.getMinOrderTotal(), detail2.getMinOrderTotal())) {
-            return false;
-        }
-
-        // If we reach here, they are duplicates
+        // If we reach here, they are duplicates (simplified comparison)
         return true;
     }
 

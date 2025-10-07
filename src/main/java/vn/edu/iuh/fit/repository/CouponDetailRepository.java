@@ -13,11 +13,11 @@ import java.util.List;
 @Repository
 public interface CouponDetailRepository extends JpaRepository<CouponDetail, Integer> {
     
-    @Query("SELECT cd FROM CouponDetail cd WHERE cd.coupon.id = :couponId ORDER BY cd.linePriority ASC")
-    List<CouponDetail> findByCouponIdOrderByLinePriorityAsc(@Param("couponId") Integer couponId);
+    @Query("SELECT cd FROM CouponDetail cd WHERE cd.coupon.id = :couponId ORDER BY cd.id ASC")
+    List<CouponDetail> findByCouponIdOrderByIdAsc(@Param("couponId") Integer couponId);
     
-    @Query("SELECT cd FROM CouponDetail cd WHERE cd.coupon.id = :couponId AND cd.enabled = true ORDER BY cd.linePriority ASC")
-    List<CouponDetail> findByCouponIdAndEnabledTrueOrderByLinePriorityAsc(@Param("couponId") Integer couponId);
+    @Query("SELECT cd FROM CouponDetail cd WHERE cd.coupon.id = :couponId AND cd.enabled = true ORDER BY cd.id ASC")
+    List<CouponDetail> findByCouponIdAndEnabledTrueOrderByIdAsc(@Param("couponId") Integer couponId);
     
     @Query("SELECT COUNT(cd) FROM CouponDetail cd WHERE cd.coupon.id = :couponId AND cd.enabled = true")
     Long countEnabledDetailsByCouponId(@Param("couponId") Integer couponId);
@@ -25,21 +25,11 @@ public interface CouponDetailRepository extends JpaRepository<CouponDetail, Inte
     @Query("SELECT COUNT(cd) FROM CouponDetail cd WHERE cd.coupon.id = :couponId")
     Long countTotalDetailsByCouponId(@Param("couponId") Integer couponId);
     
-    @Query("SELECT COALESCE(SUM(cd.detailUsedCount), 0) FROM CouponDetail cd WHERE cd.coupon.id = :couponId")
-    Long sumUsedCountByCouponId(@Param("couponId") Integer couponId);
+    @Query("SELECT cd.coupon.id FROM CouponDetail cd WHERE cd.id = :detailId")
+    Integer findCouponIdByDetailId(@Param("detailId") Integer detailId);
     
     @Modifying
     @Transactional
     @Query("DELETE FROM CouponDetail cd WHERE cd.coupon.id = :couponId")
     void deleteByCouponId(@Param("couponId") Integer couponId);
-    
-    @Query("SELECT cd.coupon.id FROM CouponDetail cd WHERE cd.id = :detailId")
-    Integer findCouponIdByDetailId(@Param("detailId") Integer detailId);
-    
-    // Kiểm tra xem product có đang được dùng làm gift trong coupon detail hoạt động không
-    @Query("SELECT COUNT(cd) > 0 FROM CouponDetail cd " +
-           "WHERE cd.giftServiceId = :productId " +
-           "AND cd.enabled = true " +
-           "AND cd.coupon.status = true")
-    boolean existsByGiftServiceIdAndEnabledTrueAndCouponStatusTrue(@Param("productId") Integer productId);
 }

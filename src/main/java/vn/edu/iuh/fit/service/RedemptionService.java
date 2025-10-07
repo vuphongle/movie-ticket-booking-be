@@ -5,10 +5,12 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import vn.edu.iuh.fit.entity.CouponDetail;
+import vn.edu.iuh.fit.entity.CouponDetailTerms;
 import vn.edu.iuh.fit.exception.BadRequestException;
 import vn.edu.iuh.fit.exception.ResourceNotFoundException;
 import vn.edu.iuh.fit.model.request.RedemptionConfirmRequest;
 import vn.edu.iuh.fit.repository.CouponDetailRepository;
+import vn.edu.iuh.fit.repository.CouponDetailTermsRepository;
 
 import java.util.HashSet;
 import java.util.List;
@@ -19,6 +21,7 @@ import java.util.Set;
 @RequiredArgsConstructor
 public class RedemptionService {
     private final CouponDetailRepository couponDetailRepository;
+    private final CouponDetailTermsRepository couponDetailTermsRepository;
     private static final Set<String> processedRedemptions = new HashSet<>(); // Simple in-memory cache - should use Redis in production
 
     @Transactional
@@ -36,17 +39,21 @@ public class RedemptionService {
             CouponDetail detail = couponDetailRepository.findById(detailId)
                     .orElseThrow(() -> new ResourceNotFoundException("Coupon detail không tồn tại: " + detailId));
 
-            // Kiểm tra usage limit
-            if (detail.getDetailUsageLimit() != null && 
-                detail.getDetailUsedCount() >= detail.getDetailUsageLimit()) {
-                throw new BadRequestException("Coupon detail " + detailId + " đã hết lượt sử dụng");
+            // Get or create terms
+            CouponDetailTerms terms = couponDetailTermsRepository.findByCouponDetailId(detailId);
+            if (terms == null) {
+                // Create terms if not exists (backward compatibility)
+                terms = CouponDetailTerms.builder()
+                        .couponDetail(detail)
+                        .detailUsedCount(0)
+                        .build();
             }
 
             // Tăng used count atomically
-            detail.setDetailUsedCount(detail.getDetailUsedCount() + 1);
-            couponDetailRepository.save(detail);
+            terms.setDetailUsedCount(terms.getDetailUsedCount() + 1);
+            couponDetailTermsRepository.save(terms);
             
-            log.info("Increased used count for coupon detail {} to {}", detailId, detail.getDetailUsedCount());
+            log.info("Increased used count for coupon detail {} to {}", detailId, terms.getDetailUsedCount());
         }
 
         // Đánh dấu đã xử lý
@@ -69,12 +76,16 @@ public class RedemptionService {
             CouponDetail detail = couponDetailRepository.findById(detailId)
                     .orElseThrow(() -> new ResourceNotFoundException("Coupon detail không tồn tại: " + detailId));
 
-            // Chỉ giảm nếu used count > 0
-            if (detail.getDetailUsedCount() > 0) {
-                detail.setDetailUsedCount(detail.getDetailUsedCount() - 1);
-                couponDetailRepository.save(detail);
-                
-                log.info("Decreased used count for coupon detail {} to {}", detailId, detail.getDetailUsedCount());
+            // Get terms
+            CouponDetailTerms terms = couponDetailTermsRepository.findByCouponDetailId(detailId);
+            if (terms != null) {
+                // Chỉ giảm nếu used count > 0
+                if (terms.getDetailUsedCount() > 0) {
+                    terms.setDetailUsedCount(terms.getDetailUsedCount() - 1);
+                    couponDetailTermsRepository.save(terms);
+                    
+                    log.info("Decreased used count for coupon detail {} to {}", detailId, terms.getDetailUsedCount());
+                }
             }
         }
 
