@@ -68,6 +68,11 @@ public class CouponController {
         return ResponseEntity.ok(couponPreviewService.previewCoupon(id, request));
     }
 
+    @PostMapping("/coupons/previews")
+    public ResponseEntity<?> previewAllCouponDetail(@Valid @RequestBody CouponPreviewRequest request) {
+        return ResponseEntity.ok(couponPreviewService.previewAllCouponDetailDisplay(request));
+    }
+
     @PostMapping("/coupons/apply")
     public ResponseEntity<?> applyCoupon(@Valid @RequestBody CouponApplyRequest request) {
         return ResponseEntity.ok(couponPreviewService.applyCoupon(request));

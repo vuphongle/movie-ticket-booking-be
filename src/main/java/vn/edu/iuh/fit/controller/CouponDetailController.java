@@ -15,6 +15,11 @@ import vn.edu.iuh.fit.service.CouponDetailService;
 public class CouponDetailController {
     private final CouponDetailService couponDetailService;
 
+    @GetMapping("/coupon-details")
+    public ResponseEntity<?> getCouponDetails() {
+        return ResponseEntity.ok(couponDetailService.getAllCouponDetails());
+    }
+
     @GetMapping("/coupon-details/{detailId}")
     public ResponseEntity<?> getCouponDetailsByDetailId(@PathVariable Integer detailId) {
         return ResponseEntity.ok(couponDetailService.getCouponDetailById(detailId));

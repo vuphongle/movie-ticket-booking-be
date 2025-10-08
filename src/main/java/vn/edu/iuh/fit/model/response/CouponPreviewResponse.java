@@ -27,6 +27,7 @@ public class CouponPreviewResponse {
         Integer detailId;
         Boolean applied;
         String reason; // lý do áp/không áp
+        Integer giftServiceId; // nếu có quà tặng
         BigDecimal lineDiscount;
         Integer affectedQuantity;
     }
@@ -40,6 +41,7 @@ public class CouponPreviewResponse {
     public static class GiftItem {
         Integer serviceId;
         String serviceName;
+        String thumbnail;
         Integer quantity;
     }
 }

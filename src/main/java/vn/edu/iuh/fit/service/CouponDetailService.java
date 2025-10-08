@@ -43,6 +43,13 @@ public class CouponDetailService {
                 .collect(Collectors.toList());
     }
 
+    public List<CouponDetailResponse> getAllCouponDetails() {
+        List<CouponDetail> details = couponDetailRepository.findAllCouponDetailByKindDISPLAYAndEnabledTrueOrderAndIdAsc();
+        return details.stream()
+                .map(this::buildCouponDetailResponse)
+                .collect(Collectors.toList());
+    }
+
     public CouponDetail getCouponDetailById(Integer detailId) {
         return couponDetailRepository.findById(detailId)
                 .orElseThrow(() -> new ResourceNotFoundException("Coupon detail không tồn tại"));
