@@ -18,8 +18,11 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.UUID;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -78,6 +81,7 @@ public class ChatRecommendationService {
   private final AgeRestrictionService ageRestrictionService;
   private final ChatMemoryService chatMemoryService;
   private final ChatCinemaLocator cinemaLocator;
+  private final Map<String, ChatMetadata> conversationMetadataCache = new ConcurrentHashMap<>();
 
   public ChatRecommendationResponse generateRecommendations(ChatRecommendationRequest request) {
   User currentUser = SecurityUtils.getCurrentUserLoginOptional().orElse(null);
@@ -89,6 +93,7 @@ public class ChatRecommendationService {
           new ChatMessage(Role.USER, request.getMessage()),
           new ChatMessage(Role.ASSISTANT, MISSING_AGE_MESSAGE));
       return ChatRecommendationResponse.builder()
+      .conversationId(context.conversationId())
           .answer(MISSING_AGE_MESSAGE)
           .recommendedMovies(Collections.emptyList())
           .build();
@@ -107,6 +112,7 @@ public class ChatRecommendationService {
           new ChatMessage(Role.USER, request.getMessage()),
           new ChatMessage(Role.ASSISTANT, fallback));
       return ChatRecommendationResponse.builder()
+      .conversationId(context.conversationId())
           .answer(fallback)
           .recommendedMovies(Collections.emptyList())
           .build();
@@ -123,6 +129,7 @@ public class ChatRecommendationService {
         new ChatMessage(Role.ASSISTANT, answer));
 
     return ChatRecommendationResponse.builder()
+    .conversationId(context.conversationId())
         .answer(answer)
         .recommendedMovies(finalRecommendations)
         .build();
@@ -132,6 +139,7 @@ public class ChatRecommendationService {
     ChatRecommendationRequest request, User currentUser) {
   ChatMetadata metadata = enrichMetadataWithUser(extractMetadata(request), currentUser);
   String conversationId = resolveConversationId(request, currentUser);
+  metadata = mergeWithCachedMetadata(conversationId, metadata);
   List<ChatMessage> recentHistory = chatMemoryService.getRecentMessages(conversationId);
   String recentHistoryBlock = buildHistoryBlock(recentHistory);
 
@@ -168,7 +176,8 @@ public class ChatRecommendationService {
   Integer requestedCinemaId = cinemaMatch == null ? null : cinemaMatch.cinema().getId();
   boolean enforceShowtimeFiltering = !CollectionUtils.isEmpty(requestedDates) || cinemaMatch != null;
 
-  return new RecommendationContext(
+  RecommendationContext recommendationContext =
+    new RecommendationContext(
     request,
     metadata,
     conversationId,
@@ -185,6 +194,8 @@ public class ChatRecommendationService {
     requestedCinemaId,
     enforceShowtimeFiltering,
     candidateMovies);
+  cacheMetadata(conversationId, metadata);
+  return recommendationContext;
   }
 
   private List<RecommendedMovieResponse> buildRecommendations(RecommendationContext context) {
@@ -253,6 +264,81 @@ public class ChatRecommendationService {
         metadata.preferredGenres() == null ? Collections.emptyList() : metadata.preferredGenres();
 
     return new ChatMetadata(effectiveUserAge, companionAges, preferredGenres);
+  }
+
+  private ChatMetadata mergeWithCachedMetadata(String conversationId, ChatMetadata metadata) {
+    ChatMetadata sanitized = sanitizeMetadata(metadata);
+    if (!StringUtils.hasText(conversationId)) {
+      return sanitized;
+    }
+    ChatMetadata cached = conversationMetadataCache.get(conversationId);
+    if (cached == null) {
+      return sanitized;
+    }
+    Integer userAge = sanitized.userAge() != null ? sanitized.userAge() : cached.userAge();
+    List<Integer> companionAges = mergeAges(cached.companionAges(), sanitized.companionAges());
+    List<String> preferredGenres = mergeGenres(cached.preferredGenres(), sanitized.preferredGenres());
+    return new ChatMetadata(userAge, companionAges, preferredGenres);
+  }
+
+  private void cacheMetadata(String conversationId, ChatMetadata metadata) {
+    if (!StringUtils.hasText(conversationId) || metadata == null) {
+      return;
+    }
+    ChatMetadata sanitized = sanitizeMetadata(metadata);
+    conversationMetadataCache.merge(
+        conversationId,
+        sanitized,
+        (existing, incoming) -> {
+          Integer userAge = incoming.userAge() != null ? incoming.userAge() : existing.userAge();
+          List<Integer> companionAges = mergeAges(existing.companionAges(), incoming.companionAges());
+          List<String> preferredGenres = mergeGenres(existing.preferredGenres(), incoming.preferredGenres());
+          return new ChatMetadata(userAge, companionAges, preferredGenres);
+        });
+  }
+
+  private ChatMetadata sanitizeMetadata(ChatMetadata metadata) {
+    if (metadata == null) {
+      return ChatMetadata.empty();
+    }
+    Integer userAge = metadata.userAge();
+    List<Integer> companionAges = mergeAges(metadata.companionAges());
+    List<String> preferredGenres = mergeGenres(metadata.preferredGenres());
+    return new ChatMetadata(userAge, companionAges, preferredGenres);
+  }
+
+  @SafeVarargs
+  private final List<Integer> mergeAges(List<Integer>... sources) {
+    LinkedHashSet<Integer> merged = new LinkedHashSet<>();
+    if (sources != null) {
+      for (List<Integer> source : sources) {
+        if (CollectionUtils.isEmpty(source)) {
+          continue;
+        }
+        source.stream()
+            .filter(Objects::nonNull)
+            .filter(age -> age > 0)
+            .forEach(merged::add);
+      }
+    }
+    return merged.isEmpty() ? Collections.emptyList() : List.copyOf(merged);
+  }
+
+  @SafeVarargs
+  private final List<String> mergeGenres(List<String>... sources) {
+    LinkedHashSet<String> merged = new LinkedHashSet<>();
+    if (sources != null) {
+      for (List<String> source : sources) {
+        if (CollectionUtils.isEmpty(source)) {
+          continue;
+        }
+        source.stream()
+            .filter(StringUtils::hasText)
+            .map(String::trim)
+            .forEach(merged::add);
+      }
+    }
+    return merged.isEmpty() ? Collections.emptyList() : List.copyOf(merged);
   }
 
   private Integer calculateAge(Date dob) {
@@ -502,6 +588,7 @@ public class ChatRecommendationService {
     return RecommendedMovieResponse.builder()
         .movieId(movie.getId())
         .name(movie.getName())
+    .slug(StringUtils.hasText(movie.getSlug()) ? movie.getSlug() : TextNormalizer.toSlug(movie.getName()))
         .poster(movie.getPoster())
         .ageRating(movie.getAge())
         .rating(movie.getRating())
@@ -919,7 +1006,7 @@ public class ChatRecommendationService {
     if (currentUser != null && currentUser.getId() != null) {
       return "user-" + currentUser.getId();
     }
-    return null;
+    return "guest-" + UUID.randomUUID();
   }
 
   private String buildHistoryBlock(List<ChatMessage> history) {
