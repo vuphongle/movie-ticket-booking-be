@@ -18,6 +18,9 @@ public interface CouponDetailRepository extends JpaRepository<CouponDetail, Inte
     
     @Query("SELECT cd FROM CouponDetail cd WHERE cd.coupon.id = :couponId AND cd.enabled = true ORDER BY cd.id ASC")
     List<CouponDetail> findByCouponIdAndEnabledTrueOrderByIdAsc(@Param("couponId") Integer couponId);
+
+    @Query("SELECT cd FROM CouponDetail cd WHERE cd.coupon.kind = 'DISPLAY' and cd.enabled = true ORDER BY cd.id ASC")
+    List<CouponDetail> findAllCouponDetailByKindDISPLAYAndEnabledTrueOrderAndIdAsc();
     
     @Query("SELECT COUNT(cd) FROM CouponDetail cd WHERE cd.coupon.id = :couponId AND cd.enabled = true")
     Long countEnabledDetailsByCouponId(@Param("couponId") Integer couponId);

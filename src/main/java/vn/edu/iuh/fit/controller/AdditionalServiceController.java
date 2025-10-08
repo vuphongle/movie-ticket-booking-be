@@ -50,13 +50,13 @@ public class AdditionalServiceController {
         additionalServices.deleteAdditionalService(id);
         return ResponseEntity.noContent().build();
     }
-    
+
     // API mới để lấy giá của additional service
     @GetMapping("/public/additional-services/{id}/price")
     public ResponseEntity<Integer> getAdditionalServicePrice(@PathVariable Integer id) {
         Integer price = additionalServices.getPriceForAdditionalService(id);
-        return price != null ? ResponseEntity.ok(price) 
-                             : ResponseEntity.notFound().build();
+        return price != null ? ResponseEntity.ok(price)
+                : ResponseEntity.notFound().build();
     }
     
     // API mới để lấy các items của combo service

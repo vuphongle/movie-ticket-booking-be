@@ -5,6 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import vn.edu.iuh.fit.constant.ValidationMessages;
+import vn.edu.iuh.fit.entity.AdditionalService;
 import vn.edu.iuh.fit.entity.Coupon;
 import vn.edu.iuh.fit.entity.CouponDetail;
 import vn.edu.iuh.fit.entity.CouponDetailTerms;
@@ -17,10 +18,12 @@ import vn.edu.iuh.fit.model.request.CouponApplyRequest;
 import vn.edu.iuh.fit.model.request.CouponPreviewRequest;
 import vn.edu.iuh.fit.model.response.CouponApplyResponse;
 import vn.edu.iuh.fit.model.response.CouponPreviewResponse;
+import vn.edu.iuh.fit.repository.AdditionalServiceRepository;
 import vn.edu.iuh.fit.repository.CouponDetailRepository;
 import vn.edu.iuh.fit.repository.CouponRepository;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -30,6 +33,7 @@ import java.util.stream.Collectors;
 public class CouponPreviewService {
     private final CouponRepository couponRepository;
     private final CouponDetailRepository couponDetailRepository;
+    private final AdditionalServiceRepository additionalServiceRepository;
 
     public CouponPreviewResponse previewCoupon(Integer couponId, CouponPreviewRequest request) {
         Coupon coupon = couponRepository.findById(couponId)
@@ -52,6 +56,15 @@ public class CouponPreviewService {
         return calculateCouponApplication(enabledDetails, request);
     }
 
+    public CouponPreviewResponse previewAllCouponDetailDisplay(CouponPreviewRequest request) {
+
+        // Lấy các details đã enabled và sắp xếp theo ID
+        List<CouponDetail> enabledDetails = couponDetailRepository
+                .findAllCouponDetailByKindDISPLAYAndEnabledTrueOrderAndIdAsc();
+
+        return calculateCouponApplication(enabledDetails, request);
+    }
+
     @Transactional
     public CouponApplyResponse applyCoupon(CouponApplyRequest request) {
         Coupon coupon = couponRepository.findByCode(request.getCouponCode())
@@ -68,10 +81,10 @@ public class CouponPreviewService {
 
         // Preview trước để xem kết quả
         CouponPreviewResponse previewResult = previewCoupon(coupon.getId(), request.getCart());
-        
+
         // Tạo idempotent token
         String idempotentToken = generateIdempotentToken(request.getOrderId(), request.getCouponCode());
-        
+
         // Lấy danh sách detail IDs đã được áp dụng
         List<Integer> appliedDetailIds = previewResult.getDetailResults().stream()
                 .filter(CouponPreviewResponse.DetailApplicationResult::getApplied)
@@ -118,12 +131,15 @@ public class CouponPreviewService {
 
             if (result.getApplied()) {
                 totalDiscount = totalDiscount.add(result.getLineDiscount());
-                
+
                 // Thêm quà nếu là FREE_PRODUCT
                 if (detail.getBenefitType() == BenefitType.FREE_PRODUCT && detail.getTerms() != null) {
+                    AdditionalService giftService = additionalServiceRepository.findById(detail.getTerms().getGiftServiceId()).orElse(null);
+                    assert giftService != null;
                     gifts.add(CouponPreviewResponse.GiftItem.builder()
                             .serviceId(detail.getTerms().getGiftServiceId())
-                            .serviceName("Service " + detail.getTerms().getGiftServiceId()) // TODO: Get actual name
+                            .serviceName(giftService.getName())
+                            .thumbnail(giftService.getThumbnail())
                             .quantity(detail.getTerms().getGiftQuantity())
                             .build());
                 }
@@ -139,9 +155,9 @@ public class CouponPreviewService {
 
     private CouponPreviewResponse.DetailApplicationResult applyDetailToCart(
             CouponDetail detail, CouponPreviewRequest request, BigDecimal originalOrderTotal) {
-        
+
         // Kiểm tra điều kiện cơ bản - removed usage limit check
-        
+
         // Apply theo target type
         switch (detail.getTargetType()) {
             case TICKET:
@@ -155,6 +171,7 @@ public class CouponPreviewService {
                         .detailId(detail.getId())
                         .applied(false)
                         .reason("Target type không hợp lệ")
+                        .giftServiceId(detail.getTerms().getGiftServiceId())
                         .lineDiscount(BigDecimal.ZERO)
                         .affectedQuantity(0)
                         .build();
@@ -166,7 +183,7 @@ public class CouponPreviewService {
         BigDecimal orderTotal = calculateOriginalOrderTotal(request);
         int totalQuantity = request.getTickets().stream()
                 .mapToInt(CouponPreviewRequest.TicketItem::getQty)
-                .sum() + 
+                .sum() +
                 (request.getServices() != null ? request.getServices().stream()
                         .mapToInt(CouponPreviewRequest.ServiceItem::getQty)
                         .sum() : 0);
@@ -182,7 +199,7 @@ public class CouponPreviewService {
         }
 
         BigDecimal discount = calculateDiscount(detail, orderTotal, totalQuantity);
-        
+
         return CouponPreviewResponse.DetailApplicationResult.builder()
                 .detailId(detail.getId())
                 .applied(true)
@@ -194,7 +211,7 @@ public class CouponPreviewService {
 
     private CouponPreviewResponse.DetailApplicationResult applyToSeatType(CouponDetail detail, CouponPreviewRequest request) {
         List<CouponPreviewRequest.TicketItem> matchingTickets;
-        
+
         if (detail.getTargetRefId() == null) {
             // Áp dụng cho tất cả seat types
             matchingTickets = request.getTickets();
@@ -217,24 +234,24 @@ public class CouponPreviewService {
 
         // Sắp xếp theo selection strategy
         matchingTickets = sortItemsByStrategy(matchingTickets, SelectionStrategy.HIGHEST_PRICE_FIRST);
-        
+
         int totalQty = matchingTickets.stream().mapToInt(CouponPreviewRequest.TicketItem::getQty).sum();
         BigDecimal totalValue = matchingTickets.stream()
                 .map(ticket -> ticket.getUnitPrice().multiply(BigDecimal.valueOf(ticket.getQty())))
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        if (true) {
-            return CouponPreviewResponse.DetailApplicationResult.builder()
-                    .detailId(detail.getId())
-                    .applied(false)
-                    .reason("Không đạt số lượng tối thiểu")
-                    .lineDiscount(BigDecimal.ZERO)
-                    .affectedQuantity(0)
-                    .build();
-        }
+//        if (true) {
+//            return CouponPreviewResponse.DetailApplicationResult.builder()
+//                    .detailId(detail.getId())
+//                    .applied(false)
+//                    .reason("Không đạt số lượng tối thiểu")
+//                    .lineDiscount(BigDecimal.ZERO)
+//                    .affectedQuantity(0)
+//                    .build();
+//        }
 
         BigDecimal discount = calculateDiscount(detail, totalValue, totalQty);
-        
+
         return CouponPreviewResponse.DetailApplicationResult.builder()
                 .detailId(detail.getId())
                 .applied(true)
@@ -256,7 +273,7 @@ public class CouponPreviewService {
         }
 
         List<CouponPreviewRequest.ServiceItem> matchingServices;
-        
+
         if (detail.getTargetRefId() == null) {
             // Áp dụng cho tất cả services
             matchingServices = request.getServices();
@@ -282,18 +299,18 @@ public class CouponPreviewService {
                 .map(service -> service.getUnitPrice().multiply(BigDecimal.valueOf(service.getQty())))
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        if (true) {
-            return CouponPreviewResponse.DetailApplicationResult.builder()
-                    .detailId(detail.getId())
-                    .applied(false)
-                    .reason("Không đạt số lượng tối thiểu")
-                    .lineDiscount(BigDecimal.ZERO)
-                    .affectedQuantity(0)
-                    .build();
-        }
+//        if (true) {
+//            return CouponPreviewResponse.DetailApplicationResult.builder()
+//                    .detailId(detail.getId())
+//                    .applied(false)
+//                    .reason("Không đạt số lượng tối thiểu")
+//                    .lineDiscount(BigDecimal.ZERO)
+//                    .affectedQuantity(0)
+//                    .build();
+//        }
 
         BigDecimal discount = calculateDiscount(detail, totalValue, totalQty);
-        
+
         return CouponPreviewResponse.DetailApplicationResult.builder()
                 .detailId(detail.getId())
                 .applied(true)
@@ -305,17 +322,19 @@ public class CouponPreviewService {
 
     private BigDecimal calculateDiscount(CouponDetail detail, BigDecimal baseValue, int quantity) {
         BigDecimal discount = BigDecimal.ZERO;
-        
+
         if (detail.getTerms() == null) {
             return discount; // No terms, no discount
         }
-        
+
         CouponDetailTerms terms = detail.getTerms();
-        
+
         switch (detail.getBenefitType()) {
             case DISCOUNT_PERCENT:
                 if (terms.getPercent() != null) {
-                    discount = baseValue.multiply(terms.getPercent()).divide(new BigDecimal("100"));
+                    discount = baseValue
+                            .multiply(terms.getPercent())
+                            .divide(new BigDecimal("100"), 2, RoundingMode.HALF_UP);
                 }
                 break;
             case DISCOUNT_AMOUNT:
@@ -337,7 +356,8 @@ public class CouponPreviewService {
         // Áp dụng limit quantity
         if (terms.getLimitQuantityApplied() != null && quantity > terms.getLimitQuantityApplied()) {
             // Tính tỷ lệ giảm theo limit quantity
-            BigDecimal ratio = BigDecimal.valueOf(terms.getLimitQuantityApplied()).divide(BigDecimal.valueOf(quantity));
+            BigDecimal ratio = BigDecimal.valueOf(terms.getLimitQuantityApplied())
+                    .divide(BigDecimal.valueOf(quantity), 2, RoundingMode.HALF_UP);
             discount = discount.multiply(ratio);
         }
 
