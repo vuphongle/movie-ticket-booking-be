@@ -80,7 +80,7 @@ public class ChatRecommendationService {
   private final ChatCinemaLocator cinemaLocator;
 
   public ChatRecommendationResponse generateRecommendations(ChatRecommendationRequest request) {
-    User currentUser = SecurityUtils.getCurrentUserLogin();
+  User currentUser = SecurityUtils.getCurrentUserLoginOptional().orElse(null);
     RecommendationContext context = prepareContext(request, currentUser);
 
     if (!context.hasAgeInfo()) {
