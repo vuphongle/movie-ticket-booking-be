@@ -7,14 +7,19 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.test.util.ReflectionTestUtils;
+import vn.edu.iuh.fit.entity.Auditorium;
+import vn.edu.iuh.fit.entity.Cinema;
 import vn.edu.iuh.fit.entity.Genre;
 import vn.edu.iuh.fit.entity.Movie;
 import vn.edu.iuh.fit.entity.Schedule;
+import vn.edu.iuh.fit.entity.Showtime;
 import vn.edu.iuh.fit.model.enums.MovieAge;
 import vn.edu.iuh.fit.model.response.RecommendedMovieResponse;
 import vn.edu.iuh.fit.repository.MovieRepository;
 import vn.edu.iuh.fit.repository.ScheduleRepository;
+import vn.edu.iuh.fit.repository.ShowtimeRepository;
 import vn.edu.iuh.fit.service.chat.AgeRestrictionService;
+import vn.edu.iuh.fit.service.chat.ChatCinemaLocator;
 import vn.edu.iuh.fit.service.chat.ChatMemoryService;
 import vn.edu.iuh.fit.service.chat.KeywordAnalyzer;
 import vn.edu.iuh.fit.service.chat.KeywordAnalyzer.KeywordContext;
@@ -29,12 +34,15 @@ import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 
@@ -51,6 +59,12 @@ class ChatRecommendationServiceTest {
     @Mock
     private ScheduleRepository scheduleRepository;
 
+    @Mock
+    private ShowtimeRepository showtimeRepository;
+
+    @Mock
+    private ChatCinemaLocator cinemaLocator;
+
     private ChatRecommendationService chatRecommendationService;
     private KeywordAnalyzer keywordAnalyzer;
     private AgeRestrictionService ageRestrictionService;
@@ -63,18 +77,21 @@ class ChatRecommendationServiceTest {
         objectMapper = new ObjectMapper();
         keywordAnalyzer = new KeywordAnalyzer();
         ageRestrictionService = new AgeRestrictionService();
-    scoringService = new RecommendationScoringService(scheduleRepository, ageRestrictionService);
-    chatMemoryService = new ChatMemoryService();
+        scoringService = new RecommendationScoringService(scheduleRepository, ageRestrictionService);
+        chatMemoryService = new ChatMemoryService();
         chatRecommendationService =
                 new ChatRecommendationService(
                         chatClient,
                         objectMapper,
                         movieRepository,
-                        scheduleRepository,
+                        showtimeRepository,
                         keywordAnalyzer,
                         scoringService,
-            ageRestrictionService,
-            chatMemoryService);
+                        ageRestrictionService,
+                        chatMemoryService,
+                        cinemaLocator);
+
+        when(cinemaLocator.resolveCinema(anyString())).thenReturn(Optional.empty());
     }
 
     @Test
@@ -128,9 +145,10 @@ class ChatRecommendationServiceTest {
         LocalDate today = now.toLocalDate();
         String message = "Tư vấn phim tối nay hoặc 2025-12-24 giúp mình";
 
-    @SuppressWarnings("unchecked")
-    Set<LocalDate> dates =
-        ReflectionTestUtils.invokeMethod(scoringService, "extractRequestedDates", message, now);
+        @SuppressWarnings("unchecked")
+        Set<LocalDate> dates =
+            ReflectionTestUtils.invokeMethod(
+                scoringService, "extractRequestedDates", message, now);
 
         assertThat(dates).contains(today, LocalDate.of(2025, 12, 24));
     }
@@ -138,47 +156,53 @@ class ChatRecommendationServiceTest {
     @Test
     void isAgeAllowed_shouldRejectOverAgeMovies() {
         Movie movie = Movie.builder().age(MovieAge.T18).build();
-    boolean allowed = ageRestrictionService.isAgeAllowed(movie, 13);
+        boolean allowed = ageRestrictionService.isAgeAllowed(movie, 13);
         assertThat(allowed).isFalse();
     }
 
     @Test
     void scoreMovie_shouldBoostWithUpcomingSchedule() {
-    Movie movie = Movie.builder()
-        .id(1)
-        .name("Jurassic Planet")
-        .slug("jurassic-planet")
-        .age(MovieAge.P)
-        .rating(8.0)
-        .publishedAt(new java.util.Date())
-        .genres(new LinkedHashSet<>(Set.of(Genre.builder().slug("comedy").name("Hài").build())))
-        .build();
+        Movie movie =
+            Movie.builder()
+                .id(1)
+                .name("Jurassic Planet")
+                .slug("jurassic-planet")
+                .age(MovieAge.P)
+                .rating(8.0)
+                .publishedAt(new java.util.Date())
+                .genres(
+                    new LinkedHashSet<>(Set.of(Genre.builder().slug("comedy").name("Hài").build())))
+                .build();
 
-    ZonedDateTime now = ZonedDateTime.now(ZoneId.of("Asia/Ho_Chi_Minh"));
-    Schedule schedule = Schedule.builder()
-        .movie(movie)
-        .startDate(java.util.Date.from(now.plusHours(2).toInstant()))
-        .endDate(java.util.Date.from(now.plusHours(4).toInstant()))
-        .build();
+        ZonedDateTime now = ZonedDateTime.now(ZoneId.of("Asia/Ho_Chi_Minh"));
+        Schedule schedule =
+            Schedule.builder()
+                .movie(movie)
+                .startDate(java.util.Date.from(now.plusHours(2).toInstant()))
+                .endDate(java.util.Date.from(now.plusHours(4).toInstant()))
+                .build();
 
-    when(scheduleRepository.findByMovie_StatusAndEndDateAfter(eq(true), any(java.util.Date.class)))
-        .thenReturn(List.of(schedule));
+        when(scheduleRepository.findByMovie_StatusAndEndDateAfter(eq(true), any(java.util.Date.class)))
+            .thenReturn(List.of(schedule));
 
-    RecommendationScoringInput input = new RecommendationScoringInput(
-        18,
-        Set.of("comedy"),
-        Set.of("jurassic"),
-        "xem phim hôm nay lúc 19h",
-        ZoneId.of("Asia/Ho_Chi_Minh"));
+        RecommendationScoringInput input =
+            new RecommendationScoringInput(
+                18,
+                Set.of("comedy"),
+                Set.of("jurassic"),
+                "xem phim hôm nay lúc 19h",
+                ZoneId.of("Asia/Ho_Chi_Minh"),
+                Collections.emptySet(),
+                Collections.emptySet());
 
-    List<ScoredMovie> scored = scoringService.scoreMovies(List.of(movie), input);
-    Object breakdown = ReflectionTestUtils.invokeMethod(scored.get(0), "breakdown");
+        List<ScoredMovie> scored = scoringService.scoreMovies(List.of(movie), input);
+        Object breakdown = ReflectionTestUtils.invokeMethod(scored.get(0), "breakdown");
 
-    Double scheduleScore = ReflectionTestUtils.invokeMethod(breakdown, "scheduleScore");
-    Double finalScore = ReflectionTestUtils.invokeMethod(breakdown, "finalScore");
+        Double scheduleScore = ReflectionTestUtils.invokeMethod(breakdown, "scheduleScore");
+        Double finalScore = ReflectionTestUtils.invokeMethod(breakdown, "finalScore");
 
-    assertThat(scheduleScore).isNotNull().isGreaterThan(0.0);
-    assertThat(finalScore).isNotNull().isGreaterThan(5.0);
+        assertThat(scheduleScore).isNotNull().isGreaterThan(0.0);
+        assertThat(finalScore).isNotNull().isGreaterThan(5.0);
     }
 
     @Test
@@ -204,5 +228,62 @@ class ChatRecommendationServiceTest {
 
         assertThat(lowQuality).isTrue();
         assertThat(acceptable).isFalse();
+    }
+
+    @Test
+    void findRelevantShowtimes_shouldRespectDateAndCinemaFilter() {
+        Movie movie = Movie.builder().id(42).build();
+        Cinema cinema = Cinema.builder().id(7).name("CGV Crescent Mall").build();
+        Auditorium auditorium =
+            Auditorium.builder().id(11).name("Phòng 1").cinema(cinema).build();
+
+        LocalDate today = LocalDate.now(ZoneId.of("Asia/Ho_Chi_Minh"));
+        Showtime matching =
+            Showtime.builder()
+                .movie(movie)
+                .auditorium(auditorium)
+                .date(today.plusDays(1))
+                .startTime("19:30")
+                .build();
+
+        Showtime otherDate =
+            Showtime.builder()
+                .movie(movie)
+                .auditorium(auditorium)
+                .date(today.plusDays(3))
+                .startTime("10:00")
+                .build();
+
+        Showtime otherCinema =
+            Showtime.builder()
+                .movie(movie)
+                .auditorium(
+                    Auditorium.builder()
+                        .id(12)
+                        .name("Phòng 2")
+                        .cinema(Cinema.builder().id(8).name("Beta Quận 1").build())
+                        .build())
+                .date(today.plusDays(1))
+                .startTime("20:00")
+                .build();
+
+        when(showtimeRepository.findByMovie_IdAndDateGreaterThanEqualOrderByDateAscStartTimeAsc(
+                eq(movie.getId()), any(LocalDate.class)))
+            .thenReturn(List.of(matching, otherDate, otherCinema));
+
+        ZonedDateTime reference = ZonedDateTime.now(ZoneId.of("Asia/Ho_Chi_Minh"));
+
+        @SuppressWarnings("unchecked")
+        List<Showtime> result =
+            ReflectionTestUtils.invokeMethod(
+                chatRecommendationService,
+                "findRelevantShowtimes",
+                movie,
+                Set.of(today.plusDays(1)),
+                Set.of(19),
+                cinema.getId(),
+                reference);
+
+        assertThat(result).containsExactly(matching);
     }
 }
