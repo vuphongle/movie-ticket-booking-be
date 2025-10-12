@@ -16,6 +16,9 @@ import java.util.List;
 public class CouponApplyRequest {
     @NotNull(message = "Order ID không được để trống")
     Integer orderId;
+
+    @NotNull(message = "Coupon ID không được để trống")
+    Integer couponId;
     
     @NotEmpty(message = "Coupon code không được để trống")
     String couponCode;

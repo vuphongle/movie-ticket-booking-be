@@ -12,6 +12,7 @@ import java.util.List;
 @Builder
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class CouponApplyResponse {
+    Integer couponDetailId;
     String status; // "applied_draft", "failed"
     String idempotentToken;
     List<Integer> appliedDetailIds;
