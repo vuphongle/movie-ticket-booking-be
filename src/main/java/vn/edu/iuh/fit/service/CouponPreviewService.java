@@ -9,11 +9,9 @@ import vn.edu.iuh.fit.entity.AdditionalService;
 import vn.edu.iuh.fit.entity.Coupon;
 import vn.edu.iuh.fit.entity.CouponDetail;
 import vn.edu.iuh.fit.entity.CouponDetailTerms;
-import vn.edu.iuh.fit.exception.BadRequestException;
 import vn.edu.iuh.fit.exception.ResourceNotFoundException;
 import vn.edu.iuh.fit.model.enums.BenefitType;
 import vn.edu.iuh.fit.model.enums.SelectionStrategy;
-import vn.edu.iuh.fit.model.enums.TargetType;
 import vn.edu.iuh.fit.model.request.CouponApplyRequest;
 import vn.edu.iuh.fit.model.request.CouponPreviewRequest;
 import vn.edu.iuh.fit.model.response.CouponApplyResponse;
@@ -60,7 +58,7 @@ public class CouponPreviewService {
 
         // Lấy các details đã enabled và sắp xếp theo ID
         List<CouponDetail> enabledDetails = couponDetailRepository
-                .findAllCouponDetailByKindDISPLAYAndEnabledTrueOrderAndIdAsc();
+                .findAllValidDisplayCouponDetails();
 
         return calculateCouponApplication(enabledDetails, request);
     }
@@ -92,6 +90,43 @@ public class CouponPreviewService {
                 .collect(Collectors.toList());
 
         return CouponApplyResponse.builder()
+                .couponDetailId(request.getCouponId())
+                .status("applied_draft")
+                .idempotentToken(idempotentToken)
+                .appliedDetailIds(appliedDetailIds)
+                .previewResult(previewResult)
+                .build();
+    }
+
+    @Transactional
+    public CouponApplyResponse applyCouponDisplay(CouponApplyRequest request) {
+        CouponDetail couponDetail =  couponDetailRepository.findById(request.getCouponId()).orElseThrow(() -> new ResourceNotFoundException("Coupon Detail không tồn tại"));
+        Coupon coupon = couponRepository.findById(couponDetail.getCouponId())
+                .orElseThrow(() -> new ResourceNotFoundException("Coupon không tồn tại"));
+
+        // Kiểm tra coupon có khả dụng không
+        String validationMessage = validateCouponAvailability(coupon);
+        if (validationMessage != null) {
+            return CouponApplyResponse.builder()
+                    .status("failed")
+                    .errorMessage(validationMessage)
+                    .build();
+        }
+
+        // Preview trước để xem kết quả
+        CouponPreviewResponse previewResult = previewCoupon(coupon.getId(), request.getCart());
+
+        // Tạo idempotent token
+        String idempotentToken = generateIdempotentToken(request.getOrderId(), request.getCouponCode());
+
+        // Lấy danh sách detail IDs đã được áp dụng
+        List<Integer> appliedDetailIds = previewResult.getDetailResults().stream()
+                .filter(CouponPreviewResponse.DetailApplicationResult::getApplied)
+                .map(CouponPreviewResponse.DetailApplicationResult::getDetailId)
+                .collect(Collectors.toList());
+
+        return CouponApplyResponse.builder()
+                .couponDetailId(request.getCouponId())
                 .status("applied_draft")
                 .idempotentToken(idempotentToken)
                 .appliedDetailIds(appliedDetailIds)
@@ -171,7 +206,6 @@ public class CouponPreviewService {
                         .detailId(detail.getId())
                         .applied(false)
                         .reason("Target type không hợp lệ")
-                        .giftServiceId(detail.getTerms().getGiftServiceId())
                         .lineDiscount(BigDecimal.ZERO)
                         .affectedQuantity(0)
                         .build();
@@ -315,6 +349,7 @@ public class CouponPreviewService {
                 .detailId(detail.getId())
                 .applied(true)
                 .reason("Áp dụng thành công cho dịch vụ")
+                .giftServiceId(detail.getTerms().getGiftServiceId())
                 .lineDiscount(discount)
                 .affectedQuantity(totalQty)
                 .build();

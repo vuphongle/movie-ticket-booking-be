@@ -44,7 +44,7 @@ public class CouponDetailService {
     }
 
     public List<CouponDetailResponse> getAllCouponDetails() {
-        List<CouponDetail> details = couponDetailRepository.findAllCouponDetailByKindDISPLAYAndEnabledTrueOrderAndIdAsc();
+        List<CouponDetail> details = couponDetailRepository.findAllValidDisplayCouponDetails();
         return details.stream()
                 .map(this::buildCouponDetailResponse)
                 .collect(Collectors.toList());
