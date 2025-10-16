@@ -154,4 +154,12 @@ public class MovieService {
                 .orElseThrow(() -> new ResourceNotFoundException("Movie not found"));
         movieRepository.deleteById(id);
     }
+
+    public List<Movie> searchShowingOrComingMovies(String keyword) {
+        if (keyword == null || keyword.trim().isEmpty()) {
+            return List.of();
+        }
+        return movieRepository.searchMovies(keyword.trim());
+    }
+
 }

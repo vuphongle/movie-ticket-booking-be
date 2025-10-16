@@ -11,9 +11,12 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import vn.edu.iuh.fit.model.dto.MovieWithShowtimesDto;
 import vn.edu.iuh.fit.model.request.UpsertMovieRequest;
 import vn.edu.iuh.fit.service.MovieService;
 import vn.edu.iuh.fit.service.ShowtimeService;
+
+import java.util.List;
 
 @Slf4j
 @RestController
@@ -52,7 +55,18 @@ public class MovieController {
     public Movie getMovieByShowtime(@PathVariable Integer id) {
         return showtimeService.getMovieByShowtimeId(id);
     }
-    
+
+    @GetMapping("/public/cinemas/{cinemaId}/movies-showtimes")
+    public ResponseEntity<List<MovieWithShowtimesDto>> getMoviesWithShowtimesByCinema(
+            @PathVariable Integer cinemaId) {
+        return ResponseEntity.ok(showtimeService.getShowtimesByCinema(cinemaId));
+    }
+
+    @GetMapping("/public/movies/search")
+    public ResponseEntity<?> searchMovies(@RequestParam String keyword) {
+        return ResponseEntity.ok(movieService.searchShowingOrComingMovies(keyword));
+    }
+
     @GetMapping("/admin/movies/in-schedule")
     public ResponseEntity<?> getAllMoviesInSchedule(@RequestParam String date) {
         return ResponseEntity.ok(movieService.getAllMoviesInSchedule(date));
