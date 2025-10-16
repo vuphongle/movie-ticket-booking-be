@@ -30,6 +30,7 @@ public class SecurityConfig {
         http.authorizeHttpRequests(authorizeRequests ->
                 authorizeRequests
                         .requestMatchers("/api/orders/vnpay-payment").permitAll()
+                        .requestMatchers("/api/orders/payos-payment").permitAll()
                         .requestMatchers("/api/v1/chat/**").hasAnyRole("USER", "ADMIN")
                         .requestMatchers("/api/users", "/api/users/**").hasAnyRole("USER", "ADMIN")
                         .requestMatchers("/api/reviews", "/api/reviews/**").hasAnyRole("USER", "ADMIN")

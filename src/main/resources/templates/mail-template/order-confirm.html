@@ -85,11 +85,37 @@
         <tr th:each="service : ${serviceItems}">
             <td th:text="${service.additionalService.name}"></td>
             <td th:text="${service.quantity}"></td>
-            <td th:text="${#numbers.formatInteger(service.price,0)}"></td>
+            <td th:text="${#numbers.formatInteger(service.price * service.quantity, 0)}"></td>
         </tr>
         </tbody>
     </table>
     <p th:if="${serviceItems == null || serviceItems.isEmpty()}">Không có combo/dịch vụ đi kèm.</p>
+
+    <h4 th:if="${coupons != null and !#lists.isEmpty(coupons)}">Mã giảm giá / Quà tặng:</h4>
+
+    <table th:if="${coupons != null and !#lists.isEmpty(coupons)}">
+        <thead>
+        <tr>
+            <th>Mã</th>
+            <th>Loại</th>
+            <th>Giảm</th>
+            <th>Quà tặng</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="c : ${coupons}">
+            <td th:text="${c['code']}"></td>
+            <td th:text="${c['type']}"></td>
+            <td th:text="${#numbers.formatInteger(c['discount'], 0)} + ' VNĐ'"></td>
+            <td>
+                <ul th:if="${c['gifts'] != null and !#lists.isEmpty(c['gifts'])}" style="list-style: none; padding-left: 0; margin: 0;">
+                    <li th:each="g : ${c['gifts']}" th:text="${g['serviceName']} + ' x' + ${g['quantity']}"></li>
+                </ul>
+                <span th:if="${c['gifts'] == null or #lists.isEmpty(c['gifts'])}"></span>
+            </td>
+        </tr>
+        </tbody>
+    </table>
 
     <h4>Tổng giá:</h4>
     <p>Giảm giá: <strong th:text="${#numbers.formatInteger(discountPrice,0)} + ' VNĐ'"></strong></p>
@@ -97,7 +123,6 @@
 </div>
 <div class="footer">
     &copy; 2025 Go Cinema. Mọi quyền được bảo lưu.
-</div>
 </div>
 </body>
 </html>

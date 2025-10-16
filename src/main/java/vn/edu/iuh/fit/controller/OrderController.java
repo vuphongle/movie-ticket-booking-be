@@ -1,5 +1,6 @@
 package vn.edu.iuh.fit.controller;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -44,7 +45,7 @@ public class OrderController {
     }
 
     @PostMapping("/orders")
-    public ResponseEntity<?> createOrder(@RequestBody CreateOrderRequest request) {
+    public ResponseEntity<?> createOrder(@RequestBody CreateOrderRequest request) throws JsonProcessingException {
         String paymentMethod = request.getPaymentMethod() != null ? request.getPaymentMethod() : "PAYOS";
         PaymentResponse response = orderService.createOrder(request, paymentMethod);
         return ResponseEntity.ok(response);
@@ -77,22 +78,25 @@ public class OrderController {
     }
 
     @GetMapping("/orders/payos-payment")
-    public ResponseEntity<?> handleReturn(HttpServletRequest request) {
+    public ResponseEntity<?> handlePayOSReturn(HttpServletRequest request) {
         Map<String, String> params = new HashMap<>();
         request.getParameterMap().forEach((k, v) -> params.put(k, v[0]));
 
-        String orderInfo = params.get("order_info");
+        String orderCode = params.get("orderCode");
         boolean valid = payOSService.verifyReturn(params);
 
-        if (valid && "SUCCESS".equals(params.get("status"))) {
-            orderService.updateOrderStatus(Integer.valueOf(orderInfo), OrderStatus.CONFIRMED);
+        if (valid) {
+            orderService.updateOrderStatus(Integer.valueOf(orderCode), OrderStatus.CONFIRMED);
         } else {
-            orderService.updateOrderStatus(Integer.valueOf(orderInfo), OrderStatus.CANCELLED);
+            orderService.updateOrderStatus(Integer.valueOf(orderCode), OrderStatus.CANCELLED);
         }
 
+        String statusParam = valid ? "success" : "failed";
         String redirectUrl = "http://localhost:3000/thanh-toan-don-hang/%s?status=%s"
-                .formatted(orderInfo, valid ? "success" : "failed");
+                .formatted(orderCode, statusParam);
 
-        return ResponseEntity.status(HttpStatus.FOUND).header("Location", redirectUrl).build();
+        return ResponseEntity.status(HttpStatus.FOUND)
+                .header("Location", redirectUrl)
+                .build();
     }
 }
