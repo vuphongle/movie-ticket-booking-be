@@ -18,6 +18,7 @@ import static lombok.AccessLevel.PRIVATE;
 @Builder
 @FieldDefaults(level = PRIVATE)
 public class ChatRecommendationResponse {
+    String conversationId;
     String answer;
     List<RecommendedMovieResponse> recommendedMovies;
 }

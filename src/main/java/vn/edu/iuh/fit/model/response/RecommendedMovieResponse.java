@@ -21,6 +21,7 @@ import static lombok.AccessLevel.PRIVATE;
 public class RecommendedMovieResponse {
     Integer movieId;
     String name;
+    String slug;
     String poster;
     MovieAge ageRating;
     Double rating;
