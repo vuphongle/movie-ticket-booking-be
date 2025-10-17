@@ -39,6 +39,7 @@ public class OrderService {
     private final MailService mailService;
     private final PayOSService payOSService;
     private final OrderTicketItemRepository orderTicketItemRepository;
+    private final OrderServiceItemRepository orderServiceItemRepository;
     private final ProductRepository productRepository;
     private final AdditionalServiceItemRepository additionalServiceItemRepository;
 
@@ -241,12 +242,13 @@ public class OrderService {
             for (OrderTicketItem ticketItem : order.getTicketItems()) {
                 seatReservationRepository.findBySeat_IdAndShowtime_Id(ticketItem.getSeat().getId(), showtimeId)
                         .ifPresent(seatReservationRepository::delete);
-                orderTicketItemRepository.delete(ticketItem);
             }
-            // Xóa các dịch vụ kèm theo
-            for(OrderServiceItem serviceItem : order.getServiceItems()) {
-                order.getServiceItems().remove(serviceItem);
-            }
+            // Xóa vé và các dịch vụ kèm theo
+            orderTicketItemRepository.deleteAll(order.getTicketItems());
+            orderServiceItemRepository.deleteAll(order.getServiceItems());
+            order.getTicketItems().clear();
+            order.getServiceItems().clear();
+
             // Không tạo QR code khi hủy
             order.setQrCodePath(null);
         }

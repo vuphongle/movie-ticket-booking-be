@@ -268,6 +268,88 @@ public class ShowtimeService {
         return new ArrayList<>(movieMap.values());
     }
 
+    public List<MovieWithShowtimesDto> getShowtimesByCinemaName(String cinemaName) {
+        // Tìm cinema theo tên
+        Cinema cinema = cinemaRepository.findByNameIgnoreCase(cinemaName)
+                .orElseThrow(() -> new RuntimeException("Cinema not found with name: " + cinemaName));
+
+        // Lấy danh sách auditorium của cinema đó
+        List<Auditorium> auditoriums = auditoriumRepository.findByCinema_Id(cinema.getId());
+
+        LocalDate today = LocalDate.now();
+        LocalDate endDate = today.plusDays(10);
+
+        // Lấy danh sách phim đang chiếu
+        List<Movie> showingNowMovies = scheduleRepository
+                .findByMovie_StatusAndStartDateBeforeAndEndDateAfter(true, new Date(), new Date())
+                .stream()
+                .map(Schedule::getMovie)
+                .toList();
+
+        Set<Integer> showingMovieIds = showingNowMovies.stream()
+                .map(Movie::getId)
+                .collect(Collectors.toSet());
+
+        Map<Integer, MovieWithShowtimesDto> movieMap = new LinkedHashMap<>();
+
+        for (Auditorium auditorium : auditoriums) {
+            List<Showtime> showtimes = showtimeRepository.findByAuditorium_Id(auditorium.getId());
+
+            showtimes.stream()
+                    .filter(s -> !s.getDate().isBefore(today) && !s.getDate().isAfter(endDate))
+                    .filter(s -> showingMovieIds.contains(s.getMovie().getId()))
+                    .forEach(s -> {
+                        Movie m = s.getMovie();
+
+                        movieMap.computeIfAbsent(m.getId(), k -> {
+                            MovieWithShowtimesDto dto = new MovieWithShowtimesDto();
+                            dto.setId(m.getId());
+                            dto.setName(m.getName());
+                            dto.setNameEn(m.getNameEn());
+                            dto.setDescription(m.getDescription());
+                            dto.setDuration(m.getDuration());
+                            dto.setPoster(m.getPoster());
+                            dto.setRating(m.getRating());
+                            dto.setReleaseYear(m.getReleaseYear());
+                            dto.setAge(m.getAge() != null ? m.getAge().name() : null);
+                            dto.setTrailer(m.getTrailer());
+                            dto.setStatus(m.getStatus() != null ? m.getStatus() : false);
+                            dto.setSlug(m.getSlug());
+                            dto.setCreatedAt(m.getCreatedAt());
+                            dto.setUpdatedAt(m.getUpdatedAt());
+                            dto.setGraphics(m.getGraphics().toString());
+                            dto.setTranslations(m.getTranslations().toString());
+                            return dto;
+                        });
+
+                        ShowtimeDto showtimeDto = new ShowtimeDto(
+                                s.getId(),
+                                s.getDate(),
+                                s.getStartTime(),
+                                s.getEndTime(),
+                                s.getGraphicsType() != null ? s.getGraphicsType().name() : null,
+                                s.getTranslationType() != null ? s.getTranslationType().name() : null,
+                                auditorium.getCinema().getId(),
+                                auditorium.getCinema().getName(),
+                                auditorium.getCinema().getMapLocation(),
+                                auditorium.getId(),
+                                auditorium.getName(),
+                                auditorium.getTotalSeats(),
+                                auditorium.getTotalRows(),
+                                auditorium.getTotalColumns(),
+                                auditorium.getType() != null ? auditorium.getType().name() : null,
+                                s.getCreatedAt(),
+                                s.getUpdatedAt()
+                        );
+
+                        movieMap.get(m.getId()).getShowtimes().add(showtimeDto);
+                    });
+        }
+
+        return new ArrayList<>(movieMap.values());
+    }
+
+
     /**
      * Tạo nhiều suất chiếu theo khoảng ngày với xử lý conflict
      */

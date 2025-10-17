@@ -5,6 +5,7 @@ import org.springframework.data.jpa.repository.Query;
 import vn.edu.iuh.fit.entity.Cinema;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface CinemaRepository extends JpaRepository<Cinema, Integer> {
     @Query("SELECT c.name FROM Cinema c")
@@ -12,4 +13,6 @@ public interface CinemaRepository extends JpaRepository<Cinema, Integer> {
 
     @Query("SELECT c.address FROM Cinema c")
     List<String> findAllAddresses();
+
+    Optional<Cinema> findByNameIgnoreCase(String name);
 }

@@ -8,14 +8,19 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 import vn.edu.iuh.fit.entity.Movie;
 import vn.edu.iuh.fit.entity.Review;
+import vn.edu.iuh.fit.entity.User;
 import vn.edu.iuh.fit.exception.BadRequestException;
 import vn.edu.iuh.fit.exception.ResourceNotFoundException;
 import vn.edu.iuh.fit.model.request.UpsertReviewRequest;
+import vn.edu.iuh.fit.model.response.ImageResponse;
 import vn.edu.iuh.fit.repository.MovieRepository;
 import vn.edu.iuh.fit.repository.ReviewRepository;
+import vn.edu.iuh.fit.security.SecurityUtils;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Slf4j
@@ -24,6 +29,7 @@ import java.util.List;
 public class ReviewService {
     private final MovieRepository movieRepository;
     private final ReviewRepository reviewRepository;
+    private final ImageService imageService;
 
     public Page<Review> getAllReviewsByMovieId(Integer movieId, Integer page, Integer limit) {
         if (!movieRepository.existsByIdAndStatus(movieId, true)) {
@@ -31,6 +37,37 @@ public class ReviewService {
         }
         Pageable pageable = PageRequest.of(page - 1, limit, Sort.by("createdAt").descending());
         return reviewRepository.findByMovie_Id(movieId, pageable);
+    }
+
+    @Transactional
+    public Review createReview(UpsertReviewRequest request, List<MultipartFile> files) {
+        User user = SecurityUtils.getCurrentUserLogin();
+
+        Movie movie = movieRepository.findById(request.getMovieId())
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy phim có id = " + request.getMovieId()));
+
+        List<String> images = new ArrayList<>();
+        if (files != null && !files.isEmpty()) {
+            for (MultipartFile file : files) {
+                ImageResponse imageResponse = imageService.uploadImage(file);
+                images.add(imageResponse.getUrl());
+            }
+        }
+
+        Review review = Review.builder()
+                .user(user)
+                .comment(request.getComment())
+                .rating(request.getRating())
+                .feeling(request.getFeeling())
+                .images(images)
+                .movie(movie)
+                .build();
+        reviewRepository.save(review);
+
+        // update rating of movie
+        updateRatingOfMovie(movie);
+
+        return review;
     }
 
     private void updateRatingOfMovie(Movie movie) {

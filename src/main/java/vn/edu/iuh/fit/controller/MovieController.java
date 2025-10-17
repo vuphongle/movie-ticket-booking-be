@@ -62,6 +62,12 @@ public class MovieController {
         return ResponseEntity.ok(showtimeService.getShowtimesByCinema(cinemaId));
     }
 
+    @GetMapping("/public/cinemas/{cinemaName}/movies-showtimes-by-cinema-name")
+    public ResponseEntity<List<MovieWithShowtimesDto>> getMoviesWithShowtimesByCinemaName(
+            @PathVariable String cinemaName) {
+        return ResponseEntity.ok(showtimeService.getShowtimesByCinemaName(cinemaName));
+    }
+
     @GetMapping("/public/movies/search")
     public ResponseEntity<?> searchMovies(@RequestParam String keyword) {
         return ResponseEntity.ok(movieService.searchShowingOrComingMovies(keyword));

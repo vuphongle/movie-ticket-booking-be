@@ -35,6 +35,10 @@ public class CouponService {
                 .collect(Collectors.toList());
     }
 
+    public List<Coupon> getAllCouponsWithDetailsAndTerms() {
+        return couponRepository.findAllActiveWithDetailsAndTerms();
+    }
+
     public Coupon getCouponById(Integer id) {
         return couponRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Coupon not found"));
