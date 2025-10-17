@@ -114,6 +114,7 @@ public class MailService {
             context.setVariable("discountPrice", order.getDiscountPrice());
             context.setVariable("ticketItems", order.getTicketItems()); // danh sách ghế
             context.setVariable("serviceItems", order.getServiceItems());
+            context.setVariable("coupons", data.get("coupons"));
             context.setVariable("qrCodePath", "ticketQr");
 
             String htmlContent = templateEngine.process("mail-template/order-confirm", context);

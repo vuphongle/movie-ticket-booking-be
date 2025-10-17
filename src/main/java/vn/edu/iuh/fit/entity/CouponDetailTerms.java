@@ -1,5 +1,6 @@
 package vn.edu.iuh.fit.entity;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
 import lombok.*;
@@ -25,6 +26,7 @@ public class CouponDetailTerms {
     @JoinColumn(name = "id", 
                 foreignKey = @ForeignKey(name = "fk_coupon_detail_terms_coupon_detail",
                 foreignKeyDefinition = "FOREIGN KEY (id) REFERENCES coupon_details(id) ON DELETE CASCADE"))
+    @JsonBackReference
     CouponDetail couponDetail;
 
     // Benefit values (migrated from CouponDetail)

@@ -1,11 +1,14 @@
 package vn.edu.iuh.fit.entity;
 
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
 import vn.edu.iuh.fit.model.enums.CouponKind;
 
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 
 @Builder
 @AllArgsConstructor
@@ -47,6 +50,10 @@ public class Coupon {
 
     @Column(name = "updated_at")
     Date updatedAt;
+
+    @OneToMany(mappedBy = "coupon", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @JsonManagedReference
+    List<CouponDetail> details = new ArrayList<>();
 
     @PrePersist
     protected void onCreate() {

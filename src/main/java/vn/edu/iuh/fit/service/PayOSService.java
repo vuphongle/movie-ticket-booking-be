@@ -1,57 +1,60 @@
 package vn.edu.iuh.fit.service;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import vn.edu.iuh.fit.config.payment.payos.PayOSConfig;
+import vn.payos.PayOS;
+import vn.payos.type.CheckoutResponseData;
+import vn.payos.type.PaymentData;
 
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
+import java.time.Instant;
 import java.util.Map;
-import java.util.TreeMap;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class PayOSService {
 
-    public String createOrder(int total, String orderInfo, String urlReturn) {
-        // Chuẩn bị tham số
-        Map<String, String> params = new TreeMap<>();
-        params.put("merchant_id", PayOSConfig.merchantId);
-        params.put("amount", String.valueOf(total));
-        params.put("order_info", orderInfo);
-        params.put("return_url", urlReturn + PayOSConfig.returnUrl);
+    private final PayOSConfig payOSConfig;
 
-        // Tạo chuỗi để hash
-        StringBuilder sb = new StringBuilder();
-        params.forEach((k, v) -> sb.append(k).append("=").append(v).append("&"));
-        sb.deleteCharAt(sb.length() - 1); // xóa & cuối
+    public String createOrder(int amount, String orderCode, String returnUrl, Integer expireSeconds) {
+        try {
+            PayOS payOS = payOSConfig.payOSClient();
 
-        // Tạo chữ ký
-        String signature = PayOSConfig.hmacSHA256(PayOSConfig.secretKey, sb.toString());
-        params.put("signature", signature);
+            PaymentData.PaymentDataBuilder builder = PaymentData.builder()
+                    .orderCode(Long.valueOf(orderCode))
+                    .amount(amount)
+                    .description("ThanhToanVe " + orderCode)
+                    .returnUrl(returnUrl)
+                    .cancelUrl(returnUrl + "?status=cancelled");
 
-        // Build query string
-        StringBuilder query = new StringBuilder();
-        params.forEach((k, v) -> {
-            query.append(URLEncoder.encode(k, StandardCharsets.UTF_8));
-            query.append("=");
-            query.append(URLEncoder.encode(v, StandardCharsets.UTF_8));
-            query.append("&");
-        });
-        query.deleteCharAt(query.length() - 1);
+            if (expireSeconds != null && expireSeconds > 0) {
+                long expiredAt = Instant.now().getEpochSecond() + expireSeconds;
+                builder.expiredAt(expiredAt);
+            }
 
-        return PayOSConfig.apiUrl + "?" + query;
+            PaymentData paymentData = builder.build();
+            CheckoutResponseData response = payOS.createPaymentLink(paymentData);
+            log.info("Created PayOS payment link for order {}: {}", orderCode, response.getCheckoutUrl());
+            return response.getCheckoutUrl();
+        } catch (Exception e) {
+            log.error("Lỗi khi tạo liên kết thanh toán PayOS", e);
+            throw new RuntimeException("Không thể tạo link thanh toán PayOS", e);
+        }
     }
 
+
+    /**
+     * Xác minh phản hồi từ PayOS redirect (nếu cần).
+     */
     public boolean verifyReturn(Map<String, String> params) {
-        String receivedSignature = params.get("signature");
-        params.remove("signature");
-
-        StringBuilder sb = new StringBuilder();
-        params.forEach((k, v) -> sb.append(k).append("=").append(v).append("&"));
-        sb.deleteCharAt(sb.length() - 1);
-
-        String calculatedSignature = PayOSConfig.hmacSHA256(PayOSConfig.secretKey, sb.toString());
-        return calculatedSignature.equals(receivedSignature);
+        try {
+            String status = params.get("status");
+            return "PAID".equalsIgnoreCase(status) || "SUCCESS".equalsIgnoreCase(status);
+        } catch (Exception e) {
+            log.error("Lỗi xác minh phản hồi PayOS", e);
+            return false;
+        }
     }
 }

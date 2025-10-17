@@ -23,7 +23,7 @@ public class CouponController {
 
     @GetMapping("/coupons")
     public ResponseEntity<?> getAllCoupons() {
-        return ResponseEntity.ok(couponService.getAllCoupons());
+        return ResponseEntity.ok(couponService.getAllCouponsWithDetailsAndTerms());
     }
 
     @GetMapping("/coupons/coupon-by-code")

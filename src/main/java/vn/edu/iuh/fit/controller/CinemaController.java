@@ -27,6 +27,21 @@ public class CinemaController {
         return ResponseEntity.ok(cinemaService.getAllCities());
     }
 
+    @GetMapping("/public/cinemas")
+    public ResponseEntity<?> getAllCinemas() {
+        return ResponseEntity.ok(cinemaService.getAllCinemas());
+    }
+
+    @GetMapping("/public/cinemas/{id}/auditoriums")
+    public ResponseEntity<?> getAuditoriumsByCinemaPublic(@PathVariable Integer id) {
+        return ResponseEntity.ok(auditoriumService.getAuditoriumsByCinema(id));
+    }
+
+    @GetMapping("/public/cinemas/{id}")
+    public ResponseEntity<?> getCinemaByIdPublic(@PathVariable Integer id) {
+        return ResponseEntity.ok(cinemaService.getCinemaById(id));
+    }
+
     @GetMapping("/admin/cinemas")
     public ResponseEntity<?> getAllCinemasByAdmin() {
         return ResponseEntity.ok(cinemaService.getAllCinemas());

@@ -21,4 +21,10 @@ public interface CouponRepository extends JpaRepository<Coupon, Integer> {
     
     @Query("SELECT c FROM Coupon c WHERE c.status = true")
     List<Coupon> findAllActive(Sort sort);
+
+    @Query("SELECT c FROM Coupon c " +
+            "LEFT JOIN FETCH c.details d " +
+            "LEFT JOIN FETCH d.terms " +
+            "WHERE c.status = true")
+    List<Coupon> findAllActiveWithDetailsAndTerms();
 }

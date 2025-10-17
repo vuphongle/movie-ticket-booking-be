@@ -3,6 +3,7 @@ package vn.edu.iuh.fit.model.request;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
+import vn.edu.iuh.fit.entity.CouponDetail;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -28,6 +29,8 @@ public class CreateOrderRequest {
 
     private Integer expireSeconds;
 
+    private Discounts discounts;
+
     @Getter
     @Setter
     @NoArgsConstructor
@@ -49,5 +52,11 @@ public class CreateOrderRequest {
         Integer additionalServiceId;
         Integer quantity;
         Integer price;
+    }
+
+    @Data
+    public static class Discounts {
+        private Integer totalDiscount;
+        private List<CouponDetailRequest> coupons;
     }
 }

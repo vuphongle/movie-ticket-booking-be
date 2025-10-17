@@ -1,5 +1,7 @@
 package vn.edu.iuh.fit.entity;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
 import lombok.*;
@@ -29,6 +31,7 @@ public class CouponDetail {
     @JoinColumn(name = "coupon_id", nullable = false, 
                 foreignKey = @ForeignKey(name = "fk_coupon_detail_coupon",
                 foreignKeyDefinition = "FOREIGN KEY (coupon_id) REFERENCES coupons(id) ON DELETE CASCADE"))
+    @JsonBackReference
     Coupon coupon;
 
     @Column(nullable = false)
@@ -52,6 +55,7 @@ public class CouponDetail {
 
     // One-to-one relationship with terms table
     @OneToOne(mappedBy = "couponDetail", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @JsonManagedReference
     CouponDetailTerms terms;
 
     @Column(length = 1000)

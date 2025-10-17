@@ -58,6 +58,10 @@ public class Order {
     LocalDateTime createdAt;
     LocalDateTime updatedAt;
 
+    // Lưu lại request để tái sử dụng khi cần
+    @Column(columnDefinition = "TEXT")
+    private String requestSnapshot;
+
     public int getTempPrice() {
         Integer ticketPrice = ticketItems.stream()
                 .map(OrderTicketItem::getPrice)
@@ -69,10 +73,7 @@ public class Order {
     }
 
     public int getDiscountPrice() {
-        if (discount == null) {
-            return 0;
-        }
-        return getTempPrice() * discount / 100;
+        return getDiscount();
     }
 
     public int getTotalPrice() {
