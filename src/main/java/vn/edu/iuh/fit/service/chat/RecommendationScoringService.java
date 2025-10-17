@@ -50,10 +50,17 @@ public class RecommendationScoringService {
     }
 
     ZonedDateTime now = ZonedDateTime.now(input.zone());
+    QueryContext context = extractQueryContext(input.originalMessage(), now);
     Map<Integer, List<Schedule>> upcomingSchedules = loadUpcomingSchedules(candidateMovies, now);
     String normalizedQuery = TextNormalizer.normalizeText(input.originalMessage());
-    Set<LocalDate> requestedDates = extractRequestedDates(input.originalMessage(), now);
-    Set<Integer> requestedHours = extractRequestedHours(input.originalMessage());
+    Set<LocalDate> requestedDates =
+        CollectionUtils.isEmpty(input.requestedDates())
+            ? context.requestedDates()
+            : input.requestedDates();
+    Set<Integer> requestedHours =
+        CollectionUtils.isEmpty(input.requestedHours())
+            ? context.requestedHours()
+            : input.requestedHours();
 
     return candidateMovies.stream()
         .map(
@@ -70,6 +77,21 @@ public class RecommendationScoringService {
                     upcomingSchedules.getOrDefault(movie.getId(), Collections.emptyList())))
         .filter(Objects::nonNull)
         .toList();
+  }
+
+  public QueryContext extractQueryContext(String message, ZoneId zone) {
+    ZoneId effectiveZone = zone == null ? ZoneId.systemDefault() : zone;
+    return extractQueryContext(message, ZonedDateTime.now(effectiveZone));
+  }
+
+  public QueryContext extractQueryContext(String message, ZonedDateTime referenceTime) {
+    ZonedDateTime effectiveReference =
+        referenceTime == null
+            ? ZonedDateTime.now(ZoneId.systemDefault())
+            : referenceTime;
+    Set<LocalDate> dates = extractRequestedDates(message, effectiveReference);
+    Set<Integer> hours = extractRequestedHours(message);
+    return new QueryContext(dates, hours);
   }
 
   public void logTopCandidates(List<ScoredMovie> scoredMovies) {
@@ -434,11 +456,13 @@ public class RecommendationScoringService {
   }
 
   public record RecommendationScoringInput(
-      int groupMinimumAge,
-      Set<String> preferredGenres,
-      Set<String> keywordNamePatterns,
-      String originalMessage,
-      ZoneId zone) {}
+    int groupMinimumAge,
+    Set<String> preferredGenres,
+    Set<String> keywordNamePatterns,
+    String originalMessage,
+    ZoneId zone,
+    Set<LocalDate> requestedDates,
+    Set<Integer> requestedHours) {}
 
   public record ScoredMovie(Movie movie, ScoreBreakdown breakdown) {}
 
@@ -451,4 +475,6 @@ public class RecommendationScoringService {
       double freshnessScore,
       double scheduleScore,
       double finalScore) {}
+
+  public record QueryContext(Set<LocalDate> requestedDates, Set<Integer> requestedHours) {}
 }
