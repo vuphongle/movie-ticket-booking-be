@@ -1,14 +1,13 @@
 package vn.edu.iuh.fit.entity;
 
 import jakarta.persistence.*;
+import java.util.Date;
+import java.util.LinkedHashSet;
+import java.util.Set;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
 import org.hibernate.annotations.Fetch;
 import org.hibernate.annotations.FetchMode;
-
-import java.util.Date;
-import java.util.LinkedHashSet;
-import java.util.Set;
 
 @Builder
 @AllArgsConstructor
@@ -19,30 +18,31 @@ import java.util.Set;
 @Table(name = "cinemas")
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class Cinema {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    Integer id;
+  @Id
+  @GeneratedValue(strategy = GenerationType.IDENTITY)
+  Integer id;
 
-    String name;
-    String address;
-    @Column(name = "map_location", length = 1000)
-    String mapLocation;
+  String name;
+  String address;
 
-    Date createdAt;
-    Date updatedAt;
+  @Column(name = "map_location", length = 1000)
+  String mapLocation;
 
-    @PrePersist
-    protected void onCreate() {
-        createdAt = new Date();
-        updatedAt = new Date();
-    }
+  Date createdAt;
+  Date updatedAt;
 
-    @PreUpdate
-    protected void onUpdate() {
-        updatedAt = new Date();
-    }
+  @PrePersist
+  protected void onCreate() {
+    createdAt = new Date();
+    updatedAt = new Date();
+  }
 
-    @OneToMany(mappedBy = "cinema", cascade = CascadeType.ALL, orphanRemoval = true)
-    @Fetch(FetchMode.JOIN)
-    Set<User> users = new LinkedHashSet<>();
+  @PreUpdate
+  protected void onUpdate() {
+    updatedAt = new Date();
+  }
+
+  @OneToMany(mappedBy = "cinema", cascade = CascadeType.ALL, orphanRemoval = true)
+  @Fetch(FetchMode.JOIN)
+  Set<User> users = new LinkedHashSet<>();
 }

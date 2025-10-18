@@ -14,18 +14,18 @@ import lombok.experimental.FieldDefaults;
 @Table(name = "order_ticket_items")
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class OrderTicketItem {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    Integer id;
+  @Id
+  @GeneratedValue(strategy = GenerationType.IDENTITY)
+  Integer id;
 
-    @JsonIgnore
-    @ManyToOne
-    @JoinColumn(name = "order_id")
-    Order order;
+  @JsonIgnore
+  @ManyToOne
+  @JoinColumn(name = "order_id")
+  Order order;
 
-    @ManyToOne
-    @JoinColumn(name = "seat_id")
-    Seat seat;
+  @ManyToOne
+  @JoinColumn(name = "seat_id")
+  Seat seat;
 
-    Integer price;
+  Integer price;
 }

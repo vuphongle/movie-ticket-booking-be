@@ -18,11 +18,13 @@ import vn.edu.iuh.fit.service.ChatRecommendationService;
 @RequiredArgsConstructor
 public class ChatController {
 
-    private final ChatRecommendationService chatRecommendationService;
+  private final ChatRecommendationService chatRecommendationService;
 
-    @PostMapping("/recommendations")
-    public ResponseEntity<ChatRecommendationResponse> getRecommendations(@Valid @RequestBody ChatRecommendationRequest request) {
-        ChatRecommendationResponse response = chatRecommendationService.generateRecommendations(request);
-        return ResponseEntity.ok(response);
-    }
+  @PostMapping("/recommendations")
+  public ResponseEntity<ChatRecommendationResponse> getRecommendations(
+      @Valid @RequestBody ChatRecommendationRequest request) {
+    ChatRecommendationResponse response =
+        chatRecommendationService.generateRecommendations(request);
+    return ResponseEntity.ok(response);
+  }
 }

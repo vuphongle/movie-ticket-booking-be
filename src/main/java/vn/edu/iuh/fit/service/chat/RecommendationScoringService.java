@@ -86,9 +86,7 @@ public class RecommendationScoringService {
 
   public QueryContext extractQueryContext(String message, ZonedDateTime referenceTime) {
     ZonedDateTime effectiveReference =
-        referenceTime == null
-            ? ZonedDateTime.now(ZoneId.systemDefault())
-            : referenceTime;
+        referenceTime == null ? ZonedDateTime.now(ZoneId.systemDefault()) : referenceTime;
     Set<LocalDate> dates = extractRequestedDates(message, effectiveReference);
     Set<Integer> hours = extractRequestedHours(message);
     return new QueryContext(dates, hours);
@@ -164,9 +162,7 @@ public class RecommendationScoringService {
       return Collections.emptySet();
     }
     return movie.getGenres().stream()
-        .map(
-            genre ->
-                StringUtils.hasText(genre.getSlug()) ? genre.getSlug() : genre.getName())
+        .map(genre -> StringUtils.hasText(genre.getSlug()) ? genre.getSlug() : genre.getName())
         .filter(StringUtils::hasText)
         .map(TextNormalizer::toSlug)
         .filter(StringUtils::hasText)
@@ -456,13 +452,13 @@ public class RecommendationScoringService {
   }
 
   public record RecommendationScoringInput(
-    int groupMinimumAge,
-    Set<String> preferredGenres,
-    Set<String> keywordNamePatterns,
-    String originalMessage,
-    ZoneId zone,
-    Set<LocalDate> requestedDates,
-    Set<Integer> requestedHours) {}
+      int groupMinimumAge,
+      Set<String> preferredGenres,
+      Set<String> keywordNamePatterns,
+      String originalMessage,
+      ZoneId zone,
+      Set<LocalDate> requestedDates,
+      Set<Integer> requestedHours) {}
 
   public record ScoredMovie(Movie movie, ScoreBreakdown breakdown) {}
 

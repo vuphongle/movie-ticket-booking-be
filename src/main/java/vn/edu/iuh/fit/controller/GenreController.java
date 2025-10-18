@@ -14,27 +14,27 @@ import vn.edu.iuh.fit.service.GenreService;
 @RequestMapping("api")
 @RequiredArgsConstructor
 public class GenreController {
-    private final GenreService genreService;
+  private final GenreService genreService;
 
-    @GetMapping("/admin/genres")
-    public ResponseEntity<?> getAllGenresByAdmin() {
-        return ResponseEntity.ok(genreService.getAllGenres());
-    }
+  @GetMapping("/admin/genres")
+  public ResponseEntity<?> getAllGenresByAdmin() {
+    return ResponseEntity.ok(genreService.getAllGenres());
+  }
 
-    @PostMapping("/admin/genres")
-    public ResponseEntity<?> createGenre(@Valid @RequestBody UpsertGenreRequest request) {
-        return new ResponseEntity<>(genreService.saveGenre(request), HttpStatus.CREATED);
-    }
+  @PostMapping("/admin/genres")
+  public ResponseEntity<?> createGenre(@Valid @RequestBody UpsertGenreRequest request) {
+    return new ResponseEntity<>(genreService.saveGenre(request), HttpStatus.CREATED);
+  }
 
-    @PutMapping("/admin/genres/{id}")
-    public ResponseEntity<?> updateGenre(@PathVariable Integer id,
-                                         @Valid @RequestBody UpsertGenreRequest request) {
-        return ResponseEntity.ok(genreService.updateGenre(id, request));
-    }
+  @PutMapping("/admin/genres/{id}")
+  public ResponseEntity<?> updateGenre(
+      @PathVariable Integer id, @Valid @RequestBody UpsertGenreRequest request) {
+    return ResponseEntity.ok(genreService.updateGenre(id, request));
+  }
 
-    @DeleteMapping("/admin/genres/{id}")
-    public ResponseEntity<?> deleteGenre(@PathVariable Integer id) {
-        genreService.deleteGenre(id);
-        return ResponseEntity.noContent().build();
-    }
+  @DeleteMapping("/admin/genres/{id}")
+  public ResponseEntity<?> deleteGenre(@PathVariable Integer id) {
+    genreService.deleteGenre(id);
+    return ResponseEntity.noContent().build();
+  }
 }

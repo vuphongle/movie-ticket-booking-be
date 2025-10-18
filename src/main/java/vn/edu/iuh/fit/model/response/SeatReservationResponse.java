@@ -1,8 +1,8 @@
 package vn.edu.iuh.fit.model.response;
 
-import vn.edu.iuh.fit.model.enums.SeatReservationStatus;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
+import vn.edu.iuh.fit.model.enums.SeatReservationStatus;
 
 @Builder
 @Getter
@@ -11,7 +11,7 @@ import lombok.experimental.FieldDefaults;
 @AllArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class SeatReservationResponse {
-    Integer seatId;
-    Integer showtimeId;
-    SeatReservationStatus status;
+  Integer seatId;
+  Integer showtimeId;
+  SeatReservationStatus status;
 }

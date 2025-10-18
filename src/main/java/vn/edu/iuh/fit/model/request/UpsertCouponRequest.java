@@ -2,11 +2,10 @@ package vn.edu.iuh.fit.model.request;
 
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
+import java.util.Date;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
 import vn.edu.iuh.fit.model.enums.CouponKind;
-
-import java.util.Date;
 
 @Getter
 @Setter
@@ -15,22 +14,22 @@ import java.util.Date;
 @ToString
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class UpsertCouponRequest {
-    @NotNull(message = "Kind không được để trống")
-    CouponKind kind = CouponKind.VOUCHER; // Default to VOUCHER
-    
-    String code; // Optional, required only for VOUCHER type
+  @NotNull(message = "Kind không được để trống")
+  CouponKind kind = CouponKind.VOUCHER; // Default to VOUCHER
 
-    @NotEmpty(message = "Name không được để trống")
-    String name;
-    
-    String description; // optional
+  String code; // Optional, required only for VOUCHER type
 
-    @NotNull(message = "Status không được để trống")
-    Boolean status;
+  @NotEmpty(message = "Name không được để trống")
+  String name;
 
-    @NotNull(message = "Start at không được để trống")
-    Date startDate;
+  String description; // optional
 
-    @NotNull(message = "End at không được để trống")
-    Date endDate;
+  @NotNull(message = "Status không được để trống")
+  Boolean status;
+
+  @NotNull(message = "Start at không được để trống")
+  Date startDate;
+
+  @NotNull(message = "End at không được để trống")
+  Date endDate;
 }

@@ -1,10 +1,9 @@
 package vn.edu.iuh.fit.entity;
 
 import jakarta.persistence.*;
+import java.util.Date;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
-
-import java.util.Date;
 
 @Builder
 @AllArgsConstructor
@@ -15,14 +14,14 @@ import java.util.Date;
 @Table(name = "schedules")
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class Schedule {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    Integer id;
+  @Id
+  @GeneratedValue(strategy = GenerationType.IDENTITY)
+  Integer id;
 
-    @ManyToOne
-    @JoinColumn(name = "movie_id")
-    Movie movie;
+  @ManyToOne
+  @JoinColumn(name = "movie_id")
+  Movie movie;
 
-    Date startDate;
-    Date endDate;
+  Date startDate;
+  Date endDate;
 }

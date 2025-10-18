@@ -14,16 +14,17 @@ import vn.edu.iuh.fit.service.SeatService;
 @RequestMapping("api/admin/seats")
 @RequiredArgsConstructor
 public class SeatController {
-    private final SeatService seatService;
+  private final SeatService seatService;
 
-    @PutMapping("/{id}")
-    public ResponseEntity<?> updateSeat(@PathVariable Integer id, @Valid @RequestBody UpsertSeatRequest request) {
-        return ResponseEntity.ok(seatService.updateSeat(id, request));
-    }
+  @PutMapping("/{id}")
+  public ResponseEntity<?> updateSeat(
+      @PathVariable Integer id, @Valid @RequestBody UpsertSeatRequest request) {
+    return ResponseEntity.ok(seatService.updateSeat(id, request));
+  }
 
-    @PutMapping("/update-row-seats")
-    public ResponseEntity<?> updateSeat(@Valid @RequestBody UpdateRowSeatRequest request) {
-        seatService.updateRowSeat(request);
-        return ResponseEntity.ok().build();
-    }
+  @PutMapping("/update-row-seats")
+  public ResponseEntity<?> updateSeat(@Valid @RequestBody UpdateRowSeatRequest request) {
+    seatService.updateRowSeat(request);
+    return ResponseEntity.ok().build();
+  }
 }

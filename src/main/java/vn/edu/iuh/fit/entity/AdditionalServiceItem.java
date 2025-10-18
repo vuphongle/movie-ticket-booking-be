@@ -13,25 +13,26 @@ import lombok.experimental.FieldDefaults;
 @Table(name = "additional_service_items")
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class AdditionalServiceItem {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    Integer id;
+  @Id
+  @GeneratedValue(strategy = GenerationType.IDENTITY)
+  Integer id;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "additional_service_id", nullable = false)
-    AdditionalService additionalService;
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "additional_service_id", nullable = false)
+  AdditionalService additionalService;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "product_id", nullable = false)
-    Product product;
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "product_id", nullable = false)
+  Product product;
 
-    @Column(nullable = false)
-    Integer quantity; // Số lượng sản phẩm trong combo (>=1)
+  @Column(nullable = false)
+  Integer quantity; // Số lượng sản phẩm trong combo (>=1)
 
-    // Constructor for convenience
-    public AdditionalServiceItem(AdditionalService additionalService, Product product, Integer quantity) {
-        this.additionalService = additionalService;
-        this.product = product;
-        this.quantity = quantity;
-    }
+  // Constructor for convenience
+  public AdditionalServiceItem(
+      AdditionalService additionalService, Product product, Integer quantity) {
+    this.additionalService = additionalService;
+    this.product = product;
+    this.quantity = quantity;
+  }
 }

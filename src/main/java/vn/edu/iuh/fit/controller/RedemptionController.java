@@ -13,17 +13,17 @@ import vn.edu.iuh.fit.service.RedemptionService;
 @RequestMapping("api/redemptions")
 @RequiredArgsConstructor
 public class RedemptionController {
-    private final RedemptionService redemptionService;
+  private final RedemptionService redemptionService;
 
-    @PostMapping("/confirm")
-    public ResponseEntity<?> confirmRedemption(@Valid @RequestBody RedemptionConfirmRequest request) {
-        redemptionService.confirmRedemption(request);
-        return ResponseEntity.ok().build();
-    }
+  @PostMapping("/confirm")
+  public ResponseEntity<?> confirmRedemption(@Valid @RequestBody RedemptionConfirmRequest request) {
+    redemptionService.confirmRedemption(request);
+    return ResponseEntity.ok().build();
+  }
 
-    @PostMapping("/revert")
-    public ResponseEntity<?> revertRedemption(@Valid @RequestBody RedemptionConfirmRequest request) {
-        redemptionService.revertRedemption(request);
-        return ResponseEntity.ok().build();
-    }
+  @PostMapping("/revert")
+  public ResponseEntity<?> revertRedemption(@Valid @RequestBody RedemptionConfirmRequest request) {
+    redemptionService.revertRedemption(request);
+    return ResponseEntity.ok().build();
+  }
 }

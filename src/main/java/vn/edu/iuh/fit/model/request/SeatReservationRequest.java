@@ -11,9 +11,9 @@ import lombok.experimental.FieldDefaults;
 @ToString
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class SeatReservationRequest {
-    @NotNull(message = "Seat id không được để trống")
-    Integer seatId;
+  @NotNull(message = "Seat id không được để trống")
+  Integer seatId;
 
-    @NotNull(message = "Showtime id không được để trống")
-    Integer showtimeId;
+  @NotNull(message = "Showtime id không được để trống")
+  Integer showtimeId;
 }

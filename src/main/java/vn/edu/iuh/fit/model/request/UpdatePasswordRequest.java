@@ -12,15 +12,15 @@ import lombok.experimental.FieldDefaults;
 @ToString
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class UpdatePasswordRequest {
-    @NotNull(message = "Mật khẩu cũ không được để trống")
-    @NotEmpty(message = "Mật khẩu cũ không được để trống")
-    String oldPassword;
+  @NotNull(message = "Mật khẩu cũ không được để trống")
+  @NotEmpty(message = "Mật khẩu cũ không được để trống")
+  String oldPassword;
 
-    @NotNull(message = "Mật khẩu mới không được để trống")
-    @NotEmpty(message = "Mật khẩu mới không được để trống")
-    String newPassword;
+  @NotNull(message = "Mật khẩu mới không được để trống")
+  @NotEmpty(message = "Mật khẩu mới không được để trống")
+  String newPassword;
 
-    @NotNull(message = "Xác nhận mật khẩu không được để trống")
-    @NotEmpty(message = "Xác nhận mật khẩu không được để trống")
-    String confirmPassword;
+  @NotNull(message = "Xác nhận mật khẩu không được để trống")
+  @NotEmpty(message = "Xác nhận mật khẩu không được để trống")
+  String confirmPassword;
 }

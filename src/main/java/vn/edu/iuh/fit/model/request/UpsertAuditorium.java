@@ -13,18 +13,18 @@ import vn.edu.iuh.fit.model.enums.AuditoriumType;
 @ToString
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class UpsertAuditorium {
-    @NotEmpty(message = "Tên không được để trống")
-    String name;
+  @NotEmpty(message = "Tên không được để trống")
+  String name;
 
-    @NotNull(message = "Số hàng không được để trống")
-    Integer totalRows;
+  @NotNull(message = "Số hàng không được để trống")
+  Integer totalRows;
 
-    @NotNull(message = "Số cột không được để trống")
-    Integer totalColumns;
+  @NotNull(message = "Số cột không được để trống")
+  Integer totalColumns;
 
-    @NotNull(message = "Loại phòng chiếu không được để trống")
-    AuditoriumType type;
+  @NotNull(message = "Loại phòng chiếu không được để trống")
+  AuditoriumType type;
 
-    @NotNull(message = "ID rạp chiếu không được để trống")
-    Integer cinemaId;
+  @NotNull(message = "ID rạp chiếu không được để trống")
+  Integer cinemaId;
 }

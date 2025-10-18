@@ -11,6 +11,6 @@ import lombok.experimental.FieldDefaults;
 @ToString
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class UpsertCountryRequest {
-    @NotEmpty(message = "Tên quốc gia không được để trống")
-    String name;
+  @NotEmpty(message = "Tên quốc gia không được để trống")
+  String name;
 }

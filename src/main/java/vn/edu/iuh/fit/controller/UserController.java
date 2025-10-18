@@ -18,37 +18,34 @@ import vn.edu.iuh.fit.service.UserService;
 @RequestMapping("api")
 @RequiredArgsConstructor
 public class UserController {
-    private final UserService userService;
-    private final S3Service s3Service;
+  private final UserService userService;
+  private final S3Service s3Service;
 
-    @PutMapping("/users/update-password")
-    public ResponseEntity<?> updatePassword(@Valid @RequestBody UpdatePasswordRequest request) {
-        userService.updatePassword(request);
-        return ResponseEntity.noContent().build();
-    }
+  @PutMapping("/users/update-password")
+  public ResponseEntity<?> updatePassword(@Valid @RequestBody UpdatePasswordRequest request) {
+    userService.updatePassword(request);
+    return ResponseEntity.noContent().build();
+  }
 
-    @PutMapping("/users/update-profile")
-    public ResponseEntity<?> updateProfile(@Valid @RequestBody UpdateProfileUserRequest request) {
-        User user = userService.updateProfile(request);
-        return ResponseEntity.ok(user);
-    }
+  @PutMapping("/users/update-profile")
+  public ResponseEntity<?> updateProfile(@Valid @RequestBody UpdateProfileUserRequest request) {
+    User user = userService.updateProfile(request);
+    return ResponseEntity.ok(user);
+  }
 
-    @PostMapping("/users/upload-avatar")
-    public ResponseEntity<UploadResponse> uploadUserAvatar(@RequestParam("file") MultipartFile file) {
-        try {
-            String url = s3Service.uploadUserAvatar(file);
-            UploadResponse response = new UploadResponse(
-                    url,
-                    file.getOriginalFilename(),
-                    file.getSize(),
-                    file.getContentType()
-            );
-            return ResponseEntity.ok(response);
-        } catch (Exception e) {
-            log.error("Lỗi khi upload avatar: {}", e.getMessage());
-            UploadResponse errorResponse = new UploadResponse();
-            errorResponse.setMessage("Upload thất bại: " + e.getMessage());
-            return ResponseEntity.badRequest().body(errorResponse);
-        }
+  @PostMapping("/users/upload-avatar")
+  public ResponseEntity<UploadResponse> uploadUserAvatar(@RequestParam("file") MultipartFile file) {
+    try {
+      String url = s3Service.uploadUserAvatar(file);
+      UploadResponse response =
+          new UploadResponse(
+              url, file.getOriginalFilename(), file.getSize(), file.getContentType());
+      return ResponseEntity.ok(response);
+    } catch (Exception e) {
+      log.error("Lỗi khi upload avatar: {}", e.getMessage());
+      UploadResponse errorResponse = new UploadResponse();
+      errorResponse.setMessage("Upload thất bại: " + e.getMessage());
+      return ResponseEntity.badRequest().body(errorResponse);
     }
+  }
 }

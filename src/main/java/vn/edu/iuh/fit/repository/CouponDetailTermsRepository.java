@@ -10,25 +10,28 @@ import vn.edu.iuh.fit.entity.CouponDetailTerms;
 
 @Repository
 public interface CouponDetailTermsRepository extends JpaRepository<CouponDetailTerms, Integer> {
-    
-    @Query("SELECT terms FROM CouponDetailTerms terms WHERE terms.couponDetail.id = :couponDetailId")
-    CouponDetailTerms findByCouponDetailId(@Param("couponDetailId") Integer couponDetailId);
-    
-    @Query("SELECT COALESCE(SUM(terms.detailUsedCount), 0) FROM CouponDetailTerms terms " +
-           "JOIN terms.couponDetail cd " +
-           "WHERE cd.coupon.id = :couponId")
-    Long sumUsedCountByCouponId(@Param("couponId") Integer couponId);
-    
-    // Check if product is being used as gift in active coupon details
-    @Query("SELECT COUNT(terms) > 0 FROM CouponDetailTerms terms " +
-           "JOIN terms.couponDetail cd " +
-           "WHERE terms.giftServiceId = :productId " +
-           "AND cd.enabled = true " +
-           "AND cd.coupon.status = true")
-    boolean existsByGiftServiceIdAndEnabledTrueAndCouponStatusTrue(@Param("productId") Integer productId);
-    
-    @Modifying
-    @Transactional
-    @Query("DELETE FROM CouponDetailTerms terms WHERE terms.couponDetail.coupon.id = :couponId")
-    void deleteByCouponId(@Param("couponId") Integer couponId);
+
+  @Query("SELECT terms FROM CouponDetailTerms terms WHERE terms.couponDetail.id = :couponDetailId")
+  CouponDetailTerms findByCouponDetailId(@Param("couponDetailId") Integer couponDetailId);
+
+  @Query(
+      "SELECT COALESCE(SUM(terms.detailUsedCount), 0) FROM CouponDetailTerms terms "
+          + "JOIN terms.couponDetail cd "
+          + "WHERE cd.coupon.id = :couponId")
+  Long sumUsedCountByCouponId(@Param("couponId") Integer couponId);
+
+  // Check if product is being used as gift in active coupon details
+  @Query(
+      "SELECT COUNT(terms) > 0 FROM CouponDetailTerms terms "
+          + "JOIN terms.couponDetail cd "
+          + "WHERE terms.giftServiceId = :productId "
+          + "AND cd.enabled = true "
+          + "AND cd.coupon.status = true")
+  boolean existsByGiftServiceIdAndEnabledTrueAndCouponStatusTrue(
+      @Param("productId") Integer productId);
+
+  @Modifying
+  @Transactional
+  @Query("DELETE FROM CouponDetailTerms terms WHERE terms.couponDetail.coupon.id = :couponId")
+  void deleteByCouponId(@Param("couponId") Integer couponId);
 }

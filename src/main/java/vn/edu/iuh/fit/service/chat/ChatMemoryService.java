@@ -12,9 +12,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 
-/**
- * Simple in-memory conversation buffer that keeps the last few turns per conversation.
- */
+/** Simple in-memory conversation buffer that keeps the last few turns per conversation. */
 @Component
 public class ChatMemoryService {
 
@@ -39,7 +37,8 @@ public class ChatMemoryService {
     conversations.compute(
         conversationId,
         (key, existing) -> {
-          Deque<ChatMessage> deque = existing == null ? new ArrayDeque<>() : new ArrayDeque<>(existing);
+          Deque<ChatMessage> deque =
+              existing == null ? new ArrayDeque<>() : new ArrayDeque<>(existing);
           for (ChatMessage message : messages) {
             if (message == null || !StringUtils.hasText(message.content())) {
               continue;

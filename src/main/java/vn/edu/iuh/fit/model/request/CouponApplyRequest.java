@@ -5,8 +5,6 @@ import jakarta.validation.constraints.NotNull;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
 
-import java.util.List;
-
 @Getter
 @Setter
 @NoArgsConstructor
@@ -14,15 +12,15 @@ import java.util.List;
 @ToString
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class CouponApplyRequest {
-    @NotNull(message = "Order ID không được để trống")
-    Integer orderId;
+  @NotNull(message = "Order ID không được để trống")
+  Integer orderId;
 
-    @NotNull(message = "Coupon ID không được để trống")
-    Integer couponId;
-    
-    @NotEmpty(message = "Coupon code không được để trống")
-    String couponCode;
-    
-    @NotNull(message = "Cart không được để trống")
-    CouponPreviewRequest cart;
+  @NotNull(message = "Coupon ID không được để trống")
+  Integer couponId;
+
+  @NotEmpty(message = "Coupon code không được để trống")
+  String couponCode;
+
+  @NotNull(message = "Cart không được để trống")
+  CouponPreviewRequest cart;
 }

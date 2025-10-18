@@ -1,5 +1,8 @@
 package vn.edu.iuh.fit.model.response;
 
+import static lombok.AccessLevel.PRIVATE;
+
+import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -8,10 +11,6 @@ import lombok.Setter;
 import lombok.experimental.FieldDefaults;
 import vn.edu.iuh.fit.model.enums.MovieAge;
 
-import java.util.List;
-
-import static lombok.AccessLevel.PRIVATE;
-
 @Getter
 @Setter
 @NoArgsConstructor
@@ -19,14 +18,14 @@ import static lombok.AccessLevel.PRIVATE;
 @Builder
 @FieldDefaults(level = PRIVATE)
 public class RecommendedMovieResponse {
-    Integer movieId;
-    String name;
-    String slug;
-    String poster;
-    MovieAge ageRating;
-    Double rating;
-    List<String> genres;
-    List<String> genreDisplayNames;
-    List<String> reasons;
-    List<String> showtimes;
+  Integer movieId;
+  String name;
+  String slug;
+  String poster;
+  MovieAge ageRating;
+  Double rating;
+  List<String> genres;
+  List<String> genreDisplayNames;
+  List<String> reasons;
+  List<String> showtimes;
 }

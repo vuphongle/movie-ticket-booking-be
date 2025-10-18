@@ -9,7 +9,7 @@ import lombok.experimental.FieldDefaults;
 @AllArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class BlogViewDto {
-    Integer id;
-    String title;
-    long viewCount;
+  Integer id;
+  String title;
+  long viewCount;
 }

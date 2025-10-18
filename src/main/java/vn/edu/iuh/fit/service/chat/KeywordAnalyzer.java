@@ -63,32 +63,27 @@ public class KeywordAnalyzer {
 
     KeywordConfig romanceConfig =
         createKeywordConfig(
-            Set.of("lang-man", "romance"),
-            Set.of("lang man", "tinh yeu", "romance", "romantic"));
+            Set.of("lang-man", "romance"), Set.of("lang man", "tinh yeu", "romance", "romantic"));
     register(config, romanceConfig, "lang man", "tinh yeu", "romance");
 
     KeywordConfig horrorConfig =
         createKeywordConfig(
-            Set.of("kinh-di", "gay-can", "horror"),
-            Set.of("kinh di", "horror", "scary"));
+            Set.of("kinh-di", "gay-can", "horror"), Set.of("kinh di", "horror", "scary"));
     register(config, horrorConfig, "kinh di", "gay can", "horror");
 
     KeywordConfig comedyConfig =
         createKeywordConfig(
-            Set.of("hai", "hai-huoc", "comedy"),
-            Set.of("hai", "hai huoc", "comedy", "funny"));
+            Set.of("hai", "hai-huoc", "comedy"), Set.of("hai", "hai huoc", "comedy", "funny"));
     register(config, comedyConfig, "hai", "hai huoc", "comedy", "funny");
 
     KeywordConfig romComConfig =
         createKeywordConfig(
-            Set.of("lang-man", "hai", "comedy"),
-            Set.of("rom com", "rom-com", "romantic comedy"));
+            Set.of("lang-man", "hai", "comedy"), Set.of("rom com", "rom-com", "romantic comedy"));
     register(config, romComConfig, "rom com", "rom-com", "romantic comedy");
 
     KeywordConfig animationConfig =
         createKeywordConfig(
-            Set.of("hoat-hinh", "animation"),
-            Set.of("hoat hinh", "animation", "animated"));
+            Set.of("hoat-hinh", "animation"), Set.of("hoat hinh", "animation", "animated"));
     register(config, animationConfig, "hoat hinh", "animation", "animated");
 
     return Collections.unmodifiableMap(config);

@@ -12,10 +12,10 @@ import vn.edu.iuh.fit.model.dto.UserDto;
 @AllArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class AuthResponse {
-    UserDto user;
-    String accessToken;
-    String refreshToken;
+  UserDto user;
+  String accessToken;
+  String refreshToken;
 
-    @JsonProperty("isAuthenticated")
-    Boolean isAuthenticated;
+  @JsonProperty("isAuthenticated")
+  Boolean isAuthenticated;
 }

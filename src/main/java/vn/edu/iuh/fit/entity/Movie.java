@@ -2,6 +2,7 @@ package vn.edu.iuh.fit.entity;
 
 import io.hypersistence.utils.hibernate.type.json.JsonType;
 import jakarta.persistence.*;
+import java.util.*;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
 import org.hibernate.annotations.Fetch;
@@ -10,8 +11,6 @@ import org.hibernate.annotations.Type;
 import vn.edu.iuh.fit.model.enums.GraphicsType;
 import vn.edu.iuh.fit.model.enums.MovieAge;
 import vn.edu.iuh.fit.model.enums.TranslationType;
-
-import java.util.*;
 
 @Builder
 @AllArgsConstructor
@@ -22,88 +21,92 @@ import java.util.*;
 @Table(name = "movies")
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class Movie {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    Integer id;
+  @Id
+  @GeneratedValue(strategy = GenerationType.IDENTITY)
+  Integer id;
 
-    String name; // tên phim
-    String nameEn; // tên phim tiếng anh
-    String slug; // tên không dấu
-    String trailer; // link trailer
+  String name; // tên phim
+  String nameEn; // tên phim tiếng anh
+  String slug; // tên không dấu
+  String trailer; // link trailer
 
-    @Column(columnDefinition = "TEXT")
-    String description; // mô tả
+  @Column(columnDefinition = "TEXT")
+  String description; // mô tả
 
-    String poster; // ảnh poster
-    Integer releaseYear; // năm phát hành
-    Double rating; // đánh giá
-    Integer duration; // thời lượng
-    Boolean status; // trạng thái
-    Date showDate; // ngày chiếu
-    Date createdAt; // ngày tạo
-    Date updatedAt; // ngày cập nhật
-    Date publishedAt; // ngày xuất bản
+  String poster; // ảnh poster
+  Integer releaseYear; // năm phát hành
+  Double rating; // đánh giá
+  Integer duration; // thời lượng
+  Boolean status; // trạng thái
+  Date showDate; // ngày chiếu
+  Date createdAt; // ngày tạo
+  Date updatedAt; // ngày cập nhật
+  Date publishedAt; // ngày xuất bản
 
-    @Type(JsonType.class)
-    @Column(columnDefinition = "json")
-    List<GraphicsType> graphics = new ArrayList<>(); // hình thức chiếu
+  @Type(JsonType.class)
+  @Column(columnDefinition = "json")
+  List<GraphicsType> graphics = new ArrayList<>(); // hình thức chiếu
 
-    @Type(JsonType.class)
-    @Column(columnDefinition = "json")
-    List<TranslationType> translations = new ArrayList<>(); // hình thức dịch
+  @Type(JsonType.class)
+  @Column(columnDefinition = "json")
+  List<TranslationType> translations = new ArrayList<>(); // hình thức dịch
 
-    @Enumerated(EnumType.STRING)
-    MovieAge age; // độ tuổi
+  @Enumerated(EnumType.STRING)
+  MovieAge age; // độ tuổi
 
-    @ManyToOne
-    @JoinColumn(name = "country_id")
-    Country country;
+  @ManyToOne
+  @JoinColumn(name = "country_id")
+  Country country;
 
-    @ManyToMany(fetch = FetchType.EAGER )
-    @JoinTable(
-            name = "movie_genre",
-            joinColumns = @JoinColumn(name = "movie_id"),
-            inverseJoinColumns = @JoinColumn(name = "genre_id")
-    )
-    @Fetch(FetchMode.SUBSELECT)
-    Set<Genre> genres = new LinkedHashSet<>();
+  @ManyToMany(fetch = FetchType.EAGER)
+  @JoinTable(
+      name = "movie_genre",
+      joinColumns = @JoinColumn(name = "movie_id"),
+      inverseJoinColumns = @JoinColumn(name = "genre_id"))
+  @Fetch(FetchMode.SUBSELECT)
+  Set<Genre> genres = new LinkedHashSet<>();
 
-    @ManyToMany(fetch = FetchType.EAGER )
-    @JoinTable(name = "movie_director",
-            joinColumns = @JoinColumn(name = "movie_id"),
-            inverseJoinColumns = @JoinColumn(name = "director_id"))
-    @Fetch(FetchMode.SUBSELECT)
-    Set<Director> directors = new LinkedHashSet<>();
+  @ManyToMany(fetch = FetchType.EAGER)
+  @JoinTable(
+      name = "movie_director",
+      joinColumns = @JoinColumn(name = "movie_id"),
+      inverseJoinColumns = @JoinColumn(name = "director_id"))
+  @Fetch(FetchMode.SUBSELECT)
+  Set<Director> directors = new LinkedHashSet<>();
 
-    @ManyToMany(fetch = FetchType.EAGER )
-    @JoinTable(name = "movie_actor",
-            joinColumns = @JoinColumn(name = "movie_id"),
-            inverseJoinColumns = @JoinColumn(name = "actor_id"))
-    @Fetch(FetchMode.SUBSELECT)
-    Set<Actor> actors = new LinkedHashSet<>();
+  @ManyToMany(fetch = FetchType.EAGER)
+  @JoinTable(
+      name = "movie_actor",
+      joinColumns = @JoinColumn(name = "movie_id"),
+      inverseJoinColumns = @JoinColumn(name = "actor_id"))
+  @Fetch(FetchMode.SUBSELECT)
+  Set<Actor> actors = new LinkedHashSet<>();
 
-    @OneToMany(mappedBy = "movie", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER )
-    @Fetch(FetchMode.SUBSELECT)
-    Set<Review> reviews = new LinkedHashSet<>();
+  @OneToMany(
+      mappedBy = "movie",
+      cascade = CascadeType.ALL,
+      orphanRemoval = true,
+      fetch = FetchType.EAGER)
+  @Fetch(FetchMode.SUBSELECT)
+  Set<Review> reviews = new LinkedHashSet<>();
 
+  @PrePersist
+  public void prePersist() {
+    createdAt = new Date();
+    updatedAt = new Date();
 
-    @PrePersist
-    public void prePersist() {
-        createdAt = new Date();
-        updatedAt = new Date();
-
-        if (status) {
-            publishedAt = new Date();
-        }
+    if (status) {
+      publishedAt = new Date();
     }
+  }
 
-    @PreUpdate
-    public void preUpdate() {
-        updatedAt = new Date();
-        if (status) {
-            publishedAt = new Date();
-        } else {
-            publishedAt = null;
-        }
+  @PreUpdate
+  public void preUpdate() {
+    updatedAt = new Date();
+    if (status) {
+      publishedAt = new Date();
+    } else {
+      publishedAt = null;
     }
+  }
 }
