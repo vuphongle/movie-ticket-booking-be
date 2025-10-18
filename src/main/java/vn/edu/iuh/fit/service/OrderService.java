@@ -313,11 +313,6 @@ public class OrderService {
             .findBySeat_IdAndShowtime_Id(ticketItem.getSeat().getId(), showtimeId)
             .ifPresent(seatReservationRepository::delete);
       }
-      // Xóa vé và các dịch vụ kèm theo
-      orderTicketItemRepository.deleteAll(order.getTicketItems());
-      orderServiceItemRepository.deleteAll(order.getServiceItems());
-      order.getTicketItems().clear();
-      order.getServiceItems().clear();
 
       // Không tạo QR code khi hủy
       order.setQrCodePath(null);
