@@ -110,4 +110,15 @@ public class SeatService {
             seatRepository.save(seat);
         });
     }
+
+    public SeatReservationStatus checkSeatReservationStatus(Integer seatId, Integer showtimeId) {
+        // Tìm reservation tương ứng với ghế và suất chiếu
+        Optional<SeatReservation> reservationOpt = seatReservationRepository.findBySeat_IdAndShowtime_Id(seatId, showtimeId);
+
+        if (reservationOpt.isEmpty()) {
+            return null; // Chưa được giữ hay đặt
+        }
+
+        return reservationOpt.get().getStatus();
+    }
 }
