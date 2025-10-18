@@ -345,4 +345,9 @@ public class OrderService {
   public List<Order> getAllOrders() {
     return orderRepository.findAll(Sort.by(Sort.Direction.DESC, "createdAt"));
   }
+
+  public Order getOrderById(Integer id) {
+    return orderRepository.findById(id)
+            .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy đơn hàng với id " + id));
+  }
 }

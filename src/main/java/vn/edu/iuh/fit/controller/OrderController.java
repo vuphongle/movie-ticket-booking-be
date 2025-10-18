@@ -99,4 +99,9 @@ public class OrderController {
   public ResponseEntity<?> getAllOrders() {
     return ResponseEntity.ok(orderService.getAllOrders());
   }
+
+  @GetMapping("/admin/orders/{id}")
+  public ResponseEntity<?> getOrderById(@PathVariable Integer id) {
+    return ResponseEntity.ok(orderService.getOrderById(id));
+  }
 }
