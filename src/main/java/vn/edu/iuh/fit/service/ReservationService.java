@@ -11,6 +11,7 @@ import vn.edu.iuh.fit.entity.Showtime;
 import vn.edu.iuh.fit.exception.BadRequestException;
 import vn.edu.iuh.fit.exception.ResourceNotFoundException;
 import vn.edu.iuh.fit.model.enums.SeatReservationStatus;
+import vn.edu.iuh.fit.model.request.CancelMultipleSeatsRequest;
 import vn.edu.iuh.fit.model.request.SeatReservationRequest;
 import vn.edu.iuh.fit.model.response.SeatReservationResponse;
 import vn.edu.iuh.fit.repository.SeatRepository;
@@ -73,4 +74,23 @@ public class ReservationService {
                 .build();
         messagingTemplate.convertAndSend("/topic/seatUpdate", response);
     }
+
+    @Transactional
+    public void cancelMultipleReservations(CancelMultipleSeatsRequest request) {
+        List<SeatReservation> reservations = seatReservationRepository
+                .findByShowtime_IdAndSeat_IdInAndStatus(
+                        request.getShowtimeId(),
+                        request.getSeatIds(),
+                        SeatReservationStatus.HELD
+                );
+
+        if (reservations.isEmpty()) {
+            log.warn("Không tìm thấy ghế nào để hủy trong suất chiếu {}", request.getShowtimeId());
+            return;
+        }
+
+        seatReservationRepository.deleteAll(reservations);
+        log.info("Đã hủy {} ghế cho suất chiếu {}", reservations.size(), request.getShowtimeId());
+    }
+
 }

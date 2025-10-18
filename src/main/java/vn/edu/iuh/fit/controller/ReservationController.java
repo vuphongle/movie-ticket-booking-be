@@ -1,5 +1,6 @@
 package vn.edu.iuh.fit.controller;
 
+import vn.edu.iuh.fit.model.request.CancelMultipleSeatsRequest;
 import vn.edu.iuh.fit.model.request.SeatReservationRequest;
 import vn.edu.iuh.fit.service.ReservationService;
 import jakarta.validation.Valid;
@@ -30,4 +31,11 @@ public class ReservationController {
         reservationService.cancelReservation(request);
         return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }
+
+    @PostMapping("/seat-reservations/cancel-multiple")
+    public ResponseEntity<?> cancelMultipleReservations(@Valid @RequestBody CancelMultipleSeatsRequest request) {
+        reservationService.cancelMultipleReservations(request);
+        return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+    }
+
 }
