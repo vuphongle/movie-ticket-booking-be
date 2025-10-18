@@ -32,8 +32,7 @@ public class VNPayService {
       int total,
       String orderInfo,
       String urlReturn,
-      int expireSeconds // 👈 thêm tham số
-      ) {
+      int expireSeconds) {
     log.info(
         "Creating order with total: {}, orderInfo: {}, urlReturn: {}, expireSeconds: {}",
         total,

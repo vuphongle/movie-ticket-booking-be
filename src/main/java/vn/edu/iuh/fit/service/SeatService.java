@@ -3,6 +3,7 @@ package vn.edu.iuh.fit.service;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -134,5 +135,17 @@ public class SeatService {
           seat.setStatus(request.getStatus());
           seatRepository.save(seat);
         });
+  }
+
+  public SeatReservationStatus checkSeatReservationStatus(Integer seatId, Integer showtimeId) {
+    // Tìm reservation tương ứng với ghế và suất chiếu
+    Optional<SeatReservation> reservationOpt =
+        seatReservationRepository.findBySeat_IdAndShowtime_Id(seatId, showtimeId);
+
+    if (reservationOpt.isEmpty()) {
+      return null; // Chưa được giữ hay đặt
+    }
+
+    return reservationOpt.get().getStatus();
   }
 }

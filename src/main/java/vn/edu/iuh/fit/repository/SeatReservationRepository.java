@@ -1,6 +1,7 @@
 package vn.edu.iuh.fit.repository;
 
 import java.time.LocalDateTime;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -15,6 +16,9 @@ public interface SeatReservationRepository extends JpaRepository<SeatReservation
 
   List<SeatReservation> findByStatusAndStartTimeBefore(
       SeatReservationStatus seatReservationStatus, LocalDateTime localDateTime);
+
+  List<SeatReservation> findByShowtime_IdAndSeat_IdInAndStatus(
+      Integer showtime_id, Collection<Integer> seat_id, SeatReservationStatus status);
 
   Optional<SeatReservation> findBySeat_IdAndShowtime_IdAndStatus(
       Integer seatId, Integer showtimeId, SeatReservationStatus seatReservationStatus);
