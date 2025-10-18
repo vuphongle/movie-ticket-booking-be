@@ -10,7 +10,7 @@ import lombok.experimental.FieldDefaults;
 @AllArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class VerifyTokenResponse {
-    String message;
-    Boolean success;
-    String token;
+  String message;
+  Boolean success;
+  String token;
 }

@@ -9,10 +9,10 @@ import org.springframework.context.annotation.Configuration;
 @RequiredArgsConstructor
 public class OpenAIConfig {
 
-    private final ChatClient.Builder chatClientBuilder;
+  private final ChatClient.Builder chatClientBuilder;
 
-    @Bean
-    public ChatClient chatClient() {
-        return chatClientBuilder.build();
-    }
+  @Bean
+  public ChatClient chatClient() {
+    return chatClientBuilder.build();
+  }
 }

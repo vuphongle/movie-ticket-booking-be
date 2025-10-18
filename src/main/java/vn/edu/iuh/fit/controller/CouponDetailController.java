@@ -13,42 +13,44 @@ import vn.edu.iuh.fit.service.CouponDetailService;
 @RequestMapping("api")
 @RequiredArgsConstructor
 public class CouponDetailController {
-    private final CouponDetailService couponDetailService;
+  private final CouponDetailService couponDetailService;
 
-    @GetMapping("/coupon-details")
-    public ResponseEntity<?> getCouponDetails() {
-        return ResponseEntity.ok(couponDetailService.getAllCouponDetails());
-    }
+  @GetMapping("/coupon-details")
+  public ResponseEntity<?> getCouponDetails() {
+    return ResponseEntity.ok(couponDetailService.getAllCouponDetails());
+  }
 
-    @GetMapping("/coupon-details/{detailId}")
-    public ResponseEntity<?> getCouponDetailsByDetailId(@PathVariable Integer detailId) {
-        return ResponseEntity.ok(couponDetailService.getCouponDetailById(detailId));
-    }
+  @GetMapping("/coupon-details/{detailId}")
+  public ResponseEntity<?> getCouponDetailsByDetailId(@PathVariable Integer detailId) {
+    return ResponseEntity.ok(couponDetailService.getCouponDetailById(detailId));
+  }
 
-    // Details endpoints
-    @GetMapping("/admin/coupons/{id}/details")
-    public ResponseEntity<?> getCouponDetails(@PathVariable Integer id) {
-        return ResponseEntity.ok(couponDetailService.getCouponDetails(id));
-    }
+  // Details endpoints
+  @GetMapping("/admin/coupons/{id}/details")
+  public ResponseEntity<?> getCouponDetails(@PathVariable Integer id) {
+    return ResponseEntity.ok(couponDetailService.getCouponDetails(id));
+  }
 
-    @PostMapping("/admin/coupons/{id}/details")
-    public ResponseEntity<?> createCouponDetail(@PathVariable Integer id, @Valid @RequestBody UpsertCouponDetailRequest request) {
-        return ResponseEntity.ok(couponDetailService.createCouponDetail(id, request));
-    }
+  @PostMapping("/admin/coupons/{id}/details")
+  public ResponseEntity<?> createCouponDetail(
+      @PathVariable Integer id, @Valid @RequestBody UpsertCouponDetailRequest request) {
+    return ResponseEntity.ok(couponDetailService.createCouponDetail(id, request));
+  }
 
-    @PutMapping("/admin/coupon-details/{detailId}")
-    public ResponseEntity<?> updateCouponDetail(@PathVariable Integer detailId, @Valid @RequestBody UpsertCouponDetailRequest request) {
-        return ResponseEntity.ok(couponDetailService.updateCouponDetail(detailId, request));
-    }
+  @PutMapping("/admin/coupon-details/{detailId}")
+  public ResponseEntity<?> updateCouponDetail(
+      @PathVariable Integer detailId, @Valid @RequestBody UpsertCouponDetailRequest request) {
+    return ResponseEntity.ok(couponDetailService.updateCouponDetail(detailId, request));
+  }
 
-    @DeleteMapping("/admin/coupon-details/{detailId}")
-    public ResponseEntity<?> deleteCouponDetail(@PathVariable Integer detailId) {
-        couponDetailService.deleteCouponDetail(detailId);
-        return ResponseEntity.ok().build();
-    }
+  @DeleteMapping("/admin/coupon-details/{detailId}")
+  public ResponseEntity<?> deleteCouponDetail(@PathVariable Integer detailId) {
+    couponDetailService.deleteCouponDetail(detailId);
+    return ResponseEntity.ok().build();
+  }
 
-    @PostMapping("/admin/coupon-details/{detailId}/duplicate")
-    public ResponseEntity<?> duplicateCouponDetail(@PathVariable Integer detailId) {
-        return ResponseEntity.ok(couponDetailService.duplicateCouponDetail(detailId));
-    }
+  @PostMapping("/admin/coupon-details/{detailId}/duplicate")
+  public ResponseEntity<?> duplicateCouponDetail(@PathVariable Integer detailId) {
+    return ResponseEntity.ok(couponDetailService.duplicateCouponDetail(detailId));
+  }
 }

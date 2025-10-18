@@ -18,39 +18,48 @@ import vn.edu.iuh.fit.security.error.CustomAuthenticationEntryPoint;
 @EnableWebSecurity
 @RequiredArgsConstructor
 public class SecurityConfig {
-    private final AuthenticationProvider authenticationProvider;
-    private final JwtCustomFilter jwtCustomFilter;
-    private final CustomAccessDenied customAccessDenied;
-    private final CustomAuthenticationEntryPoint customAuthenticationEntryPoint;
+  private final AuthenticationProvider authenticationProvider;
+  private final JwtCustomFilter jwtCustomFilter;
+  private final CustomAccessDenied customAccessDenied;
+  private final CustomAuthenticationEntryPoint customAuthenticationEntryPoint;
 
-    @Bean
-    SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        http.cors(Customizer.withDefaults());
-        http.csrf(AbstractHttpConfigurer::disable);
-        http.authorizeHttpRequests(authorizeRequests ->
-                authorizeRequests
-                        .requestMatchers("/api/orders/vnpay-payment").permitAll()
-                        .requestMatchers("/api/orders/payos-payment").permitAll()
-                        .requestMatchers("/api/v1/chat/**").permitAll()
-                        .requestMatchers("/api/users", "/api/users/**").hasAnyRole("USER", "ADMIN")
-                        .requestMatchers("/api/reviews", "/api/reviews/**").hasAnyRole("USER", "ADMIN")
-                        .requestMatchers("/api/orders", "/api/orders/**").hasAnyRole("USER", "ADMIN")
-                        .requestMatchers("/api/coupons", "/api/coupons/**").hasAnyRole("USER", "ADMIN")
-                        .requestMatchers("/api/seat-reservations/**").hasAnyRole("USER", "ADMIN")
-                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
-                        .anyRequest().permitAll()
-        );
-        http.exceptionHandling(exceptionHandling ->
-                exceptionHandling
-                        .authenticationEntryPoint(customAuthenticationEntryPoint)
-                        .accessDeniedHandler(customAccessDenied)
-        );
-        http.sessionManagement(sessionManagement ->
-                sessionManagement
-                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-        );
-        http.authenticationProvider(authenticationProvider);
-        http.addFilterBefore(jwtCustomFilter, UsernamePasswordAuthenticationFilter.class);
-        return http.build();
-    }
+  @Bean
+  SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    http.cors(Customizer.withDefaults());
+    http.csrf(AbstractHttpConfigurer::disable);
+    http.authorizeHttpRequests(
+        authorizeRequests ->
+            authorizeRequests
+                .requestMatchers("/api/orders/vnpay-payment")
+                .permitAll()
+                .requestMatchers("/api/orders/payos-payment")
+                .permitAll()
+                .requestMatchers("/api/v1/chat/**")
+                .permitAll()
+                .requestMatchers("/api/users", "/api/users/**")
+                .hasAnyRole("USER", "ADMIN")
+                .requestMatchers("/api/reviews", "/api/reviews/**")
+                .hasAnyRole("USER", "ADMIN")
+                .requestMatchers("/api/orders", "/api/orders/**")
+                .hasAnyRole("USER", "ADMIN")
+                .requestMatchers("/api/coupons", "/api/coupons/**")
+                .hasAnyRole("USER", "ADMIN")
+                .requestMatchers("/api/seat-reservations/**")
+                .hasAnyRole("USER", "ADMIN")
+                .requestMatchers("/api/admin/**")
+                .hasRole("ADMIN")
+                .anyRequest()
+                .permitAll());
+    http.exceptionHandling(
+        exceptionHandling ->
+            exceptionHandling
+                .authenticationEntryPoint(customAuthenticationEntryPoint)
+                .accessDeniedHandler(customAccessDenied));
+    http.sessionManagement(
+        sessionManagement ->
+            sessionManagement.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
+    http.authenticationProvider(authenticationProvider);
+    http.addFilterBefore(jwtCustomFilter, UsernamePasswordAuthenticationFilter.class);
+    return http.build();
+  }
 }

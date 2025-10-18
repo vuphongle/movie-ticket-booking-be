@@ -11,22 +11,22 @@ import software.amazon.awssdk.services.s3.S3Client;
 @Configuration
 public class AWSConfig {
 
-    @Value("${aws.s3.access-key}")
-    private String accessKey;
+  @Value("${aws.s3.access-key}")
+  private String accessKey;
 
-    @Value("${aws.s3.secret-key}")
-    private String secretKey;
+  @Value("${aws.s3.secret-key}")
+  private String secretKey;
 
-    @Value("${aws.s3.region}")
-    private String region;
+  @Value("${aws.s3.region}")
+  private String region;
 
-    @Bean
-    public S3Client s3Client() {
-        AwsBasicCredentials awsCredentials = AwsBasicCredentials.create(accessKey, secretKey);
-        
-        return S3Client.builder()
-                .region(Region.of(region))
-                .credentialsProvider(StaticCredentialsProvider.create(awsCredentials))
-                .build();
-    }
+  @Bean
+  public S3Client s3Client() {
+    AwsBasicCredentials awsCredentials = AwsBasicCredentials.create(accessKey, secretKey);
+
+    return S3Client.builder()
+        .region(Region.of(region))
+        .credentialsProvider(StaticCredentialsProvider.create(awsCredentials))
+        .build();
+  }
 }

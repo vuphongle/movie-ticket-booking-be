@@ -15,33 +15,34 @@ import vn.edu.iuh.fit.service.SeatService;
 @RequestMapping("api")
 @RequiredArgsConstructor
 public class AuditoriumController {
-    private final SeatService seatService;
-    private final AuditoriumService auditoriumService;
+  private final SeatService seatService;
+  private final AuditoriumService auditoriumService;
 
-    @GetMapping("/public/auditoriums/{auditoriumId}/showtimes/{showtimeId}/seats")
-    ResponseEntity<?> getSeatsByAuditoriumAndShowtime(@PathVariable Integer auditoriumId,
-                                                      @PathVariable Integer showtimeId) {
-        return ResponseEntity.ok(seatService.getSeatsByAuditoriumAndShowtime(auditoriumId, showtimeId));
-    }
+  @GetMapping("/public/auditoriums/{auditoriumId}/showtimes/{showtimeId}/seats")
+  ResponseEntity<?> getSeatsByAuditoriumAndShowtime(
+      @PathVariable Integer auditoriumId, @PathVariable Integer showtimeId) {
+    return ResponseEntity.ok(seatService.getSeatsByAuditoriumAndShowtime(auditoriumId, showtimeId));
+  }
 
-    @PostMapping("/admin/auditoriums")
-    public ResponseEntity<?> createAuditorium(@Valid @RequestBody UpsertAuditorium request) {
-        return new ResponseEntity<>(auditoriumService.saveAuditorium(request), HttpStatus.CREATED);
-    }
+  @PostMapping("/admin/auditoriums")
+  public ResponseEntity<?> createAuditorium(@Valid @RequestBody UpsertAuditorium request) {
+    return new ResponseEntity<>(auditoriumService.saveAuditorium(request), HttpStatus.CREATED);
+  }
 
-    @PutMapping("/admin/auditoriums/{id}")
-    public ResponseEntity<?> updateAuditorium(@PathVariable Integer id, @Valid @RequestBody UpsertAuditorium request) {
-        return ResponseEntity.ok(auditoriumService.updateAuditorium(id, request));
-    }
+  @PutMapping("/admin/auditoriums/{id}")
+  public ResponseEntity<?> updateAuditorium(
+      @PathVariable Integer id, @Valid @RequestBody UpsertAuditorium request) {
+    return ResponseEntity.ok(auditoriumService.updateAuditorium(id, request));
+  }
 
-    @DeleteMapping("/admin/auditoriums/{id}")
-    public ResponseEntity<?> deleteAuditorium(@PathVariable Integer id) {
-        auditoriumService.deleteAuditorium(id);
-        return ResponseEntity.noContent().build();
-    }
+  @DeleteMapping("/admin/auditoriums/{id}")
+  public ResponseEntity<?> deleteAuditorium(@PathVariable Integer id) {
+    auditoriumService.deleteAuditorium(id);
+    return ResponseEntity.noContent().build();
+  }
 
-    @GetMapping("/admin/auditoriums/{id}/seats")
-    public ResponseEntity<?> getSeatsByAuditorium(@PathVariable Integer id) {
-        return ResponseEntity.ok(auditoriumService.getSeatsByAuditorium(id));
-    }
+  @GetMapping("/admin/auditoriums/{id}/seats")
+  public ResponseEntity<?> getSeatsByAuditorium(@PathVariable Integer id) {
+    return ResponseEntity.ok(auditoriumService.getSeatsByAuditorium(id));
+  }
 }

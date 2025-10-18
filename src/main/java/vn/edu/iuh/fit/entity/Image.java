@@ -2,10 +2,9 @@ package vn.edu.iuh.fit.entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
+import java.time.LocalDateTime;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
-
-import java.time.LocalDateTime;
 
 @Builder
 @AllArgsConstructor
@@ -16,22 +15,21 @@ import java.time.LocalDateTime;
 @Table(name = "images")
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class Image {
-    @Id
-    String id;
+  @Id String id;
 
-    String type;
-    Double size;
-    String url; // S3 URL của ảnh
+  String type;
+  Double size;
+  String url; // S3 URL của ảnh
 
-    LocalDateTime createdAt;
+  LocalDateTime createdAt;
 
-    @JsonIgnore
-    @ManyToOne
-    @JoinColumn(name = "user_id")
-    User user;
+  @JsonIgnore
+  @ManyToOne
+  @JoinColumn(name = "user_id")
+  User user;
 
-    @PrePersist
-    public void prePersist() {
-        createdAt = LocalDateTime.now();
-    }
+  @PrePersist
+  public void prePersist() {
+    createdAt = LocalDateTime.now();
+  }
 }

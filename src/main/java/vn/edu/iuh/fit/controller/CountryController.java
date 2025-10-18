@@ -14,26 +14,27 @@ import vn.edu.iuh.fit.service.CountryService;
 @RequestMapping("api")
 @RequiredArgsConstructor
 public class CountryController {
-    private final CountryService countryService;
+  private final CountryService countryService;
 
-    @GetMapping("/admin/countries")
-    public ResponseEntity<?> getAllCountriesByAdmin() {
-        return ResponseEntity.ok(countryService.getAllCountries());
-    }
+  @GetMapping("/admin/countries")
+  public ResponseEntity<?> getAllCountriesByAdmin() {
+    return ResponseEntity.ok(countryService.getAllCountries());
+  }
 
-    @PostMapping("/admin/countries")
-    public ResponseEntity<?> createCountry(@Valid @RequestBody UpsertCountryRequest request) {
-        return new ResponseEntity<>(countryService.saveCountry(request), HttpStatus.CREATED);
-    }
+  @PostMapping("/admin/countries")
+  public ResponseEntity<?> createCountry(@Valid @RequestBody UpsertCountryRequest request) {
+    return new ResponseEntity<>(countryService.saveCountry(request), HttpStatus.CREATED);
+  }
 
-    @PutMapping("/admin/countries/{id}")
-    public ResponseEntity<?> updateCountry(@PathVariable Integer id, @Valid @RequestBody UpsertCountryRequest request) {
-        return ResponseEntity.ok(countryService.updateCountry(id, request));
-    }
+  @PutMapping("/admin/countries/{id}")
+  public ResponseEntity<?> updateCountry(
+      @PathVariable Integer id, @Valid @RequestBody UpsertCountryRequest request) {
+    return ResponseEntity.ok(countryService.updateCountry(id, request));
+  }
 
-    @DeleteMapping("/admin/countries/{id}")
-    public ResponseEntity<?> deleteCountry(@PathVariable Integer id) {
-        countryService.deleteCountry(id);
-        return ResponseEntity.noContent().build();
-    }
+  @DeleteMapping("/admin/countries/{id}")
+  public ResponseEntity<?> deleteCountry(@PathVariable Integer id) {
+    countryService.deleteCountry(id);
+    return ResponseEntity.noContent().build();
+  }
 }

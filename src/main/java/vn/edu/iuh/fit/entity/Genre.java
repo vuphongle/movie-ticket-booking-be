@@ -1,10 +1,9 @@
 package vn.edu.iuh.fit.entity;
 
 import jakarta.persistence.*;
+import java.util.Date;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
-
-import java.util.Date;
 
 @Getter
 @Setter
@@ -15,25 +14,25 @@ import java.util.Date;
 @Entity
 @Table(name = "genres")
 public class Genre {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    Integer id;
+  @Id
+  @GeneratedValue(strategy = GenerationType.IDENTITY)
+  Integer id;
 
-    @Column(unique = true)
-    String name;
+  @Column(unique = true)
+  String name;
 
-    String slug;
-    Date createdAt;
-    Date updatedAt;
+  String slug;
+  Date createdAt;
+  Date updatedAt;
 
-    @PrePersist
-    protected void onCreate() {
-        createdAt = new Date();
-        updatedAt = new Date();
-    }
+  @PrePersist
+  protected void onCreate() {
+    createdAt = new Date();
+    updatedAt = new Date();
+  }
 
-    @PreUpdate
-    protected void onUpdate() {
-        updatedAt = new Date();
-    }
+  @PreUpdate
+  protected void onUpdate() {
+    updatedAt = new Date();
+  }
 }

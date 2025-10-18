@@ -2,10 +2,9 @@ package vn.edu.iuh.fit.model.request;
 
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
+import java.util.List;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
-
-import java.util.List;
 
 @Getter
 @Setter
@@ -14,16 +13,16 @@ import java.util.List;
 @ToString
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class UpsertReviewRequest {
-    @NotNull(message = "Rating không được để trống")
-    Integer rating;
+  @NotNull(message = "Rating không được để trống")
+  Integer rating;
 
-    @NotEmpty(message = "Comment không được để trống")
-    String comment;
+  @NotEmpty(message = "Comment không được để trống")
+  String comment;
 
-    @NotNull(message = "Id phim không được để trống")
-    Integer movieId;
+  @NotNull(message = "Id phim không được để trống")
+  Integer movieId;
 
-    List<String> feeling;
+  List<String> feeling;
 
-    List<String> images;
+  List<String> images;
 }

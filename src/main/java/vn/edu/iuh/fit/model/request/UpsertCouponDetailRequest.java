@@ -3,14 +3,12 @@ package vn.edu.iuh.fit.model.request;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.PositiveOrZero;
+import java.math.BigDecimal;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
 import vn.edu.iuh.fit.model.enums.BenefitType;
 import vn.edu.iuh.fit.model.enums.SelectionStrategy;
 import vn.edu.iuh.fit.model.enums.TargetType;
-
-import java.math.BigDecimal;
-import java.util.Date;
 
 @Getter
 @Setter
@@ -20,54 +18,48 @@ import java.util.Date;
 @FieldDefaults(level = AccessLevel.PRIVATE)
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class UpsertCouponDetailRequest {
-    
-    @NotNull(message = "Enabled không được để trống")
-    Boolean enabled;
 
-    @NotNull(message = "Target type không được để trống")
-    TargetType targetType;
+  @NotNull(message = "Enabled không được để trống")
+  Boolean enabled;
 
-    Integer targetRefId; // null cho ORDER, id seat_type hoặc id additional_service
+  @NotNull(message = "Target type không được để trống")
+  TargetType targetType;
 
-    @NotNull(message = "Benefit type không được để trống")
-    BenefitType benefitType;
+  Integer targetRefId; // null cho ORDER, id seat_type hoặc id additional_service
 
-    // Terms data (will be saved to CouponDetailTerms table)
-    TermsData terms;
+  @NotNull(message = "Benefit type không được để trống")
+  BenefitType benefitType;
 
-    // Điều kiện/giới hạn (remaining in CouponDetail)
-    @PositiveOrZero
-    BigDecimal lineMaxDiscount; // >= 0
-    @PositiveOrZero
-    Integer minQuantity; // >= 0
-    @PositiveOrZero
-    BigDecimal minOrderTotal; // >= 0
+  // Terms data (will be saved to CouponDetailTerms table)
+  TermsData terms;
 
-    // Hạn mức theo dòng (remaining in CouponDetail)
-    @PositiveOrZero
-    Integer detailUsageLimit; // >= 0, 0 = hết lượt
+  // Điều kiện/giới hạn (remaining in CouponDetail)
+  @PositiveOrZero BigDecimal lineMaxDiscount; // >= 0
+  @PositiveOrZero Integer minQuantity; // >= 0
+  @PositiveOrZero BigDecimal minOrderTotal; // >= 0
 
-    SelectionStrategy selectionStrategy = SelectionStrategy.HIGHEST_PRICE_FIRST;
+  // Hạn mức theo dòng (remaining in CouponDetail)
+  @PositiveOrZero Integer detailUsageLimit; // >= 0, 0 = hết lượt
 
-    String notes;
-    
-    // Inner class for terms data
-    @Getter
-    @Setter
-    @NoArgsConstructor
-    @AllArgsConstructor
-    @ToString
-    @FieldDefaults(level = AccessLevel.PRIVATE)
-    public static class TermsData {
-        // Benefit values (moved from CouponDetail)
-        BigDecimal percent; // 0 < % <= 100
-        BigDecimal amount; // > 0
-        Integer giftServiceId;
-        @PositiveOrZero
-        Integer giftQuantity;
-        
-        // Limit conditions (moved from CouponDetail)
-        @PositiveOrZero
-        Integer limitQuantityApplied; // >= 0
-    }
+  SelectionStrategy selectionStrategy = SelectionStrategy.HIGHEST_PRICE_FIRST;
+
+  String notes;
+
+  // Inner class for terms data
+  @Getter
+  @Setter
+  @NoArgsConstructor
+  @AllArgsConstructor
+  @ToString
+  @FieldDefaults(level = AccessLevel.PRIVATE)
+  public static class TermsData {
+    // Benefit values (moved from CouponDetail)
+    BigDecimal percent; // 0 < % <= 100
+    BigDecimal amount; // > 0
+    Integer giftServiceId;
+    @PositiveOrZero Integer giftQuantity;
+
+    // Limit conditions (moved from CouponDetail)
+    @PositiveOrZero Integer limitQuantityApplied; // >= 0
+  }
 }

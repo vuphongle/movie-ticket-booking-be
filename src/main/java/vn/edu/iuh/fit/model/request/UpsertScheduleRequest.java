@@ -1,10 +1,9 @@
 package vn.edu.iuh.fit.model.request;
 
 import jakarta.validation.constraints.NotNull;
+import java.util.Date;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
-
-import java.util.Date;
 
 @Getter
 @Setter
@@ -13,12 +12,12 @@ import java.util.Date;
 @ToString
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class UpsertScheduleRequest {
-    @NotNull(message = "Movie id không được để trống")
-    Integer movieId;
+  @NotNull(message = "Movie id không được để trống")
+  Integer movieId;
 
-    @NotNull(message = "Start date không được để trống")
-    Date startDate;
+  @NotNull(message = "Start date không được để trống")
+  Date startDate;
 
-    @NotNull(message = "End date không được để trống")
-    Date endDate;
+  @NotNull(message = "End date không được để trống")
+  Date endDate;
 }

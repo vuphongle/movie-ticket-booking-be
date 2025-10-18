@@ -20,47 +20,49 @@ import vn.edu.iuh.fit.service.AuthService;
 @RequestMapping("api/public/auth")
 @RequiredArgsConstructor
 public class AuthController {
-    private final AuthService authService;
+  private final AuthService authService;
 
-    @PostMapping("/login")
-    public ResponseEntity<?> login(@Valid @RequestBody LoginRequest request) {
-        try {
-            AuthResponse authResponse = authService.login(request);
-            return ResponseEntity.ok(authResponse);
-        } catch (DisabledException e) {
-            throw new BadRequestException("Tài khoản của bạn chưa được kích hoạt. Vui lòng kiểm tra email của bạn để kích hoạt tài khoản", "ACCOUNT_NOT_ACTIVATED");
-        } catch (AuthenticationException e) {
-            throw new BadRequestException("Tài khoản hoặc mật khẩu không đúng", "INVALID_CREDENTIALS");
-        }
+  @PostMapping("/login")
+  public ResponseEntity<?> login(@Valid @RequestBody LoginRequest request) {
+    try {
+      AuthResponse authResponse = authService.login(request);
+      return ResponseEntity.ok(authResponse);
+    } catch (DisabledException e) {
+      throw new BadRequestException(
+          "Tài khoản của bạn chưa được kích hoạt. Vui lòng kiểm tra email của bạn để kích hoạt tài khoản",
+          "ACCOUNT_NOT_ACTIVATED");
+    } catch (AuthenticationException e) {
+      throw new BadRequestException("Tài khoản hoặc mật khẩu không đúng", "INVALID_CREDENTIALS");
     }
+  }
 
-    @PostMapping("/register")
-    public ResponseEntity<?> register(@Valid @RequestBody RegisterRequest request) {
-        authService.register(request);
-        return ResponseEntity.ok().build();
-    }
+  @PostMapping("/register")
+  public ResponseEntity<?> register(@Valid @RequestBody RegisterRequest request) {
+    authService.register(request);
+    return ResponseEntity.ok().build();
+  }
 
-    @GetMapping("/check-register-token/{token}")
-    public ResponseEntity<?> checkRegisterToken(@PathVariable String token) {
-        VerifyTokenResponse response = authService.checkRegisterToken(token);
-        return ResponseEntity.ok(response);
-    }
+  @GetMapping("/check-register-token/{token}")
+  public ResponseEntity<?> checkRegisterToken(@PathVariable String token) {
+    VerifyTokenResponse response = authService.checkRegisterToken(token);
+    return ResponseEntity.ok(response);
+  }
 
-    @GetMapping("/forgot-password")
-    public ResponseEntity<?> forgotPassword(@RequestParam String email) {
-        authService.forgotPassword(email);
-        return ResponseEntity.ok().build();
-    }
+  @GetMapping("/forgot-password")
+  public ResponseEntity<?> forgotPassword(@RequestParam String email) {
+    authService.forgotPassword(email);
+    return ResponseEntity.ok().build();
+  }
 
-    @GetMapping("/check-forgot-password-token/{token}")
-    public ResponseEntity<?> checkForgotPasswordToken(@PathVariable String token) {
-        VerifyTokenResponse response = authService.checkForgotPasswordToken(token);
-        return ResponseEntity.ok(response);
-    }
+  @GetMapping("/check-forgot-password-token/{token}")
+  public ResponseEntity<?> checkForgotPasswordToken(@PathVariable String token) {
+    VerifyTokenResponse response = authService.checkForgotPasswordToken(token);
+    return ResponseEntity.ok(response);
+  }
 
-    @PostMapping("/change-password")
-    public ResponseEntity<?> confirmResetPassword(@Valid @RequestBody ResetPasswordRequest request) {
-        authService.changePassword(request);
-        return ResponseEntity.ok().build();
-    }
+  @PostMapping("/change-password")
+  public ResponseEntity<?> confirmResetPassword(@Valid @RequestBody ResetPasswordRequest request) {
+    authService.changePassword(request);
+    return ResponseEntity.ok().build();
+  }
 }

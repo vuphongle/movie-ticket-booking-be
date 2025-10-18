@@ -12,12 +12,12 @@ import vn.edu.iuh.fit.model.enums.SeatType;
 @AllArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class SeatResponse {
-    Integer id;
-    Integer rowIndex;
-    Integer colIndex;
-    String code;
-    SeatType type;
-    Boolean status;
-    SeatReservationStatus reservationStatus;
-    Integer price;
+  Integer id;
+  Integer rowIndex;
+  Integer colIndex;
+  String code;
+  SeatType type;
+  Boolean status;
+  SeatReservationStatus reservationStatus;
+  Integer price;
 }

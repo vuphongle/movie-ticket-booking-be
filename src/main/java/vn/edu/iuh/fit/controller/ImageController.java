@@ -15,32 +15,32 @@ import vn.edu.iuh.fit.service.ImageService;
 @RequestMapping("/api")
 @RequiredArgsConstructor
 public class ImageController {
-    private final ImageService imageService;
+  private final ImageService imageService;
 
-    @GetMapping("/admin/images")
-    public ResponseEntity<?> getAllImage() {
-        return ResponseEntity.ok(imageService.getAllImage());
-    }
+  @GetMapping("/admin/images")
+  public ResponseEntity<?> getAllImage() {
+    return ResponseEntity.ok(imageService.getAllImage());
+  }
 
-    @PostMapping("/admin/images")
-    public ResponseEntity<?> uploadImage(@RequestParam("file") MultipartFile file) {
-        return new ResponseEntity<>(imageService.uploadImage(file), HttpStatus.CREATED);
-    }
+  @PostMapping("/admin/images")
+  public ResponseEntity<?> uploadImage(@RequestParam("file") MultipartFile file) {
+    return new ResponseEntity<>(imageService.uploadImage(file), HttpStatus.CREATED);
+  }
 
-    @GetMapping("/public/images/{id}")
-    public ResponseEntity<?> readImage(@PathVariable String id) {
-        Image image = imageService.getImageById(id);
-        if (image == null) {
-            return ResponseEntity.notFound().build();
-        }
-        return ResponseEntity.ok()
-                .contentType(MediaType.parseMediaType(image.getType()))
-                .body(imageService.getImageData(image));
+  @GetMapping("/public/images/{id}")
+  public ResponseEntity<?> readImage(@PathVariable String id) {
+    Image image = imageService.getImageById(id);
+    if (image == null) {
+      return ResponseEntity.notFound().build();
     }
+    return ResponseEntity.ok()
+        .contentType(MediaType.parseMediaType(image.getType()))
+        .body(imageService.getImageData(image));
+  }
 
-    @DeleteMapping("/admin/images/{id}")
-    public ResponseEntity<?> deleteImage(@PathVariable String id) {
-        imageService.deleteImage(id);
-        return ResponseEntity.ok().build();
-    }
+  @DeleteMapping("/admin/images/{id}")
+  public ResponseEntity<?> deleteImage(@PathVariable String id) {
+    imageService.deleteImage(id);
+    return ResponseEntity.ok().build();
+  }
 }

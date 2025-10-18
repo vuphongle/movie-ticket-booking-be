@@ -2,11 +2,10 @@ package vn.edu.iuh.fit.entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
+import java.util.Date;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
 import vn.edu.iuh.fit.model.enums.UserRole;
-
-import java.util.Date;
 
 @NoArgsConstructor
 @AllArgsConstructor
@@ -17,54 +16,54 @@ import java.util.Date;
 @Table(name = "users")
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class User {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    Integer id;
+  @Id
+  @GeneratedValue(strategy = GenerationType.IDENTITY)
+  Integer id;
 
-    String name;
+  String name;
 
-    @Temporal(TemporalType.DATE)
-    Date dob;
+  @Temporal(TemporalType.DATE)
+  Date dob;
 
-    @Column(unique = true)
-    String email;
+  @Column(unique = true)
+  String email;
 
-    String phone;
+  String phone;
 
-    @JsonIgnore
-    @Column(nullable = false)
-    String password;
+  @JsonIgnore
+  @Column(nullable = false)
+  String password;
 
-    String avatar;
+  String avatar;
 
-    @Enumerated(EnumType.STRING)
-    UserRole role;
+  @Enumerated(EnumType.STRING)
+  UserRole role;
 
-    Boolean enabled;
+  Boolean enabled;
 
-    Date createdAt;
-    Date updatedAt;
+  Date createdAt;
+  Date updatedAt;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "branch_id")
-    Cinema cinema;
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "branch_id")
+  Cinema cinema;
 
-    @PrePersist
-    public void prePersist() {
-        createdAt = new Date();
-        updatedAt = createdAt;
+  @PrePersist
+  public void prePersist() {
+    createdAt = new Date();
+    updatedAt = createdAt;
 
-        if (role == null) {
-            role = UserRole.USER;
-        }
-
-        if (enabled == null) {
-            enabled = false;
-        }
+    if (role == null) {
+      role = UserRole.USER;
     }
 
-    @PreUpdate
-    public void preUpdate() {
-        updatedAt = new Date();
+    if (enabled == null) {
+      enabled = false;
     }
+  }
+
+  @PreUpdate
+  public void preUpdate() {
+    updatedAt = new Date();
+  }
 }

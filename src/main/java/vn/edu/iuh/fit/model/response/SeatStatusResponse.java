@@ -9,7 +9,7 @@ import vn.edu.iuh.fit.model.enums.SeatReservationStatus;
 @AllArgsConstructor
 @NoArgsConstructor
 public class SeatStatusResponse {
-    private Integer seatId;
-    private Integer showtimeId;
-    private SeatReservationStatus status; // BOOKED, HELD, hoặc CANCEL
+  private Integer seatId;
+  private Integer showtimeId;
+  private SeatReservationStatus status; // BOOKED, HELD, hoặc CANCEL
 }

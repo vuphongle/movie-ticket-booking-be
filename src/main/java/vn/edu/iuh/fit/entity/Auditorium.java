@@ -1,14 +1,13 @@
 package vn.edu.iuh.fit.entity;
 
-import jakarta.persistence.*;
-import lombok.*;
-import lombok.experimental.FieldDefaults;
-import vn.edu.iuh.fit.model.enums.AuditoriumType;
 import com.fasterxml.jackson.annotation.JsonIgnore;
-
+import jakarta.persistence.*;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import lombok.*;
+import lombok.experimental.FieldDefaults;
+import vn.edu.iuh.fit.model.enums.AuditoriumType;
 
 @Builder
 @AllArgsConstructor
@@ -19,44 +18,43 @@ import java.util.List;
 @Table(name = "auditoriums")
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class Auditorium {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    Integer id;
+  @Id
+  @GeneratedValue(strategy = GenerationType.IDENTITY)
+  Integer id;
 
-    String name;
+  String name;
 
-    @Transient
-    Integer totalSeats;
+  @Transient Integer totalSeats;
 
-    Integer totalRows;
-    Integer totalColumns;
+  Integer totalRows;
+  Integer totalColumns;
 
-    @Enumerated(EnumType.STRING)
-    AuditoriumType type;
+  @Enumerated(EnumType.STRING)
+  AuditoriumType type;
 
-    @ManyToOne
-    @JoinColumn(name = "cinema_id")
-    Cinema cinema;
+  @ManyToOne
+  @JoinColumn(name = "cinema_id")
+  Cinema cinema;
 
-    Date createdAt;
-    Date updatedAt;
+  Date createdAt;
+  Date updatedAt;
 
-    public Integer getTotalSeats() {
-        return totalRows * totalColumns;
-    }
+  public Integer getTotalSeats() {
+    return totalRows * totalColumns;
+  }
 
-    @JsonIgnore
-    @OneToMany(mappedBy = "auditorium", cascade = CascadeType.ALL)
-    List<Seat> seats = new ArrayList<>();
+  @JsonIgnore
+  @OneToMany(mappedBy = "auditorium", cascade = CascadeType.ALL)
+  List<Seat> seats = new ArrayList<>();
 
-    @PrePersist
-    protected void onCreate() {
-        createdAt = new Date();
-        updatedAt = new Date();
-    }
+  @PrePersist
+  protected void onCreate() {
+    createdAt = new Date();
+    updatedAt = new Date();
+  }
 
-    @PreUpdate
-    protected void onUpdate() {
-        updatedAt = new Date();
-    }
+  @PreUpdate
+  protected void onUpdate() {
+    updatedAt = new Date();
+  }
 }

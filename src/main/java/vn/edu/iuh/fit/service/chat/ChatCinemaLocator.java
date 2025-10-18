@@ -49,10 +49,7 @@ public class ChatCinemaLocator {
   }
 
   private double calculateConfidence(
-      Cinema cinema,
-      String normalizedMessage,
-      String slugMessage,
-      Set<String> messageTokens) {
+      Cinema cinema, String normalizedMessage, String slugMessage, Set<String> messageTokens) {
     if (cinema == null) {
       return 0.0;
     }
@@ -68,7 +65,8 @@ public class ChatCinemaLocator {
     score = Math.max(score, overlapScore(normalizedMessage, messageTokens, normalizedName));
 
     String normalizedAddress = TextNormalizer.normalizeText(cinema.getAddress());
-    score = Math.max(score, 0.8 * overlapScore(normalizedMessage, messageTokens, normalizedAddress));
+    score =
+        Math.max(score, 0.8 * overlapScore(normalizedMessage, messageTokens, normalizedAddress));
 
     return score;
   }

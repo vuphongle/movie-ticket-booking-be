@@ -21,8 +21,8 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -66,7 +66,7 @@ public class ChatRecommendationService {
   private static final DateTimeFormatter SHOWTIME_FORMATTER =
       DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
   private static final DateTimeFormatter FRIENDLY_DATE_FORMAT =
-    DateTimeFormatter.ofPattern("dd/MM/yyyy");
+      DateTimeFormatter.ofPattern("dd/MM/yyyy");
   private static final ZoneId DEFAULT_ZONE = ZoneId.of("Asia/Ho_Chi_Minh");
   private static final String MISSING_AGE_MESSAGE =
       "Chúng tôi cần biết độ tuổi của bạn hoặc người đi cùng để gợi ý phim phù hợp. Vui lòng cập"
@@ -84,7 +84,7 @@ public class ChatRecommendationService {
   private final Map<String, ChatMetadata> conversationMetadataCache = new ConcurrentHashMap<>();
 
   public ChatRecommendationResponse generateRecommendations(ChatRecommendationRequest request) {
-  User currentUser = SecurityUtils.getCurrentUserLoginOptional().orElse(null);
+    User currentUser = SecurityUtils.getCurrentUserLoginOptional().orElse(null);
     RecommendationContext context = prepareContext(request, currentUser);
 
     if (!context.hasAgeInfo()) {
@@ -93,7 +93,7 @@ public class ChatRecommendationService {
           new ChatMessage(Role.USER, request.getMessage()),
           new ChatMessage(Role.ASSISTANT, MISSING_AGE_MESSAGE));
       return ChatRecommendationResponse.builder()
-      .conversationId(context.conversationId())
+          .conversationId(context.conversationId())
           .answer(MISSING_AGE_MESSAGE)
           .recommendedMovies(Collections.emptyList())
           .build();
@@ -112,7 +112,7 @@ public class ChatRecommendationService {
           new ChatMessage(Role.USER, request.getMessage()),
           new ChatMessage(Role.ASSISTANT, fallback));
       return ChatRecommendationResponse.builder()
-      .conversationId(context.conversationId())
+          .conversationId(context.conversationId())
           .answer(fallback)
           .recommendedMovies(Collections.emptyList())
           .build();
@@ -129,104 +129,113 @@ public class ChatRecommendationService {
         new ChatMessage(Role.ASSISTANT, answer));
 
     return ChatRecommendationResponse.builder()
-    .conversationId(context.conversationId())
+        .conversationId(context.conversationId())
         .answer(answer)
         .recommendedMovies(finalRecommendations)
         .build();
   }
 
   private RecommendationContext prepareContext(
-    ChatRecommendationRequest request, User currentUser) {
-  ChatMetadata metadata = enrichMetadataWithUser(extractMetadata(request), currentUser);
-  String conversationId = resolveConversationId(request, currentUser);
-  metadata = mergeWithCachedMetadata(conversationId, metadata);
-  List<ChatMessage> recentHistory = chatMemoryService.getRecentMessages(conversationId);
-  String recentHistoryBlock = buildHistoryBlock(recentHistory);
+      ChatRecommendationRequest request, User currentUser) {
+    ChatMetadata metadata = enrichMetadataWithUser(extractMetadata(request), currentUser);
+    String conversationId = resolveConversationId(request, currentUser);
+    metadata = mergeWithCachedMetadata(conversationId, metadata);
+    List<ChatMessage> recentHistory = chatMemoryService.getRecentMessages(conversationId);
+    String recentHistoryBlock = buildHistoryBlock(recentHistory);
 
-  List<Integer> ageSamples = collectAllAges(metadata);
-  List<Integer> immutableAges = List.copyOf(ageSamples);
+    List<Integer> ageSamples = collectAllAges(metadata);
+    List<Integer> immutableAges = List.copyOf(ageSamples);
 
-  int groupMinAge = ageSamples.isEmpty() ? 0 : ageRestrictionService.determineMinimumAge(ageSamples);
-  List<MovieAge> allowedRatings =
-    ageSamples.isEmpty()
-      ? Collections.emptyList()
-      : List.copyOf(ageRestrictionService.resolveAllowedRatings(groupMinAge));
+    int groupMinAge =
+        ageSamples.isEmpty() ? 0 : ageRestrictionService.determineMinimumAge(ageSamples);
+    List<MovieAge> allowedRatings =
+        ageSamples.isEmpty()
+            ? Collections.emptyList()
+            : List.copyOf(ageRestrictionService.resolveAllowedRatings(groupMinAge));
 
-  List<Movie> candidateMoviesRaw = movieRepository.findByStatusOrderByCreatedAtDesc(true);
-  List<Movie> candidateMovies =
-    candidateMoviesRaw == null ? Collections.emptyList() : List.copyOf(candidateMoviesRaw);
+    List<Movie> candidateMoviesRaw = movieRepository.findByStatusOrderByCreatedAtDesc(true);
+    List<Movie> candidateMovies =
+        candidateMoviesRaw == null ? Collections.emptyList() : List.copyOf(candidateMoviesRaw);
 
-  KeywordContext keywordContext = keywordAnalyzer.analyze(request.getMessage());
-  Set<String> preferredGenres =
-    new LinkedHashSet<>(TextNormalizer.normalizePreferredGenres(metadata.preferredGenres()));
-  preferredGenres.addAll(keywordContext.genreSlugs());
+    KeywordContext keywordContext = keywordAnalyzer.analyze(request.getMessage());
+    Set<String> preferredGenres =
+        new LinkedHashSet<>(TextNormalizer.normalizePreferredGenres(metadata.preferredGenres()));
+    preferredGenres.addAll(keywordContext.genreSlugs());
 
-  Set<String> immutablePreferredGenres = toUnmodifiableLinkedSet(preferredGenres);
-  Set<String> immutableKeywordPatterns = toUnmodifiableLinkedSet(keywordContext.namePatterns());
+    Set<String> immutablePreferredGenres = toUnmodifiableLinkedSet(preferredGenres);
+    Set<String> immutableKeywordPatterns = toUnmodifiableLinkedSet(keywordContext.namePatterns());
 
-  ZonedDateTime referenceTime = ZonedDateTime.now(DEFAULT_ZONE);
-  QueryContext queryContext = scoringService.extractQueryContext(request.getMessage(), referenceTime);
+    ZonedDateTime referenceTime = ZonedDateTime.now(DEFAULT_ZONE);
+    QueryContext queryContext =
+        scoringService.extractQueryContext(request.getMessage(), referenceTime);
 
-  Set<LocalDate> requestedDates =
-    queryContext == null ? Collections.emptySet() : toUnmodifiableLinkedSet(queryContext.requestedDates());
-  Set<Integer> requestedHours =
-    queryContext == null ? Collections.emptySet() : toUnmodifiableLinkedSet(queryContext.requestedHours());
+    Set<LocalDate> requestedDates =
+        queryContext == null
+            ? Collections.emptySet()
+            : toUnmodifiableLinkedSet(queryContext.requestedDates());
+    Set<Integer> requestedHours =
+        queryContext == null
+            ? Collections.emptySet()
+            : toUnmodifiableLinkedSet(queryContext.requestedHours());
 
-  CinemaMatch cinemaMatch = cinemaLocator.resolveCinema(request.getMessage()).orElse(null);
-  Integer requestedCinemaId = cinemaMatch == null ? null : cinemaMatch.cinema().getId();
-  boolean enforceShowtimeFiltering = !CollectionUtils.isEmpty(requestedDates) || cinemaMatch != null;
+    CinemaMatch cinemaMatch = cinemaLocator.resolveCinema(request.getMessage()).orElse(null);
+    Integer requestedCinemaId = cinemaMatch == null ? null : cinemaMatch.cinema().getId();
+    boolean enforceShowtimeFiltering =
+        !CollectionUtils.isEmpty(requestedDates) || cinemaMatch != null;
 
-  RecommendationContext recommendationContext =
-    new RecommendationContext(
-    request,
-    metadata,
-    conversationId,
-    recentHistoryBlock,
-    immutableAges,
-    groupMinAge,
-    allowedRatings,
-    immutablePreferredGenres,
-    immutableKeywordPatterns,
-    referenceTime,
-    requestedDates,
-    requestedHours,
-    cinemaMatch,
-    requestedCinemaId,
-    enforceShowtimeFiltering,
-    candidateMovies);
-  cacheMetadata(conversationId, metadata);
-  return recommendationContext;
+    RecommendationContext recommendationContext =
+        new RecommendationContext(
+            request,
+            metadata,
+            conversationId,
+            recentHistoryBlock,
+            immutableAges,
+            groupMinAge,
+            allowedRatings,
+            immutablePreferredGenres,
+            immutableKeywordPatterns,
+            referenceTime,
+            requestedDates,
+            requestedHours,
+            cinemaMatch,
+            requestedCinemaId,
+            enforceShowtimeFiltering,
+            candidateMovies);
+    cacheMetadata(conversationId, metadata);
+    return recommendationContext;
   }
 
   private List<RecommendedMovieResponse> buildRecommendations(RecommendationContext context) {
-  RecommendationScoringInput scoringInput =
-    new RecommendationScoringInput(
-      context.groupMinimumAge(),
-      context.preferredGenres(),
-      context.keywordPatterns(),
-      context.request().getMessage(),
-      DEFAULT_ZONE,
-      context.requestedDates(),
-      context.requestedHours());
+    RecommendationScoringInput scoringInput =
+        new RecommendationScoringInput(
+            context.groupMinimumAge(),
+            context.preferredGenres(),
+            context.keywordPatterns(),
+            context.request().getMessage(),
+            DEFAULT_ZONE,
+            context.requestedDates(),
+            context.requestedHours());
 
-  List<ScoredMovie> scoredMovies = scoringService.scoreMovies(context.candidateMovies(), scoringInput);
-  scoringService.logTopCandidates(scoredMovies);
+    List<ScoredMovie> scoredMovies =
+        scoringService.scoreMovies(context.candidateMovies(), scoringInput);
+    scoringService.logTopCandidates(scoredMovies);
 
-  List<ScoredMovie> orderedCandidates =
-    scoredMovies.stream()
-      .filter(candidate -> candidate.breakdown().ageAllowed())
-      .sorted(
-        Comparator.comparingDouble((ScoredMovie candidate) -> candidate.breakdown().finalScore())
-          .reversed()
-          .thenComparing(
-            candidate -> candidate.movie().getRating(),
-            Comparator.nullsLast(Comparator.reverseOrder()))
-          .thenComparing(
-            candidate -> candidate.movie().getCreatedAt(),
-            Comparator.nullsLast(Comparator.reverseOrder())))
-      .toList();
+    List<ScoredMovie> orderedCandidates =
+        scoredMovies.stream()
+            .filter(candidate -> candidate.breakdown().ageAllowed())
+            .sorted(
+                Comparator.comparingDouble(
+                        (ScoredMovie candidate) -> candidate.breakdown().finalScore())
+                    .reversed()
+                    .thenComparing(
+                        candidate -> candidate.movie().getRating(),
+                        Comparator.nullsLast(Comparator.reverseOrder()))
+                    .thenComparing(
+                        candidate -> candidate.movie().getCreatedAt(),
+                        Comparator.nullsLast(Comparator.reverseOrder())))
+            .toList();
 
-  List<RecommendedMovieResponse> recommendationPayload = new ArrayList<>();
+    List<RecommendedMovieResponse> recommendationPayload = new ArrayList<>();
     for (ScoredMovie scored : orderedCandidates) {
       Movie movie = scored.movie();
       List<Showtime> matchingShowtimes =
@@ -244,7 +253,7 @@ public class ChatRecommendationService {
         break;
       }
     }
-  return recommendationPayload;
+    return recommendationPayload;
   }
 
   private ChatMetadata enrichMetadataWithUser(ChatMetadata metadata, User currentUser) {
@@ -277,7 +286,8 @@ public class ChatRecommendationService {
     }
     Integer userAge = sanitized.userAge() != null ? sanitized.userAge() : cached.userAge();
     List<Integer> companionAges = mergeAges(cached.companionAges(), sanitized.companionAges());
-    List<String> preferredGenres = mergeGenres(cached.preferredGenres(), sanitized.preferredGenres());
+    List<String> preferredGenres =
+        mergeGenres(cached.preferredGenres(), sanitized.preferredGenres());
     return new ChatMetadata(userAge, companionAges, preferredGenres);
   }
 
@@ -291,8 +301,10 @@ public class ChatRecommendationService {
         sanitized,
         (existing, incoming) -> {
           Integer userAge = incoming.userAge() != null ? incoming.userAge() : existing.userAge();
-          List<Integer> companionAges = mergeAges(existing.companionAges(), incoming.companionAges());
-          List<String> preferredGenres = mergeGenres(existing.preferredGenres(), incoming.preferredGenres());
+          List<Integer> companionAges =
+              mergeAges(existing.companionAges(), incoming.companionAges());
+          List<String> preferredGenres =
+              mergeGenres(existing.preferredGenres(), incoming.preferredGenres());
           return new ChatMetadata(userAge, companionAges, preferredGenres);
         });
   }
@@ -315,10 +327,7 @@ public class ChatRecommendationService {
         if (CollectionUtils.isEmpty(source)) {
           continue;
         }
-        source.stream()
-            .filter(Objects::nonNull)
-            .filter(age -> age > 0)
-            .forEach(merged::add);
+        source.stream().filter(Objects::nonNull).filter(age -> age > 0).forEach(merged::add);
       }
     }
     return merged.isEmpty() ? Collections.emptyList() : List.copyOf(merged);
@@ -332,10 +341,7 @@ public class ChatRecommendationService {
         if (CollectionUtils.isEmpty(source)) {
           continue;
         }
-        source.stream()
-            .filter(StringUtils::hasText)
-            .map(String::trim)
-            .forEach(merged::add);
+        source.stream().filter(StringUtils::hasText).map(String::trim).forEach(merged::add);
       }
     }
     return merged.isEmpty() ? Collections.emptyList() : List.copyOf(merged);
@@ -373,8 +379,7 @@ public class ChatRecommendationService {
               + " phim vượt giới hạn. Nếu câu hỏi lệch khỏi chủ đề phim, hãy khéo léo đưa người"
               + " dùng trở lại với những gợi ý phim.";
 
-      String userPrompt =
-      buildUserPrompt(context, recommendations, language);
+      String userPrompt = buildUserPrompt(context, recommendations, language);
 
       String content =
           chatClient
@@ -546,8 +551,7 @@ public class ChatRecommendationService {
     return "{}";
   }
 
-  private RecommendedMovieResponse buildRecommendedMovie(
-      Movie movie, List<Showtime> showtimes) {
+  private RecommendedMovieResponse buildRecommendedMovie(Movie movie, List<Showtime> showtimes) {
     List<String> reasons = new ArrayList<>();
     if (movie.getAge() != null) {
       reasons.add("Phân loại độ tuổi: " + movie.getAge().name());
@@ -588,14 +592,17 @@ public class ChatRecommendationService {
     return RecommendedMovieResponse.builder()
         .movieId(movie.getId())
         .name(movie.getName())
-    .slug(StringUtils.hasText(movie.getSlug()) ? movie.getSlug() : TextNormalizer.toSlug(movie.getName()))
+        .slug(
+            StringUtils.hasText(movie.getSlug())
+                ? movie.getSlug()
+                : TextNormalizer.toSlug(movie.getName()))
         .poster(movie.getPoster())
         .ageRating(movie.getAge())
         .rating(movie.getRating())
         .genres(genreSlugs)
         .genreDisplayNames(genreDisplayNames)
         .reasons(reasons)
-    .showtimes(showtimeSummaries)
+        .showtimes(showtimeSummaries)
         .build();
   }
 
@@ -650,10 +657,12 @@ public class ChatRecommendationService {
             : filtered;
 
     LinkedHashMap<ZonedDateTime, Showtime> unique = new LinkedHashMap<>();
-    for (Showtime showtime : prioritized.stream()
-        .sorted(
-            Comparator.comparing(this::resolveShowtimeStart, Comparator.nullsLast(Comparator.naturalOrder())))
-        .toList()) {
+    for (Showtime showtime :
+        prioritized.stream()
+            .sorted(
+                Comparator.comparing(
+                    this::resolveShowtimeStart, Comparator.nullsLast(Comparator.naturalOrder())))
+            .toList()) {
       ZonedDateTime start = resolveShowtimeStart(showtime);
       if (start == null) {
         continue;
@@ -751,7 +760,8 @@ public class ChatRecommendationService {
     if (showtime.getAuditorium() != null && showtime.getAuditorium().getCinema() != null) {
       builder.append(" • ").append(showtime.getAuditorium().getCinema().getName());
     }
-    if (showtime.getAuditorium() != null && StringUtils.hasText(showtime.getAuditorium().getName())) {
+    if (showtime.getAuditorium() != null
+        && StringUtils.hasText(showtime.getAuditorium().getName())) {
       builder.append(" • ").append(showtime.getAuditorium().getName());
     }
     if (showtime.getGraphicsType() != null) {
@@ -765,9 +775,7 @@ public class ChatRecommendationService {
 
   private String buildNoShowtimeFallback(Set<LocalDate> requestedDates, CinemaMatch cinemaMatch) {
     String cinemaText =
-        cinemaMatch == null || cinemaMatch.cinema() == null
-            ? null
-            : cinemaMatch.cinema().getName();
+        cinemaMatch == null || cinemaMatch.cinema() == null ? null : cinemaMatch.cinema().getName();
     if (!CollectionUtils.isEmpty(requestedDates) && StringUtils.hasText(cinemaText)) {
       return "Chúng tôi chưa tìm thấy suất chiếu cho "
           + cinemaText
@@ -798,122 +806,122 @@ public class ChatRecommendationService {
       RecommendationContext context,
       List<RecommendedMovieResponse> recommendations,
       String language) {
-  ChatMetadata metadata = context.metadata();
-  String recentHistory = context.recentHistoryBlock();
-  String historySection =
-    StringUtils.hasText(recentHistory)
-      ? recentHistory
-      : "Không có hội thoại gần đây hoặc chưa lưu được.";
+    ChatMetadata metadata = context.metadata();
+    String recentHistory = context.recentHistoryBlock();
+    String historySection =
+        StringUtils.hasText(recentHistory)
+            ? recentHistory
+            : "Không có hội thoại gần đây hoặc chưa lưu được.";
 
-  String moviesContext =
-    recommendations.stream()
-      .map(
-        movie -> {
-          String genreSlugText =
-            CollectionUtils.isEmpty(movie.getGenres())
-              ? "không xác định"
-              : String.join(", ", movie.getGenres());
-          String genreNameText =
-            CollectionUtils.isEmpty(movie.getGenreDisplayNames())
-              ? ""
-              : " | tên: " + String.join(", ", movie.getGenreDisplayNames());
-          String ratingText =
-            movie.getRating() != null
-              ? String.format(Locale.US, ", rating %.1f", movie.getRating())
-              : "";
-          String showtimeText =
-            CollectionUtils.isEmpty(movie.getShowtimes())
-              ? "suất chiếu: chưa xác định"
-              : "suất chiếu: " + String.join("; ", movie.getShowtimes());
-          return "- "
-            + movie.getName()
-            + " ("
-            + movie.getAgeRating()
-            + ratingText
-            + ", slug thể loại: "
-            + genreSlugText
-            + genreNameText
-            + ") "
-            + showtimeText;
-        })
-      .collect(Collectors.joining("\n"));
+    String moviesContext =
+        recommendations.stream()
+            .map(
+                movie -> {
+                  String genreSlugText =
+                      CollectionUtils.isEmpty(movie.getGenres())
+                          ? "không xác định"
+                          : String.join(", ", movie.getGenres());
+                  String genreNameText =
+                      CollectionUtils.isEmpty(movie.getGenreDisplayNames())
+                          ? ""
+                          : " | tên: " + String.join(", ", movie.getGenreDisplayNames());
+                  String ratingText =
+                      movie.getRating() != null
+                          ? String.format(Locale.US, ", rating %.1f", movie.getRating())
+                          : "";
+                  String showtimeText =
+                      CollectionUtils.isEmpty(movie.getShowtimes())
+                          ? "suất chiếu: chưa xác định"
+                          : "suất chiếu: " + String.join("; ", movie.getShowtimes());
+                  return "- "
+                      + movie.getName()
+                      + " ("
+                      + movie.getAgeRating()
+                      + ratingText
+                      + ", slug thể loại: "
+                      + genreSlugText
+                      + genreNameText
+                      + ") "
+                      + showtimeText;
+                })
+            .collect(Collectors.joining("\n"));
 
-  List<Integer> companionAgeList =
-    metadata.companionAges() == null ? Collections.emptyList() : metadata.companionAges();
+    List<Integer> companionAgeList =
+        metadata.companionAges() == null ? Collections.emptyList() : metadata.companionAges();
 
-  String companionAges =
-    CollectionUtils.isEmpty(companionAgeList)
-      ? "Không cung cấp"
-      : companionAgeList.stream().map(String::valueOf).collect(Collectors.joining(", "));
+    String companionAges =
+        CollectionUtils.isEmpty(companionAgeList)
+            ? "Không cung cấp"
+            : companionAgeList.stream().map(String::valueOf).collect(Collectors.joining(", "));
 
-  String userAge =
-    metadata.userAge() == null ? "Không cung cấp" : String.valueOf(metadata.userAge());
+    String userAge =
+        metadata.userAge() == null ? "Không cung cấp" : String.valueOf(metadata.userAge());
 
-  String allowedText =
-    context.allowedRatings().stream().map(Enum::name).collect(Collectors.joining(", "));
+    String allowedText =
+        context.allowedRatings().stream().map(Enum::name).collect(Collectors.joining(", "));
 
-  String genreHintText =
-    CollectionUtils.isEmpty(context.preferredGenres())
-      ? "Không cung cấp"
-      : String.join(", ", context.preferredGenres());
+    String genreHintText =
+        CollectionUtils.isEmpty(context.preferredGenres())
+            ? "Không cung cấp"
+            : String.join(", ", context.preferredGenres());
 
-  String keywordHintText =
-    CollectionUtils.isEmpty(context.keywordPatterns())
-      ? "Không xác định"
-      : context.keywordPatterns().stream()
-        .map(pattern -> pattern.replace('-', ' '))
-        .collect(Collectors.joining(", "));
+    String keywordHintText =
+        CollectionUtils.isEmpty(context.keywordPatterns())
+            ? "Không xác định"
+            : context.keywordPatterns().stream()
+                .map(pattern -> pattern.replace('-', ' '))
+                .collect(Collectors.joining(", "));
 
-  String requestedDateText =
-    CollectionUtils.isEmpty(context.requestedDates())
-      ? "Không cung cấp"
-      : context.requestedDates().stream()
-        .sorted()
-        .map(date -> date.format(FRIENDLY_DATE_FORMAT))
-        .collect(Collectors.joining(", "));
+    String requestedDateText =
+        CollectionUtils.isEmpty(context.requestedDates())
+            ? "Không cung cấp"
+            : context.requestedDates().stream()
+                .sorted()
+                .map(date -> date.format(FRIENDLY_DATE_FORMAT))
+                .collect(Collectors.joining(", "));
 
-  String cinemaText =
-    context.cinemaMatch() == null || context.cinemaMatch().cinema() == null
-      ? "Không cung cấp"
-      : context.cinemaMatch().cinema().getName();
+    String cinemaText =
+        context.cinemaMatch() == null || context.cinemaMatch().cinema() == null
+            ? "Không cung cấp"
+            : context.cinemaMatch().cinema().getName();
 
-  return "Lịch sử hội thoại gần đây (tối đa 5 lượt):\n"
-    + historySection
-    + "\n\nNgười dùng hỏi bằng ngôn ngữ: "
-    + language
-    + "\n"
-    + "Tin nhắn của người dùng: "
-    + context.request().getMessage()
-    + "\n"
-    + "Độ tuổi của người hỏi: "
-    + userAge
-    + "\n"
-    + "Độ tuổi người đi cùng: "
-    + companionAges
-    + "\n"
-    + "Các phân loại độ tuổi được phép: "
-    + allowedText
-    + "\n"
-    + "Các thể loại ưu tiên (bao gồm suy luận từ từ khóa): "
-    + genreHintText
-    + "\n"
-    + "Từ khóa nổi bật nhận được: "
-    + keywordHintText
-    + "\n"
-    + "Ngày được yêu cầu: "
-    + requestedDateText
-    + "\n"
-    + "Rạp được yêu cầu: "
-    + cinemaText
-    + "\n"
-    + "Danh sách phim có thể gợi ý (tối đa "
-    + MAX_RECOMMENDATIONS
-    + "):\n"
-    + moviesContext
-    + "\n"
-    + "Hãy phản hồi tối đa 2 đoạn ngắn, giữ thân thiện, nhắc đến 2-3 phim tiêu biểu và khuyến khích người dùng đặt vé.\n"
-    + "Nếu có thông tin suất chiếu, hãy nêu rõ thời gian và rạp tương ứng.\n"
-    + "Chỉ đề cập tới các phim trong danh sách, không bịa thêm nội dung. Nếu thông tin chưa đủ, hãy gợi ý người dùng cung cấp thêm tiêu chí.";
+    return "Lịch sử hội thoại gần đây (tối đa 5 lượt):\n"
+        + historySection
+        + "\n\nNgười dùng hỏi bằng ngôn ngữ: "
+        + language
+        + "\n"
+        + "Tin nhắn của người dùng: "
+        + context.request().getMessage()
+        + "\n"
+        + "Độ tuổi của người hỏi: "
+        + userAge
+        + "\n"
+        + "Độ tuổi người đi cùng: "
+        + companionAges
+        + "\n"
+        + "Các phân loại độ tuổi được phép: "
+        + allowedText
+        + "\n"
+        + "Các thể loại ưu tiên (bao gồm suy luận từ từ khóa): "
+        + genreHintText
+        + "\n"
+        + "Từ khóa nổi bật nhận được: "
+        + keywordHintText
+        + "\n"
+        + "Ngày được yêu cầu: "
+        + requestedDateText
+        + "\n"
+        + "Rạp được yêu cầu: "
+        + cinemaText
+        + "\n"
+        + "Danh sách phim có thể gợi ý (tối đa "
+        + MAX_RECOMMENDATIONS
+        + "):\n"
+        + moviesContext
+        + "\n"
+        + "Hãy phản hồi tối đa 2 đoạn ngắn, giữ thân thiện, nhắc đến 2-3 phim tiêu biểu và khuyến khích người dùng đặt vé.\n"
+        + "Nếu có thông tin suất chiếu, hãy nêu rõ thời gian và rạp tương ứng.\n"
+        + "Chỉ đề cập tới các phim trong danh sách, không bịa thêm nội dung. Nếu thông tin chưa đủ, hãy gợi ý người dùng cung cấp thêm tiêu chí.";
   }
 
   private static <T> Set<T> toUnmodifiableLinkedSet(Collection<T> source) {
@@ -1015,10 +1023,10 @@ public class ChatRecommendationService {
     }
     return history.stream()
         .map(
-            entry ->
-                (entry.role() == Role.USER ? "Người dùng" : "Trợ lý") + ": " + entry.content())
+            entry -> (entry.role() == Role.USER ? "Người dùng" : "Trợ lý") + ": " + entry.content())
         .collect(Collectors.joining("\n"));
   }
+
   @JsonIgnoreProperties(ignoreUnknown = true)
   record ChatMetadata(Integer userAge, List<Integer> companionAges, List<String> preferredGenres) {
     static ChatMetadata empty() {

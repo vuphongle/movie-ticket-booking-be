@@ -8,17 +8,17 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class UploadResponse {
-    private String url;
-    private String fileName;
-    private Long fileSize;
-    private String contentType;
-    private String message;
+  private String url;
+  private String fileName;
+  private Long fileSize;
+  private String contentType;
+  private String message;
 
-    public UploadResponse(String url, String fileName, Long fileSize, String contentType) {
-        this.url = url;
-        this.fileName = fileName;
-        this.fileSize = fileSize;
-        this.contentType = contentType;
-        this.message = "Upload thành công";
-    }
+  public UploadResponse(String url, String fileName, Long fileSize, String contentType) {
+    this.url = url;
+    this.fileName = fileName;
+    this.fileSize = fileSize;
+    this.contentType = contentType;
+    this.message = "Upload thành công";
+  }
 }

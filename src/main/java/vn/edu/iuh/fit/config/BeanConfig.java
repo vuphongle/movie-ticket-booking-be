@@ -8,22 +8,18 @@ import org.springframework.context.annotation.Configuration;
 
 @Configuration
 public class BeanConfig {
-    @Bean
-    public Faker faker() {
-        return new Faker();
-    }
+  @Bean
+  public Faker faker() {
+    return new Faker();
+  }
 
-    @Bean
-    public Slugify slugify() {
-        return Slugify.builder()
-                .customReplacement("đ", "d")
-                .customReplacement("Đ", "D")
-                .build();
-    }
+  @Bean
+  public Slugify slugify() {
+    return Slugify.builder().customReplacement("đ", "d").customReplacement("Đ", "D").build();
+  }
 
-    @Bean
-    public ModelMapper modelMapper() {
-        return new ModelMapper();
-    }
-
+  @Bean
+  public ModelMapper modelMapper() {
+    return new ModelMapper();
+  }
 }

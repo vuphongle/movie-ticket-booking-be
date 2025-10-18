@@ -14,19 +14,19 @@ import lombok.experimental.FieldDefaults;
 @Table(name = "order_service_items")
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class OrderServiceItem {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    Integer id;
+  @Id
+  @GeneratedValue(strategy = GenerationType.IDENTITY)
+  Integer id;
 
-    @JsonIgnore
-    @ManyToOne
-    @JoinColumn(name = "order_id")
-    Order order;
+  @JsonIgnore
+  @ManyToOne
+  @JoinColumn(name = "order_id")
+  Order order;
 
-    @ManyToOne
-    @JoinColumn(name = "service_id")
-    AdditionalService additionalService;
+  @ManyToOne
+  @JoinColumn(name = "service_id")
+  AdditionalService additionalService;
 
-    Integer quantity;
-    Integer price;
+  Integer quantity;
+  Integer price;
 }

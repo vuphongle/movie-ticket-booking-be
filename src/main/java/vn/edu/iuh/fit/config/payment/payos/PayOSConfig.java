@@ -8,17 +8,17 @@ import vn.payos.PayOS;
 @Configuration
 public class PayOSConfig {
 
-    @Value("${payos.client_id}")
-    private String clientId;
+  @Value("${payos.client_id}")
+  private String clientId;
 
-    @Value("${payos.api_key}")
-    private String apiKey;
+  @Value("${payos.api_key}")
+  private String apiKey;
 
-    @Value("${payos.checksum_key}")
-    private String checksumKey;
+  @Value("${payos.checksum_key}")
+  private String checksumKey;
 
-    @Bean
-    public PayOS payOSClient() {
-        return new PayOS(clientId, apiKey, checksumKey);
-    }
+  @Bean
+  public PayOS payOSClient() {
+    return new PayOS(clientId, apiKey, checksumKey);
+  }
 }

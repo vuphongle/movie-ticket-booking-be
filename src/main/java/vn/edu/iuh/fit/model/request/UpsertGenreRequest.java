@@ -11,6 +11,6 @@ import lombok.experimental.FieldDefaults;
 @ToString
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class UpsertGenreRequest {
-    @NotEmpty(message = "Tên thể loại không được để trống")
-    String name;
+  @NotEmpty(message = "Tên thể loại không được để trống")
+  String name;
 }
