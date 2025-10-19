@@ -8,12 +8,11 @@ pipeline {
   }
   options {
     timestamps()
-    ansiColor('xterm')
   }
   stages {
     stage('Checkout') {
       steps {
-        git branch: 'main',
+        git branch: 'dev',
             url: 'https://github.com/vuphongle/movie-ticket-booking-be.git'
       }
     }
