@@ -45,4 +45,24 @@ public class DashboardController {
                 "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
         .body(data);
   }
+
+  @GetMapping("/revenue/movie")
+  public ResponseEntity<?> getRevenueByMovie(
+      @RequestParam(required = false) String startDate,
+      @RequestParam(required = false) String endDate) {
+    return ResponseEntity.ok(dashboardService.getRevenueByMovie(startDate, endDate));
+  }
+
+  @GetMapping("/revenue/movie/export")
+  public ResponseEntity<?> exportRevenueByMovie(
+      @RequestParam(required = false) String startDate,
+      @RequestParam(required = false) String endDate) {
+    byte[] data = reportService.exportRevenueByMovie(startDate, endDate);
+    return ResponseEntity.ok()
+        .header("Content-Disposition", "attachment; filename=reports_movie.xlsx")
+        .contentType(
+            MediaType.parseMediaType(
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+        .body(data);
+  }
 }
