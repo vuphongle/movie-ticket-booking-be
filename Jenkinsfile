@@ -51,15 +51,17 @@ pipeline {
 
     stage('Deploy to VPS') {
       steps {
-        sshagent(credentials: ['vps-ssh-key']) {
-          sh """
-            ssh -o StrictHostKeyChecking=no ${VPS_USER}@${VPS_HOST} '
-              cd ${DEPLOY_PATH} && \
-              docker-compose pull backend && \
-              docker-compose up -d backend && \
-              docker-compose ps
-            '
-          """
+        script {
+          withCredentials([sshUserPrivateKey(credentialsId: 'vps-ssh-key', keyFileVariable: 'SSH_KEY', usernameVariable: 'SSH_USER')]) {
+            sh """
+              ssh -i \${SSH_KEY} -o StrictHostKeyChecking=no ${VPS_USER}@${VPS_HOST} '
+                cd ${DEPLOY_PATH} && \
+                docker-compose pull backend && \
+                docker-compose up -d backend && \
+                docker-compose ps
+              '
+            """
+          }
         }
       }
     }
