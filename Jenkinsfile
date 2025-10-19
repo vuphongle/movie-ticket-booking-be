@@ -44,4 +44,18 @@ pipeline {
       }
     }
   }
+  
+  post {
+    success {
+      echo "✅ Build và push Docker image thành công!"
+      echo "Image: ${TAG_BUILD}"
+      echo "Latest: ${TAG_LATEST}"
+    }
+    failure {
+      echo "❌ Build thất bại!"
+    }
+    always {
+      sh 'docker system prune -f || true'
+    }
+  }
 }
