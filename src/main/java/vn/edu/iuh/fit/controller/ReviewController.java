@@ -33,6 +33,18 @@ public class ReviewController {
     return ResponseEntity.ok(reviewService.createReview(request, files));
   }
 
+  @PutMapping("/reviews")
+  public ResponseEntity<?> updateReview(
+          @Valid @RequestBody UpsertReviewRequest request) {
+    return ResponseEntity.ok(reviewService.updateReviewByUser(request));
+  }
+
+  @DeleteMapping("/reviews/{movieId}")
+  public ResponseEntity<?> deleteReview(@PathVariable Integer movieId) {
+    reviewService.deleteReviewByUser(movieId);
+    return ResponseEntity.ok().build();
+  }
+
   @PutMapping("/admin/reviews/{id}")
   public ResponseEntity<?> adminUpdateReview(
       @Valid @RequestBody UpsertReviewRequest request, @PathVariable Integer id) {

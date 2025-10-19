@@ -75,6 +75,46 @@ public class ReviewService {
     return review;
   }
 
+  // Xóa 1 review của user về 1 phim
+  @Transactional
+  public void deleteReviewByUser(Integer movieId) {
+    User user = SecurityUtils.getCurrentUserLogin();
+
+    Movie movie = movieRepository.findById(movieId)
+            .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy phim có id = " + movieId));
+
+    Review review = reviewRepository.findByUser_IdAndMovie_Id(user.getId(), movieId)
+            .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy review của user về phim này"));
+
+    reviewRepository.delete(review);
+
+    // update rating of movie
+    updateRatingOfMovie(movie);
+  }
+
+  // Cập nhật đánh giá của user về 1 phim
+  @Transactional
+  public Review updateReviewByUser(UpsertReviewRequest request) {
+    User user = SecurityUtils.getCurrentUserLogin();
+
+    Movie movie = movieRepository.findById(request.getMovieId())
+            .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy phim có id = " + request.getMovieId()));
+
+    Review review = reviewRepository.findByUser_IdAndMovie_Id(user.getId(), request.getMovieId())
+            .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy review của user về phim này"));
+
+    review.setComment(request.getComment());
+    review.setRating(request.getRating());
+    review.setFeeling(request.getFeeling());
+
+    reviewRepository.save(review);
+
+    // update rating of movie
+    updateRatingOfMovie(movie);
+
+    return review;
+  }
+
   private void updateRatingOfMovie(Movie movie) {
     List<Review> reviews = reviewRepository.findByMovie_Id(movie.getId());
     double rating = reviews.stream().mapToDouble(Review::getRating).average().orElse(0);

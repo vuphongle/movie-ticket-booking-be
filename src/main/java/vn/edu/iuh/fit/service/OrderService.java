@@ -175,7 +175,7 @@ public class OrderService {
     // Nếu thanh toán thành công, tạo QR code và đặt ghế
     if (status == OrderStatus.CONFIRMED) {
       String qrCodeContent = String.valueOf(order.getId());
-      byte[] qrCodeImage = qrCodeService.generateQRCodeImage(qrCodeContent, 200, 200);
+      byte[] qrCodeImage = qrCodeService.generateQRCodeImage(qrCodeContent, 400, 400);
       ImageResponse imageResponse = imageService.uploadQRCodeImage(qrCodeImage);
       order.setQrCodePath(imageResponse.getUrl());
 
