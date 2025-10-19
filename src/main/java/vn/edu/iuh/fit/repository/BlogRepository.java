@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import vn.edu.iuh.fit.entity.Blog;
 import vn.edu.iuh.fit.model.dto.BlogDto;
+import vn.edu.iuh.fit.model.dto.BlogViewDto;
 import vn.edu.iuh.fit.model.enums.BlogType;
 
 public interface BlogRepository extends JpaRepository<Blog, Integer> {
@@ -27,4 +28,9 @@ public interface BlogRepository extends JpaRepository<Blog, Integer> {
   @Query(
       "select new vn.edu.iuh.fit.model.dto.BlogDto(b.id, b.title, b.slug, b.description, b.thumbnail, b.publishedAt) from Blog b join ViewHistory vh on b.id = vh.blog.id where b.type = ?1 and b.status = true and vh.viewedAt between ?2 and ?3 group by b.id order by count(vh.id) desc")
   List<BlogDto> findMostViewBlogByType(BlogType blogType, LocalDateTime start, LocalDateTime end);
+
+  // join to view history to get view count in time range
+  @Query(
+      "select new vn.edu.iuh.fit.model.dto.BlogViewDto(b.id, b.title, count(vh.id)) from Blog b join ViewHistory vh on b.id = vh.blog.id where vh.viewedAt between ?1 and ?2 group by b.id order by sum(vh.id) desc")
+  List<BlogViewDto> findTopViewBlogs(LocalDateTime start, LocalDateTime end);
 }
