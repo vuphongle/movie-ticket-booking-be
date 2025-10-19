@@ -56,9 +56,9 @@ pipeline {
             sh """
               ssh -i \${SSH_KEY} -o StrictHostKeyChecking=no ${VPS_USER}@${VPS_HOST} '
                 cd ${DEPLOY_PATH} && \
-                docker-compose pull backend && \
-                docker-compose up -d backend && \
-                docker-compose ps
+                docker compose pull backend && \
+                docker compose up -d backend && \
+                docker compose ps
               '
             """
           }
