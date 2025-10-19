@@ -118,4 +118,18 @@ public class DashboardService {
     List<MovieRevenueDto> movieRevenues = orderRepository.findMovieRevenues(start, end);
     return movieRevenues.stream().mapToLong(MovieRevenueDto::getTotalTickets).sum();
   }
+
+  public List<CinemaRevenueDto> getRevenueByCinema(String startDate, String endDate) {
+    Map<String, LocalDate> dateMap = parseDate(startDate, endDate);
+    LocalDate start = dateMap.get("start");
+    LocalDate end = dateMap.get("end");
+    return getCinemaRevenues(start, end);
+  }
+
+  public List<MovieRevenueDto> getRevenueByMovie(String startDate, String endDate) {
+    Map<String, LocalDate> dateMap = parseDate(startDate, endDate);
+    LocalDate start = dateMap.get("start");
+    LocalDate end = dateMap.get("end");
+    return getMovieRevenues(start, end);
+  }
 }
