@@ -45,7 +45,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends curl && rm -rf 
 WORKDIR /app
 
 # Copy the built JAR from the build stage
-# Adjust the pattern if your artifact name differs
 COPY --from=build /workspace/build/libs/*.jar /app/app.jar
 
 # Fix ownership and drop privileges
