@@ -1,18 +1,14 @@
 package vn.edu.iuh.fit.service;
 
-import jakarta.mail.MessagingException;
-import jakarta.mail.internet.MimeMessage;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.io.ByteArrayResource;
-import org.springframework.mail.javamail.JavaMailSender;
-import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.context.Context;
+import vn.edu.iuh.fit.client.SendPulseClient;
 import vn.edu.iuh.fit.entity.Order;
 import vn.edu.iuh.fit.entity.User;
 
@@ -20,7 +16,7 @@ import vn.edu.iuh.fit.entity.User;
 @Service
 @RequiredArgsConstructor
 public class MailService {
-  private final JavaMailSender javaMailSender;
+  private final SendPulseClient sendPulseClient;
   private final TemplateEngine templateEngine;
 
   @Value("${app.frontend.host}")
@@ -35,12 +31,6 @@ public class MailService {
     log.info("sendMailConfirmRegistration");
     log.info("Sending email request : {}", data);
     try {
-      MimeMessage message = javaMailSender.createMimeMessage();
-      MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
-
-      helper.setTo(data.get("email"));
-      helper.setSubject("Xác nhận đăng ký tài khoản");
-
       // Create the Thymeleaf context
       Context context = new Context();
       context.setVariable("username", data.get("username"));
@@ -49,10 +39,12 @@ public class MailService {
 
       // Use the template engine to process the template
       String htmlContent = templateEngine.process("mail-template/confirmation-account", context);
-      helper.setText(htmlContent, true); // Enable HTML content
 
-      javaMailSender.send(message);
-    } catch (MessagingException e) {
+      // Send via SendPulse REST API
+      sendPulseClient.sendEmail(data.get("email"), "Xác nhận đăng ký tài khoản", htmlContent);
+
+      log.info("Registration confirmation email sent to {}", data.get("email"));
+    } catch (Exception e) {
       log.error("Error when sending email: " + e.getMessage());
       throw new RuntimeException(e.getMessage());
     }
@@ -62,12 +54,6 @@ public class MailService {
   @Async
   public void sendMailResetPassword(Map<String, String> data) {
     try {
-      MimeMessage message = javaMailSender.createMimeMessage();
-      MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
-
-      helper.setTo(data.get("email"));
-      helper.setSubject("Xác nhận đặt lại mật khẩu");
-
       // Create the Thymeleaf context
       Context context = new Context();
       context.setVariable("username", data.get("username"));
@@ -76,10 +62,13 @@ public class MailService {
 
       // Use the template engine to process the template
       String htmlContent = templateEngine.process("mail-template/reset-password", context);
-      helper.setText(htmlContent, true); // Enable HTML content
 
-      javaMailSender.send(message);
-    } catch (MessagingException e) {
+      // Send via SendPulse REST API
+      sendPulseClient.sendEmail(data.get("email"), "Xác nhận đặt lại mật khẩu", htmlContent);
+
+      log.info("Password reset email sent to {}", data.get("email"));
+    } catch (Exception e) {
+      log.error("Error sending password reset email: {}", e.getMessage());
       throw new RuntimeException(e.getMessage());
     }
   }
@@ -87,14 +76,8 @@ public class MailService {
   @Async
   public void sendMailConfirmOrder(Map<String, Object> data, byte[] qrCodeImage) {
     try {
-      MimeMessage message = javaMailSender.createMimeMessage();
-      MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
-
       User user = (User) data.get("user");
       Order order = (Order) data.get("order");
-
-      helper.setTo(user.getEmail());
-      helper.setSubject("Vé điện tử Go Cinema");
 
       Context context = new Context();
       context.setVariable("userName", user.getName());
@@ -114,15 +97,17 @@ public class MailService {
       context.setVariable("ticketItems", order.getTicketItems()); // danh sách ghế
       context.setVariable("serviceItems", order.getServiceItems());
       context.setVariable("coupons", data.get("coupons"));
-      context.setVariable("qrCodePath", "ticketQr");
 
       String htmlContent = templateEngine.process("mail-template/order-confirm", context);
-      helper.setText(htmlContent, true);
 
-      // Thêm QR code inline
-      helper.addInline("ticketQr", new ByteArrayResource(qrCodeImage), "image/png");
+      // Embed QR code as base64 in HTML
+      String base64QrCode = java.util.Base64.getEncoder().encodeToString(qrCodeImage);
+      String qrCodeDataUrl = "data:image/png;base64," + base64QrCode;
+      htmlContent = htmlContent.replace("cid:ticketQr", qrCodeDataUrl);
 
-      javaMailSender.send(message);
+      // Send via SendPulse REST API
+      sendPulseClient.sendEmail(user.getEmail(), "Vé điện tử Go Cinema", htmlContent);
+
       log.info("Sent order confirmation email to {}", user.getEmail());
     } catch (Exception e) {
       log.error("Error sending order confirmation email: {}", e.getMessage());
