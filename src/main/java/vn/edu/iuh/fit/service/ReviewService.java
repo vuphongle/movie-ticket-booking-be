@@ -2,6 +2,8 @@ package vn.edu.iuh.fit.service;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -40,6 +42,13 @@ public class ReviewService {
 
   @Transactional
   public Review createReview(UpsertReviewRequest request, List<MultipartFile> files) {
+
+    Optional<Review> existing = reviewRepository.findByUser_IdAndMovie_Id(Integer.valueOf(request.getUserId()), request.getMovieId());
+    if (existing.isPresent()) {
+      throw new BadRequestException("Bạn đã đánh giá phim này rồi");
+    }
+
+
     User user = SecurityUtils.getCurrentUserLogin();
 
     Movie movie =
@@ -74,6 +83,54 @@ public class ReviewService {
 
     return review;
   }
+
+  // Xóa 1 review của user về 1 phim
+  @Transactional
+  public void deleteReviewByUser(Integer reviewId) {
+      Review review =
+              reviewRepository
+                      .findById(reviewId)
+                      .orElseThrow(
+                              () -> new ResourceNotFoundException("Không tìm thấy review có id = " + reviewId));
+      reviewRepository.delete(review);
+
+      // update rating of movie
+      updateRatingOfMovie(review.getMovie());
+  }
+
+  // Cập nhật đánh giá của user về 1 phim
+  @Transactional
+  public Review updateReviewByUser(UpsertReviewRequest request, List<MultipartFile> files) {
+    User user = SecurityUtils.getCurrentUserLogin();
+
+    Movie movie = movieRepository.findById(request.getMovieId())
+            .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy phim có id = " + request.getMovieId()));
+
+    Review review = reviewRepository.findByUser_IdAndMovie_Id(user.getId(), request.getMovieId())
+            .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy review của user về phim này"));
+
+    review.setComment(request.getComment());
+    review.setRating(request.getRating());
+    review.setFeeling(request.getFeeling());
+
+    // Nếu có file ảnh mới, upload lên S3
+    if (files != null && !files.isEmpty()) {
+      List<String> images = new ArrayList<>();
+      for (MultipartFile file : files) {
+        ImageResponse imageResponse = imageService.uploadImage(file);
+        images.add(imageResponse.getUrl());
+      }
+      review.setImages(images);
+    }
+
+    reviewRepository.save(review);
+
+    // update rating of movie
+    updateRatingOfMovie(movie);
+
+    return review;
+  }
+
 
   private void updateRatingOfMovie(Movie movie) {
     List<Review> reviews = reviewRepository.findByMovie_Id(movie.getId());

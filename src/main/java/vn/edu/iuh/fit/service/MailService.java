@@ -1,9 +1,16 @@
 package vn.edu.iuh.fit.service;
 
+import jakarta.mail.MessagingException;
+import jakarta.mail.internet.MimeMessage;
+
+import java.text.DecimalFormat;
+import java.text.DecimalFormatSymbols;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.thymeleaf.TemplateEngine;
@@ -18,6 +25,7 @@ import vn.edu.iuh.fit.entity.User;
 public class MailService {
   private final SendPulseClient sendPulseClient;
   private final TemplateEngine templateEngine;
+  private final JavaMailSender javaMailSender;
 
   @Value("${app.frontend.host}")
   private String frontendHost;
@@ -93,6 +101,15 @@ public class MailService {
   @Async
   public void sendMailConfirmOrder(Map<String, Object> data, byte[] qrCodeImage) {
     try {
+      MimeMessage message = javaMailSender.createMimeMessage();
+      MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+
+      // --- Format giá tiền bằng DecimalFormat ---
+      DecimalFormatSymbols symbols = new DecimalFormatSymbols();
+      symbols.setGroupingSeparator(',');
+      symbols.setDecimalSeparator(',');
+      DecimalFormat df = new DecimalFormat("#,###", symbols);
+
       User user = (User) data.get("user");
       Order order = (Order) data.get("order");
 
@@ -109,8 +126,8 @@ public class MailService {
       context.setVariable("cinemaName", order.getShowtime().getAuditorium().getCinema().getName());
       context.setVariable("auditoriumName", order.getShowtime().getAuditorium().getName());
       context.setVariable("status", order.getStatus().name());
-      context.setVariable("totalPrice", order.getTotalPrice());
-      context.setVariable("discountPrice", order.getDiscountPrice());
+      context.setVariable("totalPrice", df.format(order.getTotalPrice()) + " VNĐ");
+      context.setVariable("discountPrice", df.format(order.getDiscountPrice()) + " VNĐ");
       context.setVariable("ticketItems", order.getTicketItems()); // danh sách ghế
       context.setVariable("serviceItems", order.getServiceItems());
       context.setVariable("coupons", data.get("coupons"));
