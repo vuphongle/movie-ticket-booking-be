@@ -30,6 +30,13 @@ public class TestEmailController {
   @Value("${app.frontend.port}")
   private String frontendPort;
 
+  private String getFrontendDomain() {
+    if (frontendPort == null || frontendPort.trim().isEmpty()) {
+      return frontendHost;
+    }
+    return "%s:%s".formatted(frontendHost, frontendPort);
+  }
+
   /** Test gửi email đơn giản GET /api/v1/test/send-email?to=recipient@example.com */
   @GetMapping("/send-email")
   public ResponseEntity<Map<String, Object>> testSendEmail(
@@ -97,7 +104,7 @@ public class TestEmailController {
       Context context = new Context();
       context.setVariable("username", username);
       context.setVariable("token", "test-token-12345");
-      context.setVariable("frontendDomain", "%s:%s".formatted(frontendHost, frontendPort));
+      context.setVariable("frontendDomain", getFrontendDomain());
 
       // Process template
       String htmlContent = templateEngine.process("mail-template/reset-password", context);
@@ -148,7 +155,7 @@ public class TestEmailController {
       Context context = new Context();
       context.setVariable("username", "Test User");
       context.setVariable("token", "test-token-12345");
-      context.setVariable("frontendDomain", "%s:%s".formatted(frontendHost, frontendPort));
+      context.setVariable("frontendDomain", getFrontendDomain());
 
       // Process template
       String htmlContent = templateEngine.process("mail-template/" + template, context);

@@ -47,6 +47,8 @@ services:
       SENDPULSE_CLIENT_ID: ${SENDPULSE_CLIENT_ID}
       SENDPULSE_CLIENT_SECRET: ${SENDPULSE_CLIENT_SECRET}
       SENDPULSE_MAIL_FROM_EMAIL: ${SENDPULSE_MAIL_FROM_EMAIL:-contact@gocinema.io.vn}
+      FRONTEND_HOST: ${FRONTEND_HOST:-http://localhost}
+      FRONTEND_PORT: ${FRONTEND_PORT:-3000}
     ports:
       - "8080:8080"
     depends_on:

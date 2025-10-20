@@ -25,6 +25,13 @@ public class MailService {
   @Value("${app.frontend.port}")
   private String frontendPort;
 
+  private String getFrontendDomain() {
+    if (frontendPort == null || frontendPort.trim().isEmpty()) {
+      return frontendHost;
+    }
+    return "%s:%s".formatted(frontendHost, frontendPort);
+  }
+
   // Send mail confirm registration
   @Async
   public void sendMailConfirmRegistration(Map<String, String> data) {
@@ -34,7 +41,7 @@ public class MailService {
       Context context = new Context();
       context.setVariable("username", data.get("username"));
       context.setVariable("token", data.get("token"));
-      context.setVariable("frontendDomain", "%s:%s".formatted(frontendHost, frontendPort));
+      context.setVariable("frontendDomain", getFrontendDomain());
 
       // Use the template engine to process the template
       String htmlContent = templateEngine.process("mail-template/confirmation-account", context);
@@ -63,7 +70,7 @@ public class MailService {
       Context context = new Context();
       context.setVariable("username", data.get("username"));
       context.setVariable("token", data.get("token"));
-      context.setVariable("frontendDomain", "%s:%s".formatted(frontendHost, frontendPort));
+      context.setVariable("frontendDomain", getFrontendDomain());
 
       // Use the template engine to process the template
       String htmlContent = templateEngine.process("mail-template/reset-password", context);
