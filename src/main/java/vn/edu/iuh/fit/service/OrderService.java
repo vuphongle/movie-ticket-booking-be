@@ -41,6 +41,7 @@ public class OrderService {
   private final OrderServiceItemRepository orderServiceItemRepository;
   private final ProductRepository productRepository;
   private final AdditionalServiceItemRepository additionalServiceItemRepository;
+  private final PDFService pdfService;
 
   @Autowired private CouponDetailTermsRepository couponDetailTermRepository;
 
@@ -158,7 +159,7 @@ public class OrderService {
   }
 
   @Transactional
-  public void updateOrderStatus(Integer orderId, OrderStatus status) {
+  public void updateOrderStatus(Integer orderId, OrderStatus status) throws Exception {
     Order order =
         orderRepository
             .findById(orderId)
@@ -281,6 +282,10 @@ public class OrderService {
       // --- Force load các collection để tránh LazyInitializationException ---
       order.getServiceItems().size();
       order.getTicketItems().size();
+
+        String pdfPath = pdfService.generateOrderPdf(order, Arrays.toString(qrCodeImage));
+        order.setPdfPath(pdfPath);
+        orderRepository.save(order);
 
       // --- Gửi email vé điện tử ---
       Map<String, Object> mailData = new HashMap<>();

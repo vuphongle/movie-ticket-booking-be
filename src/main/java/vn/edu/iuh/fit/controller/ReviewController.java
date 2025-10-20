@@ -1,12 +1,15 @@
 package vn.edu.iuh.fit.controller;
 
 import jakarta.validation.Valid;
+
+import java.nio.file.AccessDeniedException;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import vn.edu.iuh.fit.entity.Review;
 import vn.edu.iuh.fit.model.request.UpsertReviewRequest;
 import vn.edu.iuh.fit.service.MovieService;
 import vn.edu.iuh.fit.service.ReviewService;
@@ -34,14 +37,16 @@ public class ReviewController {
   }
 
   @PutMapping("/reviews")
-  public ResponseEntity<?> updateReview(
-          @Valid @RequestBody UpsertReviewRequest request) {
-    return ResponseEntity.ok(reviewService.updateReviewByUser(request));
+  public ResponseEntity<Review> updateReview(
+          @ModelAttribute UpsertReviewRequest request,
+          @RequestPart(value = "files", required = false) List<MultipartFile> files) {
+    Review review = reviewService.updateReviewByUser(request, files);
+    return ResponseEntity.ok(review);
   }
 
-  @DeleteMapping("/reviews/{movieId}")
-  public ResponseEntity<?> deleteReview(@PathVariable Integer movieId) {
-    reviewService.deleteReviewByUser(movieId);
+  @DeleteMapping("/reviews/{reviewId}")
+  public ResponseEntity<?> deleteReview(@PathVariable Integer reviewId) throws AccessDeniedException {
+    reviewService.deleteReviewByUser(reviewId);
     return ResponseEntity.ok().build();
   }
 

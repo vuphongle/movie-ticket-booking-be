@@ -5,6 +5,7 @@ import jakarta.validation.constraints.NotNull;
 import java.util.List;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
+import vn.edu.iuh.fit.entity.User;
 
 @Getter
 @Setter
@@ -13,6 +14,9 @@ import lombok.experimental.FieldDefaults;
 @ToString
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class UpsertReviewRequest {
+  // User
+  String userId;
+
   @NotNull(message = "Rating không được để trống")
   Integer rating;
 
@@ -25,4 +29,6 @@ public class UpsertReviewRequest {
   List<String> feeling;
 
   List<String> images;
+
+
 }

@@ -1,15 +1,23 @@
 package vn.edu.iuh.fit.controller;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletRequest;
+
+import java.io.IOException;
+import java.net.MalformedURLException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.UrlResource;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import vn.edu.iuh.fit.entity.Order;
 import vn.edu.iuh.fit.model.enums.OrderStatus;
 import vn.edu.iuh.fit.model.request.CreateOrderRequest;
 import vn.edu.iuh.fit.model.response.PaymentResponse;
@@ -52,7 +60,7 @@ public class OrderController {
   }
 
   @GetMapping("/orders/vnpay-payment")
-  public ResponseEntity<?> GetMapping(HttpServletRequest request) {
+  public ResponseEntity<?> GetMapping(HttpServletRequest request) throws Exception {
     int paymentStatus = vnPayService.orderReturn(request);
 
     String orderInfo = request.getParameter("vnp_OrderInfo");
@@ -75,7 +83,7 @@ public class OrderController {
   }
 
   @GetMapping("/orders/payos-payment")
-  public ResponseEntity<?> handlePayOSReturn(HttpServletRequest request) {
+  public ResponseEntity<?> handlePayOSReturn(HttpServletRequest request) throws Exception {
     Map<String, String> params = new HashMap<>();
     request.getParameterMap().forEach((k, v) -> params.put(k, v[0]));
 
@@ -95,7 +103,20 @@ public class OrderController {
     return ResponseEntity.status(HttpStatus.FOUND).header("Location", redirectUrl).build();
   }
 
-  @GetMapping("/admin/orders")
+    @GetMapping("/orders/{id}/pdf")
+    public ResponseEntity<Resource> downloadOrderPdf(@PathVariable Integer id) throws IOException {
+        Order order = orderService.getOrderById(id);
+        if (order.getPdfPath() == null) return ResponseEntity.notFound().build();
+
+        Path filePath = Paths.get(order.getPdfPath());
+        UrlResource resource = new UrlResource(filePath.toUri());
+        return ResponseEntity.ok()
+                .header("Content-Disposition", "inline; filename=\"" + filePath.getFileName() + "\"")
+                .body((Resource) resource);
+    }
+
+
+    @GetMapping("/admin/orders")
   public ResponseEntity<?> getAllOrders() {
     return ResponseEntity.ok(orderService.getAllOrders());
   }
