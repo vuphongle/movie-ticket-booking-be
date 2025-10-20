@@ -78,16 +78,18 @@ public class SendPulseClient {
 
   /**
    * Send email with attachment via SendPulse REST API
+   * Note: HTML content will be automatically Base64 encoded as required by SendPulse API
    *
    * @param to Recipient email
    * @param subject Email subject
-   * @param htmlBody HTML body content
+   * @param htmlBody HTML body content (will be Base64 encoded)
    * @param attachments Array of attachments (optional)
    */
   public void sendEmail(String to, String subject, String htmlBody, ObjectNode[] attachments) {
     try {
       String token = getAccessToken();
 
+      // Create inner email data object
       ObjectNode emailData = objectMapper.createObjectNode();
 
       // From
@@ -105,7 +107,10 @@ public class SendPulseClient {
 
       // Subject and body
       emailData.put("subject", subject);
-      emailData.put("html", htmlBody);
+      
+      // SendPulse API requires HTML to be Base64 encoded
+      String encodedHtml = Base64.getEncoder().encodeToString(htmlBody.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+      emailData.put("html", encodedHtml);
 
       // Attachments if present
       if (attachments != null && attachments.length > 0) {
@@ -116,6 +121,10 @@ public class SendPulseClient {
         emailData.set("attachments", attachmentsArray);
       }
 
+      // Wrap emailData in "email" object as per SendPulse API requirement
+      ObjectNode requestBody = objectMapper.createObjectNode();
+      requestBody.set("email", emailData);
+
       log.info("Sending email to {} via SendPulse API", to);
 
       JsonNode response =
@@ -123,7 +132,8 @@ public class SendPulseClient {
               .post()
               .uri("/smtp/emails")
               .header("Authorization", "Bearer " + token)
-              .bodyValue(emailData)
+              .header("Content-Type", "application/json")
+              .bodyValue(requestBody)
               .retrieve()
               .bodyToMono(JsonNode.class)
               .timeout(Duration.ofSeconds(30))

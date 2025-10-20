@@ -28,8 +28,7 @@ public class MailService {
   // Send mail confirm registration
   @Async
   public void sendMailConfirmRegistration(Map<String, String> data) {
-    log.info("sendMailConfirmRegistration");
-    log.info("Sending email request : {}", data);
+    log.info("Sending registration confirmation email to {}", data.get("email"));
     try {
       // Create the Thymeleaf context
       Context context = new Context();
@@ -40,19 +39,25 @@ public class MailService {
       // Use the template engine to process the template
       String htmlContent = templateEngine.process("mail-template/confirmation-account", context);
 
+      if (htmlContent == null || htmlContent.trim().isEmpty()) {
+        log.error("Template processing returned empty content!");
+        throw new RuntimeException("Email template processing failed - empty content");
+      }
+
       // Send via SendPulse REST API
       sendPulseClient.sendEmail(data.get("email"), "Xác nhận đăng ký tài khoản", htmlContent);
 
-      log.info("Registration confirmation email sent to {}", data.get("email"));
+      log.info("Registration confirmation email sent successfully to {}", data.get("email"));
     } catch (Exception e) {
-      log.error("Error when sending email: " + e.getMessage());
-      throw new RuntimeException(e.getMessage());
+      log.error("Error when sending registration email: {}", e.getMessage(), e);
+      throw new RuntimeException("Failed to send registration email: " + e.getMessage());
     }
   }
 
   // Send mail reset password
   @Async
   public void sendMailResetPassword(Map<String, String> data) {
+    log.info("Sending password reset email to {}", data.get("email"));
     try {
       // Create the Thymeleaf context
       Context context = new Context();
@@ -63,13 +68,18 @@ public class MailService {
       // Use the template engine to process the template
       String htmlContent = templateEngine.process("mail-template/reset-password", context);
 
+      if (htmlContent == null || htmlContent.trim().isEmpty()) {
+        log.error("Template processing returned empty content!");
+        throw new RuntimeException("Email template processing failed - empty content");
+      }
+
       // Send via SendPulse REST API
       sendPulseClient.sendEmail(data.get("email"), "Xác nhận đặt lại mật khẩu", htmlContent);
 
-      log.info("Password reset email sent to {}", data.get("email"));
+      log.info("Password reset email sent successfully to {}", data.get("email"));
     } catch (Exception e) {
-      log.error("Error sending password reset email: {}", e.getMessage());
-      throw new RuntimeException(e.getMessage());
+      log.error("Error sending password reset email: {}", e.getMessage(), e);
+      throw new RuntimeException("Failed to send password reset email: " + e.getMessage());
     }
   }
 
