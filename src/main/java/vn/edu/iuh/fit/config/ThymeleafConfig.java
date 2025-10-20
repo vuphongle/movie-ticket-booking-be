@@ -7,9 +7,7 @@ import org.thymeleaf.spring6.SpringTemplateEngine;
 import org.thymeleaf.spring6.templateresolver.SpringResourceTemplateResolver;
 import org.thymeleaf.templatemode.TemplateMode;
 
-/**
- * Thymeleaf configuration for email templates
- */
+/** Thymeleaf configuration for email templates */
 @Configuration
 public class ThymeleafConfig {
 

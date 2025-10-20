@@ -77,8 +77,8 @@ public class SendPulseClient {
   }
 
   /**
-   * Send email with attachment via SendPulse REST API
-   * Note: HTML content will be automatically Base64 encoded as required by SendPulse API
+   * Send email with attachment via SendPulse REST API Note: HTML content will be automatically
+   * Base64 encoded as required by SendPulse API
    *
    * @param to Recipient email
    * @param subject Email subject
@@ -107,9 +107,11 @@ public class SendPulseClient {
 
       // Subject and body
       emailData.put("subject", subject);
-      
+
       // SendPulse API requires HTML to be Base64 encoded
-      String encodedHtml = Base64.getEncoder().encodeToString(htmlBody.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+      String encodedHtml =
+          Base64.getEncoder()
+              .encodeToString(htmlBody.getBytes(java.nio.charset.StandardCharsets.UTF_8));
       emailData.put("html", encodedHtml);
 
       // Attachments if present
