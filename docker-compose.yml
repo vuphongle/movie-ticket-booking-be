@@ -49,6 +49,9 @@ services:
       SENDPULSE_MAIL_FROM_EMAIL: ${SENDPULSE_MAIL_FROM_EMAIL:-contact@gocinema.io.vn}
       FRONTEND_HOST: ${FRONTEND_HOST:-http://localhost}
       FRONTEND_PORT: ${FRONTEND_PORT:-3000}
+      BACKEND_HOST: ${BACKEND_HOST:-http://localhost}
+      BACKEND_PORT: ${BACKEND_PORT:-8080}
+      VNP_IP_ADDRESS: ${VNP_IP_ADDRESS:-127.0.0.1}
     ports:
       - "8080:8080"
     depends_on:

@@ -98,7 +98,8 @@ public class OrderController {
 
     String statusParam = valid ? "success" : "failed";
     String redirectUrl =
-        "http://localhost:3000/thanh-toan-don-hang/%s?status=%s".formatted(orderCode, statusParam);
+        "%s:%s/thanh-toan-don-hang/%s?status=%s"
+            .formatted(frontendHost, frontendPort, orderCode, statusParam);
 
     return ResponseEntity.status(HttpStatus.FOUND).header("Location", redirectUrl).build();
   }
