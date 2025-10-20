@@ -283,9 +283,10 @@ public class OrderService {
       order.getServiceItems().size();
       order.getTicketItems().size();
 
-        String pdfPath = pdfService.generateOrderPdf(order, Arrays.toString(qrCodeImage));
-        order.setPdfPath(pdfPath);
-        orderRepository.save(order);
+      String qrCodeBase64 = Base64.getEncoder().encodeToString(qrCodeImage);
+      String pdfPath = pdfService.generateOrderPdf(order, qrCodeBase64);
+      order.setPdfPath(pdfPath);
+      orderRepository.save(order);
 
       // --- Gửi email vé điện tử ---
       Map<String, Object> mailData = new HashMap<>();

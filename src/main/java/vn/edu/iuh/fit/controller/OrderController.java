@@ -1,11 +1,13 @@
 package vn.edu.iuh.fit.controller;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import jakarta.annotation.Resource;
+import org.springframework.core.io.Resource;
 import jakarta.servlet.http.HttpServletRequest;
 
 import java.io.IOException;
 import java.net.MalformedURLException;
+import org.springframework.http.MediaType;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.HashMap;
@@ -106,13 +108,24 @@ public class OrderController {
     @GetMapping("/orders/{id}/pdf")
     public ResponseEntity<Resource> downloadOrderPdf(@PathVariable Integer id) throws IOException {
         Order order = orderService.getOrderById(id);
-        if (order.getPdfPath() == null) return ResponseEntity.notFound().build();
+        if (order.getPdfPath() == null) {
+            return ResponseEntity.notFound().build();
+        }
 
         Path filePath = Paths.get(order.getPdfPath());
-        UrlResource resource = new UrlResource(filePath.toUri());
+        if (!Files.exists(filePath)) {
+            return ResponseEntity.notFound().build();
+        }
+
+        Resource resource = new UrlResource(filePath.toUri());
+        if (!resource.exists() || !resource.isReadable()) {
+            return ResponseEntity.status(500).build();
+        }
+
         return ResponseEntity.ok()
-                .header("Content-Disposition", "inline; filename=\"" + filePath.getFileName() + "\"")
-                .body((Resource) resource);
+                .contentType(MediaType.APPLICATION_PDF)
+                .header("Content-Disposition", "inline; filename=\"" + filePath.getFileName().toString() + "\"")
+                .body(resource);
     }
 
 
