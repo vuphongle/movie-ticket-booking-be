@@ -24,9 +24,11 @@ services:
     restart: unless-stopped
 
   backend:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: vuphongle23/movie-ticket-booking-be:latest
+    # Uncomment below to build locally instead of pulling from Docker Hub
+    # build:
+    #   context: .
+    #   dockerfile: Dockerfile
     container_name: movie-booking-backend
     environment:
       TZ: Asia/Ho_Chi_Minh
@@ -38,15 +40,32 @@ services:
       MAIL_PASSWORD: ${MAIL_PASSWORD:-your-app-password}
       AWS_ACCESS_KEY: ${AWS_ACCESS_KEY:-your-aws-access-key}
       AWS_SECRET_KEY: ${AWS_SECRET_KEY:-your-aws-secret-key}
+      SPRING_AI_OPENAI_API_KEY: ${SPRING_AI_OPENAI_API_KEY:-your-openai-key}
+      PAYOS_CLIENT_ID: ${PAYOS_CLIENT_ID}
+      PAYOS_API_KEY: ${PAYOS_API_KEY}
+      PAYOS_CHECKSUM_KEY: ${PAYOS_CHECKSUM_KEY}
+      SENDPULSE_CLIENT_ID: ${SENDPULSE_CLIENT_ID}
+      SENDPULSE_CLIENT_SECRET: ${SENDPULSE_CLIENT_SECRET}
+      SENDPULSE_MAIL_FROM_EMAIL: ${SENDPULSE_MAIL_FROM_EMAIL:-contact@gocinema.io.vn}
+      FRONTEND_HOST: ${FRONTEND_HOST:-http://localhost}
+      FRONTEND_PORT: ${FRONTEND_PORT:-3000}
     ports:
       - "8080:8080"
     depends_on:
       mariadb:
         condition: service_healthy
+        restart: true
     networks:
       - movie-booking-network
     volumes:
       - ./logs:/app/logs
+      - ./image_uploads:/app/image_uploads
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
     stop_grace_period: 30s
     restart: unless-stopped
 

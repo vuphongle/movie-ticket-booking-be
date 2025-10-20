@@ -34,8 +34,15 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
     implementation 'org.springframework.boot:spring-boot-starter-websocket'
     implementation 'org.springframework.boot:spring-boot-starter-security'
-    implementation 'org.springframework.boot:spring-boot-starter-mail'
     implementation 'org.springframework.boot:spring-boot-starter-thymeleaf'
+    
+    // HTTP Client for SendPulse REST API
+    implementation 'org.springframework.boot:spring-boot-starter-webflux'
+    
+    // Netty DNS resolver for macOS (fix DNS warning)
+    if (System.getProperty("os.name").toLowerCase().contains("mac")) {
+        runtimeOnly 'io.netty:netty-resolver-dns-native-macos:4.1.100.Final:osx-aarch_64'
+    }
 
     implementation "net.datafaker:datafaker:2.1.0"
     implementation "com.github.slugify:slugify:3.0.6"
@@ -79,6 +86,16 @@ dependencies {
     implementation 'com.openhtmltopdf:openhtmltopdf-slf4j:1.0.10'
     implementation 'com.openhtmltopdf:openhtmltopdf-rtl-support:1.0.10'
 
+    // https://mvnrepository.com/artifact/org.apache.poi/poi
+    implementation("org.apache.poi:poi:5.4.1")
+
+    // https://mvnrepository.com/artifact/org.apache.poi/poi-ooxml
+    implementation("org.apache.poi:poi-ooxml:5.4.1")
 }
 
 tasks.named('test') { useJUnitPlatform() }
+
+// Disable plain JAR, only build the executable Spring Boot JAR
+tasks.named('jar') {
+    enabled = false
+}
