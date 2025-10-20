@@ -1,7 +1,6 @@
 package vn.edu.iuh.fit.controller;
 
 import jakarta.validation.Valid;
-
 import java.nio.file.AccessDeniedException;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -38,14 +37,15 @@ public class ReviewController {
 
   @PutMapping("/reviews")
   public ResponseEntity<Review> updateReview(
-          @ModelAttribute UpsertReviewRequest request,
-          @RequestPart(value = "files", required = false) List<MultipartFile> files) {
+      @ModelAttribute UpsertReviewRequest request,
+      @RequestPart(value = "files", required = false) List<MultipartFile> files) {
     Review review = reviewService.updateReviewByUser(request, files);
     return ResponseEntity.ok(review);
   }
 
   @DeleteMapping("/reviews/{reviewId}")
-  public ResponseEntity<?> deleteReview(@PathVariable Integer reviewId) throws AccessDeniedException {
+  public ResponseEntity<?> deleteReview(@PathVariable Integer reviewId)
+      throws AccessDeniedException {
     reviewService.deleteReviewByUser(reviewId);
     return ResponseEntity.ok().build();
   }

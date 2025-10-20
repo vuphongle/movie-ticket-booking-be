@@ -1,12 +1,8 @@
 package vn.edu.iuh.fit.controller;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import org.springframework.core.io.Resource;
 import jakarta.servlet.http.HttpServletRequest;
-
 import java.io.IOException;
-import java.net.MalformedURLException;
-import org.springframework.http.MediaType;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -15,8 +11,10 @@ import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import vn.edu.iuh.fit.entity.Order;
@@ -105,31 +103,31 @@ public class OrderController {
     return ResponseEntity.status(HttpStatus.FOUND).header("Location", redirectUrl).build();
   }
 
-    @GetMapping("/orders/{id}/pdf")
-    public ResponseEntity<Resource> downloadOrderPdf(@PathVariable Integer id) throws IOException {
-        Order order = orderService.getOrderById(id);
-        if (order.getPdfPath() == null) {
-            return ResponseEntity.notFound().build();
-        }
-
-        Path filePath = Paths.get(order.getPdfPath());
-        if (!Files.exists(filePath)) {
-            return ResponseEntity.notFound().build();
-        }
-
-        Resource resource = new UrlResource(filePath.toUri());
-        if (!resource.exists() || !resource.isReadable()) {
-            return ResponseEntity.status(500).build();
-        }
-
-        return ResponseEntity.ok()
-                .contentType(MediaType.APPLICATION_PDF)
-                .header("Content-Disposition", "inline; filename=\"" + filePath.getFileName().toString() + "\"")
-                .body(resource);
+  @GetMapping("/orders/{id}/pdf")
+  public ResponseEntity<Resource> downloadOrderPdf(@PathVariable Integer id) throws IOException {
+    Order order = orderService.getOrderById(id);
+    if (order.getPdfPath() == null) {
+      return ResponseEntity.notFound().build();
     }
 
+    Path filePath = Paths.get(order.getPdfPath());
+    if (!Files.exists(filePath)) {
+      return ResponseEntity.notFound().build();
+    }
 
-    @GetMapping("/admin/orders")
+    Resource resource = new UrlResource(filePath.toUri());
+    if (!resource.exists() || !resource.isReadable()) {
+      return ResponseEntity.status(500).build();
+    }
+
+    return ResponseEntity.ok()
+        .contentType(MediaType.APPLICATION_PDF)
+        .header(
+            "Content-Disposition", "inline; filename=\"" + filePath.getFileName().toString() + "\"")
+        .body(resource);
+  }
+
+  @GetMapping("/admin/orders")
   public ResponseEntity<?> getAllOrders() {
     return ResponseEntity.ok(orderService.getAllOrders());
   }

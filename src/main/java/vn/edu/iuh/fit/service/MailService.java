@@ -1,8 +1,6 @@
 package vn.edu.iuh.fit.service;
 
-import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
-
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
 import java.util.Map;

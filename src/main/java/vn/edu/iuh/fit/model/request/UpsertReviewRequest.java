@@ -5,7 +5,6 @@ import jakarta.validation.constraints.NotNull;
 import java.util.List;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
-import vn.edu.iuh.fit.entity.User;
 
 @Getter
 @Setter
@@ -29,6 +28,4 @@ public class UpsertReviewRequest {
   List<String> feeling;
 
   List<String> images;
-
-
 }

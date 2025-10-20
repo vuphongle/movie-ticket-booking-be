@@ -54,7 +54,7 @@ public class Order {
 
   String qrCodePath;
 
-    private String pdfPath;
+  private String pdfPath;
 
   LocalDateTime createdAt;
   LocalDateTime updatedAt;
