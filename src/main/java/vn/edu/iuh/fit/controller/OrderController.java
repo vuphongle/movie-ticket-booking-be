@@ -133,11 +133,13 @@ public class OrderController {
   @PostMapping("/payos-webhook")
   public ResponseEntity<?> handlePayOSWebhook(
       @RequestHeader(value = "x-payos-signature", required = false) String signature,
+      @RequestHeader Map<String, String> headers,
       @RequestBody String webhookBody) {
 
     log.info("Received PayOS webhook");
-    log.debug("Webhook body: {}", webhookBody);
-    log.debug("Signature: {}", signature);
+    log.info("All headers: {}", headers);
+    log.info("Webhook body: {}", webhookBody);
+    log.info("Signature header: {}", signature);
 
     try {
       // 1. Verify webhook signature
