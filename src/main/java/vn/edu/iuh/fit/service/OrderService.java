@@ -135,8 +135,14 @@ public class OrderService {
     String paymentUrl;
     int expireSeconds = (request.getExpireSeconds() != null) ? request.getExpireSeconds() : 600;
 
+    // Build return URL - nếu backendExposePort rỗng hoặc null thì không thêm port (production)
+    String baseUrl =
+        (backendExposePort != null && !backendExposePort.trim().isEmpty())
+            ? "%s:%s".formatted(backendHost, backendExposePort)
+            : backendHost;
+
     if ("VNPAY".equalsIgnoreCase(paymentMethod)) {
-      String returnUrl = "%s:%s/api/orders/vnpay-payment".formatted(backendHost, backendExposePort);
+      String returnUrl = "%s/api/orders/vnpay-payment".formatted(baseUrl);
       paymentUrl =
           vnpayService.createOrder(
               savedOrder.getTotalPrice(),
@@ -144,7 +150,7 @@ public class OrderService {
               returnUrl,
               expireSeconds);
     } else if ("PAYOS".equalsIgnoreCase(paymentMethod)) {
-      String returnUrl = "%s:%s/api/orders/payos-payment".formatted(backendHost, backendExposePort);
+      String returnUrl = "%s/api/orders/payos-payment".formatted(baseUrl);
       paymentUrl =
           payOSService.createOrder(
               savedOrder.getTotalPrice(),
@@ -171,6 +177,20 @@ public class OrderService {
       order.setDiscount(0);
     }
 
+    // IDEMPOTENCY CHECK: Nếu order đã có status này rồi, skip xử lý để tránh duplicate
+    if (order.getStatus() == status) {
+      log.info("Order {} already has status {}, skipping duplicate processing", orderId, status);
+      return;
+    }
+
+    // Kiểm tra transition hợp lệ: chỉ cho phép PENDING -> CONFIRMED hoặc PENDING -> CANCELLED
+    if (order.getStatus() == OrderStatus.CONFIRMED) {
+      log.warn(
+          "Order {} is already CONFIRMED, cannot change to {}. Ignoring update.", orderId, status);
+      return;
+    }
+
+    log.info("Updating order {} status from {} to {}", orderId, order.getStatus(), status);
     order.setStatus(status);
 
     // Nếu thanh toán thành công, tạo QR code và đặt ghế
