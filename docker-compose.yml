@@ -51,7 +51,7 @@ services:
       FRONTEND_HOST: ${FRONTEND_HOST:-http://localhost}
       FRONTEND_PORT: ${FRONTEND_PORT:-3000}
       BACKEND_HOST: ${BACKEND_HOST:-http://localhost}
-      BACKEND_PORT: ${BACKEND_PORT:-8080}
+      BACKEND_PORT: ${BACKEND_PORT}
       VNP_IP_ADDRESS: ${VNP_IP_ADDRESS:-127.0.0.1}
     ports:
       - "8080:8080"
