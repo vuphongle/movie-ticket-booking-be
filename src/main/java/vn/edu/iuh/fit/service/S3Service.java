@@ -137,4 +137,23 @@ public class S3Service {
     }
     throw new IllegalArgumentException("URL không hợp lệ: " + fileUrl);
   }
+
+  public String uploadImage(String fileName, byte[] data, String contentType) {
+    try {
+      PutObjectRequest request =
+          PutObjectRequest.builder()
+              .bucket(bucketName)
+              .key(fileName)
+              .contentType(contentType)
+              .contentLength((long) data.length)
+              .build();
+
+      s3Client.putObject(request, RequestBody.fromBytes(data));
+
+      return String.format("https://%s.s3.%s.amazonaws.com/%s", bucketName, region, fileName);
+    } catch (S3Exception e) {
+      log.error("Lỗi khi upload file lên S3: {}", e.getMessage());
+      throw new RuntimeException("Không thể upload file lên S3: " + e.getMessage());
+    }
+  }
 }

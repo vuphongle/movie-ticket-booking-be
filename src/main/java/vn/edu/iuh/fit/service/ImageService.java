@@ -1,11 +1,7 @@
 package vn.edu.iuh.fit.service;
 
-import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -24,7 +20,6 @@ import vn.edu.iuh.fit.security.SecurityUtils;
 @Service
 @RequiredArgsConstructor
 public class ImageService {
-  private final String uploadDir = "image_uploads";
   private final ImageRepository imageRepository;
   private final S3Service s3Service;
 
@@ -65,27 +60,28 @@ public class ImageService {
 
   public ImageResponse uploadQRCodeImage(byte[] data) {
     String imageId = UUID.randomUUID().toString();
-    Path rootPath = Paths.get(uploadDir);
-    Path filePath = rootPath.resolve(imageId);
+    String fileName = imageId + ".png";
+    String contentType = "image/png";
 
     try {
-      Files.write(filePath, data);
+      // Upload byte[] lên S3 (chuyển byte[] sang InputStream)
+      String s3Url = s3Service.uploadImage(fileName, data, contentType);
 
-      // Tính toán kích thước file theo MB
+      // Tính kích thước file (MB)
       double sizeInMB =
           BigDecimal.valueOf(data.length / 1024.0 / 1024.0)
               .setScale(2, RoundingMode.HALF_UP)
               .doubleValue();
-      Image image = Image.builder().id(imageId).type("image/png").size(sizeInMB).build();
+
+      Image image = Image.builder().id(imageId).type(contentType).size(sizeInMB).url(s3Url).build();
 
       imageRepository.save(image);
 
-      String url = "/api/public/images/" + image.getId();
-      return ImageResponse.builder().id(imageId).url(url).build();
-    } catch (IOException e) {
-      log.error("Cannot upload file: " + filePath);
-      log.error(e.getMessage());
-      throw new RuntimeException("Cannot upload file: " + filePath);
+      return ImageResponse.builder().id(imageId).url(s3Url).build();
+
+    } catch (Exception e) {
+      log.error("Cannot upload QR Code to S3: {}", e.getMessage());
+      throw new RuntimeException("Cannot upload QR Code to S3", e);
     }
   }
 
@@ -129,18 +125,18 @@ public class ImageService {
     return imageRepository.findById(id).orElse(null);
   }
 
-  public byte[] getImageData(Image image) {
-    Path rootPath = Paths.get(uploadDir);
-    Path filePath = rootPath.resolve(image.getId());
-
-    try {
-      return Files.readAllBytes(filePath);
-    } catch (IOException e) {
-      log.error("Cannot read file: {}", filePath);
-      log.error(e.getMessage());
-      throw new RuntimeException("Cannot read file: " + filePath);
-    }
-  }
+  //  public byte[] getImageData(Image image) {
+  //    Path rootPath = Paths.get(uploadDir);
+  //    Path filePath = rootPath.resolve(image.getId());
+  //
+  //    try {
+  //      return Files.readAllBytes(filePath);
+  //    } catch (IOException e) {
+  //      log.error("Cannot read file: {}", filePath);
+  //      log.error(e.getMessage());
+  //      throw new RuntimeException("Cannot read file: " + filePath);
+  //    }
+  //  }
 
   public void deleteImage(String imageId) {
     User user = SecurityUtils.getCurrentUserLogin();
