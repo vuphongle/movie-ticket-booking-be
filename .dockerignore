@@ -16,6 +16,9 @@ DEPLOYMENT.md
 .gradle
 build/
 !gradle/wrapper/gradle-wrapper.jar
+bin/
+out/
+target/
 
 # Environment files
 .env

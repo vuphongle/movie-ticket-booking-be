@@ -25,7 +25,8 @@ RUN ./gradlew --no-daemon dependencies || true
 COPY src src
 
 # Build the application (skip tests for container image build)
-RUN ./gradlew --no-daemon clean build -x test
+# Add --no-build-cache to prevent Gradle build cache issues
+RUN ./gradlew --no-daemon --no-build-cache clean build -x test
 
 
 # ---- Runtime stage (Temurin JRE 17, Ubuntu Jammy) ----

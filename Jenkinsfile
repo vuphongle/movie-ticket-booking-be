@@ -22,10 +22,24 @@ pipeline {
       }
     }
 
+    stage('Clean Docker Environment') {
+      steps {
+        script {
+          // Remove any previous build artifacts and dangling images
+          sh """
+            docker system prune -f || true
+            docker image rm ${TAG_BUILD} || true
+            docker image rm ${TAG_LATEST} || true
+          """
+        }
+      }
+    }
+
     stage('Build Image') {
       steps {
         script {
-          docker.build("${TAG_BUILD}")
+          // Build with --no-cache and --pull to ensure fresh build
+          docker.build("${TAG_BUILD}", "--no-cache --pull .")
         }
       }
     }
@@ -76,9 +90,16 @@ pipeline {
     }
     failure {
       echo "❌ Pipeline thất bại!"
+      // Clean up failed build artifacts
+      sh """
+        docker image rm ${TAG_BUILD} || true
+      """
     }
     always {
-      sh 'docker system prune -f || true'
+      // Clean up dangling images
+      sh """
+        docker system prune -f || true
+      """
     }
   }
 }
