@@ -103,33 +103,37 @@ public class PayOSService {
     try {
       JsonNode rootNode = objectMapper.readTree(webhookBody);
 
-      // PayOS webhook structure: { "data": { "orderCode": ..., "amount": ..., "description": ...,
-      // ... }, "code": "00", "desc": "success" }
+      // PayOS webhook structure theo docs:
+      // { "code": "00", "desc": "success", "success": true, "data": {...}, "signature": "..." }
+      // code: "00" = Thành công, "01" = Invalid Params
+      // success: true = giao dịch thành công
       String code = rootNode.path("code").asText();
+      String desc = rootNode.path("desc").asText();
+      boolean success = rootNode.path("success").asBoolean(false);
       JsonNode dataNode = rootNode.path("data");
 
       Long orderCode = dataNode.path("orderCode").asLong();
-      String status = dataNode.path("status").asText();
       int amount = dataNode.path("amount").asInt();
 
       log.info(
-          "Processing PayOS webhook - OrderCode: {}, Status: {}, Amount: {}, Code: {}",
+          "Processing PayOS webhook - OrderCode: {}, Amount: {}, Code: {}, Success: {}, Desc: {}",
           orderCode,
-          status,
           amount,
-          code);
+          code,
+          success,
+          desc);
 
-      // Kiểm tra code và status
-      if ("00".equals(code)
-          && ("PAID".equalsIgnoreCase(status) || "SUCCESS".equalsIgnoreCase(status))) {
+      // Theo tài liệu PayOS: code "00" + success = true nghĩa là thanh toán thành công
+      if ("00".equals(code) && success) {
         log.info("Payment successful for order: {}", orderCode);
         return orderCode;
       } else {
         log.warn(
-            "Payment not successful - OrderCode: {}, Status: {}, Code: {}",
+            "Payment not successful - OrderCode: {}, Code: {}, Success: {}, Desc: {}",
             orderCode,
-            status,
-            code);
+            code,
+            success,
+            desc);
         return null;
       }
     } catch (Exception e) {
