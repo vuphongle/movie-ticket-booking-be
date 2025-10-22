@@ -1,14 +1,22 @@
 package vn.edu.iuh.fit.service;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Instant;
 import java.util.Map;
+import javax.crypto.Mac;
+import javax.crypto.spec.SecretKeySpec;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import vn.edu.iuh.fit.config.payment.payos.PayOSConfig;
 import vn.payos.PayOS;
 import vn.payos.type.CheckoutResponseData;
 import vn.payos.type.PaymentData;
+import vn.payos.type.PaymentLinkData;
+import vn.payos.type.Webhook;
+import vn.payos.type.WebhookData;
 
 @Slf4j
 @Service
@@ -16,6 +24,10 @@ import vn.payos.type.PaymentData;
 public class PayOSService {
 
   private final PayOSConfig payOSConfig;
+  private final ObjectMapper objectMapper = new ObjectMapper();
+
+  @Value("${payos.checksum_key}")
+  private String checksumKey;
 
   public String createOrder(int amount, String orderCode, String returnUrl, Integer expireSeconds) {
     try {
@@ -52,6 +64,87 @@ public class PayOSService {
     } catch (Exception e) {
       log.error("Lỗi xác minh phản hồi PayOS", e);
       return false;
+    }
+  }
+
+  /**
+   * Xác minh webhook signature từ PayOS
+   * PayOS gửi signature trong header "x-payos-signature"
+   */
+  public boolean verifyWebhookSignature(String signature, String requestBody) {
+    try {
+      String computedSignature = computeHmacSha256(requestBody, checksumKey);
+      boolean isValid = computedSignature.equalsIgnoreCase(signature);
+      log.info("Webhook signature verification: {}", isValid ? "VALID" : "INVALID");
+      return isValid;
+    } catch (Exception e) {
+      log.error("Error verifying webhook signature", e);
+      return false;
+    }
+  }
+
+  /**
+   * Xử lý webhook data từ PayOS
+   * @return orderCode nếu thanh toán thành công, null nếu thất bại
+   */
+  public Long processWebhook(String webhookBody) {
+    try {
+      JsonNode rootNode = objectMapper.readTree(webhookBody);
+      
+      // PayOS webhook structure: { "data": { "orderCode": ..., "amount": ..., "description": ..., ... }, "code": "00", "desc": "success" }
+      String code = rootNode.path("code").asText();
+      JsonNode dataNode = rootNode.path("data");
+      
+      Long orderCode = dataNode.path("orderCode").asLong();
+      String status = dataNode.path("status").asText();
+      int amount = dataNode.path("amount").asInt();
+      
+      log.info("Processing PayOS webhook - OrderCode: {}, Status: {}, Amount: {}, Code: {}", 
+               orderCode, status, amount, code);
+      
+      // Kiểm tra code và status
+      if ("00".equals(code) && ("PAID".equalsIgnoreCase(status) || "SUCCESS".equalsIgnoreCase(status))) {
+        log.info("Payment successful for order: {}", orderCode);
+        return orderCode;
+      } else {
+        log.warn("Payment not successful - OrderCode: {}, Status: {}, Code: {}", orderCode, status, code);
+        return null;
+      }
+    } catch (Exception e) {
+      log.error("Error processing webhook body", e);
+      return null;
+    }
+  }
+
+  /**
+   * Tính toán HMAC SHA256 signature
+   */
+  private String computeHmacSha256(String data, String key) throws Exception {
+    Mac sha256Hmac = Mac.getInstance("HmacSHA256");
+    SecretKeySpec secretKey = new SecretKeySpec(key.getBytes("UTF-8"), "HmacSHA256");
+    sha256Hmac.init(secretKey);
+    byte[] hash = sha256Hmac.doFinal(data.getBytes("UTF-8"));
+    
+    // Convert to hex string
+    StringBuilder hexString = new StringBuilder();
+    for (byte b : hash) {
+      String hex = Integer.toHexString(0xff & b);
+      if (hex.length() == 1) hexString.append('0');
+      hexString.append(hex);
+    }
+    return hexString.toString();
+  }
+
+  /**
+   * Lấy thông tin payment từ PayOS API (optional - để verify)
+   */
+  public PaymentLinkData getPaymentInfo(Long orderCode) {
+    try {
+      PayOS payOS = payOSConfig.payOSClient();
+      return payOS.getPaymentLinkInformation(orderCode);
+    } catch (Exception e) {
+      log.error("Error getting payment info for order: {}", orderCode, e);
+      return null;
     }
   }
 }

@@ -34,6 +34,8 @@ public class SecurityConfig {
                 .permitAll()
                 .requestMatchers("/api/orders/payos-payment")
                 .permitAll()
+                .requestMatchers("/api/payos-webhook")
+                .permitAll()
                 .requestMatchers("/api/v1/chat/**")
                 .permitAll()
                 .requestMatchers("/api/users", "/api/users/**")

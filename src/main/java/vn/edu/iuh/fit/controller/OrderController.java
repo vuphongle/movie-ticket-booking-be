@@ -104,6 +104,64 @@ public class OrderController {
     return ResponseEntity.status(HttpStatus.FOUND).header("Location", redirectUrl).build();
   }
 
+  /**
+   * PayOS Webhook endpoint - Nhận thông báo thanh toán từ PayOS
+   * Endpoint này được gọi trực tiếp từ PayOS server khi có thay đổi trạng thái thanh toán
+   * URL webhook cần được cấu hình trong PayOS dashboard
+   */
+  @PostMapping("/payos-webhook")
+  public ResponseEntity<?> handlePayOSWebhook(
+      @RequestHeader(value = "x-payos-signature", required = false) String signature,
+      @RequestBody String webhookBody) {
+    
+    log.info("Received PayOS webhook");
+    log.debug("Webhook body: {}", webhookBody);
+    log.debug("Signature: {}", signature);
+
+    try {
+      // 1. Verify webhook signature
+      if (signature == null || signature.isEmpty()) {
+        log.warn("Missing webhook signature");
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+            .body(Map.of("error", "Missing signature"));
+      }
+
+      boolean isValid = payOSService.verifyWebhookSignature(signature, webhookBody);
+      if (!isValid) {
+        log.error("Invalid webhook signature");
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+            .body(Map.of("error", "Invalid signature"));
+      }
+
+      // 2. Process webhook data
+      Long orderCode = payOSService.processWebhook(webhookBody);
+      
+      if (orderCode != null) {
+        // Payment successful - update order status
+        log.info("Updating order {} to CONFIRMED via webhook", orderCode);
+        orderService.updateOrderStatus(orderCode.intValue(), OrderStatus.CONFIRMED);
+        
+        return ResponseEntity.ok(Map.of(
+            "success", true,
+            "message", "Order updated successfully",
+            "orderCode", orderCode
+        ));
+      } else {
+        // Payment failed or cancelled
+        log.warn("Payment not successful for webhook data: {}", webhookBody);
+        return ResponseEntity.ok(Map.of(
+            "success", false,
+            "message", "Payment not successful"
+        ));
+      }
+      
+    } catch (Exception e) {
+      log.error("Error processing PayOS webhook", e);
+      return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+          .body(Map.of("error", e.getMessage()));
+    }
+  }
+
   @GetMapping("/orders/{id}/pdf")
   public ResponseEntity<Resource> downloadOrderPdf(@PathVariable Integer id) throws IOException {
     Order order = orderService.getOrderById(id);
