@@ -1,14 +1,11 @@
 package vn.edu.iuh.fit.service;
 
-import jakarta.mail.internet.MimeMessage;
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.mail.javamail.JavaMailSender;
-import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.thymeleaf.TemplateEngine;
@@ -16,6 +13,8 @@ import org.thymeleaf.context.Context;
 import vn.edu.iuh.fit.client.SendPulseClient;
 import vn.edu.iuh.fit.entity.Order;
 import vn.edu.iuh.fit.entity.User;
+import vn.edu.iuh.fit.model.enums.GraphicsType;
+import vn.edu.iuh.fit.model.enums.TranslationType;
 
 @Slf4j
 @Service
@@ -23,7 +22,6 @@ import vn.edu.iuh.fit.entity.User;
 public class MailService {
   private final SendPulseClient sendPulseClient;
   private final TemplateEngine templateEngine;
-  private final JavaMailSender javaMailSender;
 
   @Value("${app.frontend.host}")
   private String frontendHost;
@@ -96,54 +94,60 @@ public class MailService {
     }
   }
 
-  @Async
-  public void sendMailConfirmOrder(Map<String, Object> data, byte[] qrCodeImage) {
-    try {
-      MimeMessage message = javaMailSender.createMimeMessage();
-      MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+    @Async
+    public void sendMailConfirmOrder(Map<String, Object> data, byte[] qrCodeImage) {
+        try {
 
-      // --- Format giá tiền bằng DecimalFormat ---
-      DecimalFormatSymbols symbols = new DecimalFormatSymbols();
-      symbols.setGroupingSeparator(',');
-      symbols.setDecimalSeparator(',');
-      DecimalFormat df = new DecimalFormat("#,###", symbols);
+            User user = (User) data.get("user");
+            Order order = (Order) data.get("order");
 
-      User user = (User) data.get("user");
-      Order order = (Order) data.get("order");
+            // --- Format giá tiền bằng DecimalFormat ---
+            DecimalFormatSymbols symbols = new DecimalFormatSymbols();
+            symbols.setGroupingSeparator(',');
+            symbols.setDecimalSeparator(',');
+            DecimalFormat df = new DecimalFormat("#,###", symbols);
 
-      Context context = new Context();
-      context.setVariable("userName", user.getName());
-      context.setVariable("userPhone", user.getPhone());
-      context.setVariable("orderId", order.getId());
-      context.setVariable("movieTitle", order.getShowtime().getMovie().getName());
-      context.setVariable("graphicsType", order.getShowtime().getGraphicsType()); // 2D/3D
-      context.setVariable("translationType", order.getShowtime().getTranslationType()); // SUB/DUB
-      context.setVariable("showDate", order.getShowtime().getDate().toString());
-      context.setVariable("startTime", order.getShowtime().getStartTime().toString());
-      context.setVariable("endTime", order.getShowtime().getEndTime().toString());
-      context.setVariable("cinemaName", order.getShowtime().getAuditorium().getCinema().getName());
-      context.setVariable("auditoriumName", order.getShowtime().getAuditorium().getName());
-      context.setVariable("status", order.getStatus().name());
-      context.setVariable("totalPrice", df.format(order.getTotalPrice()) + " VNĐ");
-      context.setVariable("discountPrice", df.format(order.getDiscountPrice()) + " VNĐ");
-      context.setVariable("ticketItems", order.getTicketItems()); // danh sách ghế
-      context.setVariable("serviceItems", order.getServiceItems());
-      context.setVariable("coupons", data.get("coupons"));
+            GraphicsType graphicsTypeEnum = order.getShowtime().getGraphicsType();
+            String formattedGraphicsType = switch (graphicsTypeEnum) {
+                case _2D -> "2D";
+                case _3D -> "3D";
+            };
 
-      String htmlContent = templateEngine.process("mail-template/order-confirm", context);
+            TranslationType translationTypeEnum = order.getShowtime().getTranslationType(); // enum
+            String formattedTranslationType = switch (translationTypeEnum) {
+                case DUBBING -> "Lồng tiếng";
+                case SUBTITLING -> "Phụ đề";
+            };
 
-      // Embed QR code as base64 in HTML
-      String base64QrCode = java.util.Base64.getEncoder().encodeToString(qrCodeImage);
-      String qrCodeDataUrl = "data:image/png;base64," + base64QrCode;
-      htmlContent = htmlContent.replace("cid:ticketQr", qrCodeDataUrl);
+            Context context = new Context();
+            context.setVariable("userName", user.getName());
+            context.setVariable("userPhone", user.getPhone());
+            context.setVariable("orderId", order.getId());
+            context.setVariable("movieTitle", order.getShowtime().getMovie().getName());
+            context.setVariable("graphicsType", formattedGraphicsType);
+            context.setVariable("translationType", formattedTranslationType);
+            context.setVariable("showDate", order.getShowtime().getDate().toString());
+            context.setVariable("startTime", order.getShowtime().getStartTime().toString());
+            context.setVariable("endTime", order.getShowtime().getEndTime().toString());
+            context.setVariable("cinemaName", order.getShowtime().getAuditorium().getCinema().getName());
+            context.setVariable("auditoriumName", order.getShowtime().getAuditorium().getName());
+            context.setVariable("status", order.getStatus().name());
+            context.setVariable("totalPrice", df.format(order.getTotalPrice()) + " VNĐ");
+            context.setVariable("discountPrice", df.format(order.getDiscountPrice()) + " VNĐ");
+            context.setVariable("ticketItems", order.getTicketItems()); // danh sách ghế
+            context.setVariable("serviceItems", order.getServiceItems());
+            context.setVariable("coupons", data.get("coupons"));
 
-      // Send via SendPulse REST API
-      sendPulseClient.sendEmail(user.getEmail(), "Vé điện tử Go Cinema", htmlContent);
+            context.setVariable("qrCodeUrl", order.getQrCodePath());
+            String htmlContent = templateEngine.process("mail-template/order-confirm", context);
 
-      log.info("Sent order confirmation email to {}", user.getEmail());
-    } catch (Exception e) {
-      log.error("Error sending order confirmation email: {}", e.getMessage());
-      throw new RuntimeException(e.getMessage());
+
+            // Send via SendPulse REST API
+            sendPulseClient.sendEmail(user.getEmail(), "Vé điện tử Go Cinema", htmlContent);
+
+            log.info("Sent order confirmation email to {}", user.getEmail());
+        } catch (Exception e) {
+            log.error("Error sending order confirmation email: {}", e.getMessage());
+        }
     }
-  }
 }

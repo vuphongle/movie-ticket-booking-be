@@ -28,8 +28,9 @@
     </div>
     <div class="content">
         <h3>Vé điện tử của bạn</h3>
-        <div class="qr-code" th:if="${qrCodePath != null}">
-            <img th:src="@{'cid:ticketQr'}" alt="QR Code"/>
+        <div class="qr-code" th:if="${qrCodeUrl != null}">
+            <!-- th:src để Thymeleaf xử lý URL -->
+            <img th:src="${qrCodeUrl}" alt="QR Code" width="400" height="400"/>
         </div>
 
         <p>Vui lòng giữ QR code này để xuất trình khi đến rạp.</p>
@@ -44,7 +45,7 @@
         <li>Mã đơn hàng: <strong th:text="${orderId}"></strong></li>
         <li>Phim: <strong th:text="${movieTitle}"></strong></li>
         <li>Loại chiếu:
-            <strong th:text="${graphicsType == '_2D' ? '2D' : (graphicsType == '_3D' ? '3D' : graphicsType)} + ' / ' + (translationType == 'DUBBING' ? 'Lồng tiếng' : (translationType == 'SUBTITLING' ? 'Phụ đề' : translationType))"></strong>
+            <strong th:text="${graphicsType} + ' / ' + ${translationType}"></strong>
         </li>
         <li>Ngày/giờ chiếu: <strong th:text="${showDate} + ' | ' + ${startTime} + ' - ' + ${endTime}"></strong></li>
         <li>Rạp / Phòng: <strong th:text="${cinemaName} + ' / ' + ${auditoriumName}"></strong></li>
@@ -118,8 +119,8 @@
     </table>
 
     <h4>Tổng giá:</h4>
-    <p>Giảm giá: <strong th:text="${discountPrice} + ' VNĐ'"></strong></p>
-    <p>Tổng thanh toán: <strong th:text="${totalPrice} + ' VNĐ'"></strong></p>
+    <p>Giảm giá: <strong th:text="${discountPrice}"></strong></p>
+    <p>Tổng thanh toán: <strong th:text="${totalPrice}"></strong></p>
 </div>
 <div class="footer">
     &copy; 2025 Go Cinema. Mọi quyền được bảo lưu.

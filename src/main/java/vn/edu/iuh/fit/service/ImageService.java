@@ -24,144 +24,151 @@ import vn.edu.iuh.fit.security.SecurityUtils;
 @Service
 @RequiredArgsConstructor
 public class ImageService {
-  private final String uploadDir = "image_uploads";
-  private final ImageRepository imageRepository;
-  private final S3Service s3Service;
+    private final ImageRepository imageRepository;
+    private final S3Service s3Service;
 
-  public List<ImageResponse> getAllImage() {
-    User user = SecurityUtils.getCurrentUserLogin();
-    List<Image> images = imageRepository.findByUser_IdOrderByCreatedAtDesc(user.getId());
+    public List<ImageResponse> getAllImage() {
+        User user = SecurityUtils.getCurrentUserLogin();
+        List<Image> images = imageRepository.findByUser_IdOrderByCreatedAtDesc(user.getId());
 
-    return images.stream().map(image -> new ImageResponse(image.getId(), image.getUrl())).toList();
-  }
-
-  public ImageResponse uploadImage(MultipartFile file) {
-    User user = SecurityUtils.getCurrentUserLogin();
-    validateFile(file);
-
-    try {
-      // Upload ảnh lên S3 và lấy URL
-      String s3Url = s3Service.uploadImage(file);
-
-      String imageId = UUID.randomUUID().toString();
-
-      Image image =
-          Image.builder()
-              .id(imageId)
-              .type(file.getContentType())
-              .size(extractSize(file))
-              .url(s3Url)
-              .user(user)
-              .build();
-
-      imageRepository.save(image);
-
-      return ImageResponse.builder().id(imageId).url(s3Url).build();
-    } catch (Exception e) {
-      log.error("Cannot upload file to S3: " + e.getMessage());
-      throw new RuntimeException("Cannot upload file: " + e.getMessage());
-    }
-  }
-
-  public ImageResponse uploadQRCodeImage(byte[] data) {
-    String imageId = UUID.randomUUID().toString();
-    Path rootPath = Paths.get(uploadDir);
-    Path filePath = rootPath.resolve(imageId);
-
-    try {
-      Files.write(filePath, data);
-
-      // Tính toán kích thước file theo MB
-      double sizeInMB =
-          BigDecimal.valueOf(data.length / 1024.0 / 1024.0)
-              .setScale(2, RoundingMode.HALF_UP)
-              .doubleValue();
-      Image image = Image.builder().id(imageId).type("image/png").size(sizeInMB).build();
-
-      imageRepository.save(image);
-
-      String url = "/api/public/images/" + image.getId();
-      return ImageResponse.builder().id(imageId).url(url).build();
-    } catch (IOException e) {
-      log.error("Cannot upload file: " + filePath);
-      log.error(e.getMessage());
-      throw new RuntimeException("Cannot upload file: " + filePath);
-    }
-  }
-
-  private void validateFile(MultipartFile file) {
-    // Kiểm tra tên file
-    String fileName = file.getOriginalFilename();
-    if (fileName == null || fileName.isEmpty()) {
-      throw new BadRequestException("File name không được để trống");
+        return images.stream().map(image -> new ImageResponse(image.getId(), image.getUrl())).toList();
     }
 
-    String fileExtension = getFileExtensiton(fileName);
-    if (!checkFileExtension(fileExtension)) {
-      throw new BadRequestException("File không đúng định dạng");
+    public ImageResponse uploadImage(MultipartFile file) {
+        User user = SecurityUtils.getCurrentUserLogin();
+        validateFile(file);
+
+        try {
+            // Upload ảnh lên S3 và lấy URL
+            String s3Url = s3Service.uploadImage(file);
+
+            String imageId = UUID.randomUUID().toString();
+
+            Image image =
+                    Image.builder()
+                            .id(imageId)
+                            .type(file.getContentType())
+                            .size(extractSize(file))
+                            .url(s3Url)
+                            .user(user)
+                            .build();
+
+            imageRepository.save(image);
+
+            return ImageResponse.builder().id(imageId).url(s3Url).build();
+        } catch (Exception e) {
+            log.error("Cannot upload file to S3: " + e.getMessage());
+            throw new RuntimeException("Cannot upload file: " + e.getMessage());
+        }
     }
 
-    // Kiểm tra dung lượng file (<= 2MB)
-    if (extractSize(file) > 2.0) {
-      throw new BadRequestException("File không được vượt quá 2MB");
-    }
-  }
+    public ImageResponse uploadQRCodeImage(byte[] data) {
+        String imageId = UUID.randomUUID().toString();
+        String fileName = imageId + ".png";
+        String contentType = "image/png";
 
-  private String getFileExtensiton(String fileName) {
-    int lastIndexOf = fileName.lastIndexOf(".");
-    return fileName.substring(lastIndexOf + 1);
-  }
+        try {
+            // Upload byte[] lên S3 (chuyển byte[] sang InputStream)
+            String s3Url = s3Service.uploadImage(fileName, data, contentType);
 
-  private boolean checkFileExtension(String fileExtension) {
-    List<String> extensions = new ArrayList<>(List.of("png", "jpg", "jpeg"));
-    return extensions.contains(fileExtension.toLowerCase());
-  }
+            // Tính kích thước file (MB)
+            double sizeInMB = BigDecimal.valueOf(data.length / 1024.0 / 1024.0)
+                    .setScale(2, RoundingMode.HALF_UP)
+                    .doubleValue();
 
-  // Tính toán kích thước của file
-  public double extractSize(MultipartFile file) {
-    long sizeInBytes = file.getSize();
+            Image image = Image.builder()
+                    .id(imageId)
+                    .type(contentType)
+                    .size(sizeInMB)
+                    .url(s3Url)
+                    .build();
 
-    // làm tròn 2 dấu phay động
-    return Math.round((double) sizeInBytes / (1024 * 1024) * 100) / 100.0;
-  }
+            imageRepository.save(image);
 
-  public Image getImageById(String id) {
-    return imageRepository.findById(id).orElse(null);
-  }
+            return ImageResponse.builder()
+                    .id(imageId)
+                    .url(s3Url)
+                    .build();
 
-  public byte[] getImageData(Image image) {
-    Path rootPath = Paths.get(uploadDir);
-    Path filePath = rootPath.resolve(image.getId());
-
-    try {
-      return Files.readAllBytes(filePath);
-    } catch (IOException e) {
-      log.error("Cannot read file: {}", filePath);
-      log.error(e.getMessage());
-      throw new RuntimeException("Cannot read file: " + filePath);
-    }
-  }
-
-  public void deleteImage(String imageId) {
-    User user = SecurityUtils.getCurrentUserLogin();
-    Image image =
-        imageRepository
-            .findById(imageId)
-            .orElseThrow(() -> new BadRequestException("Không tìm thấy ảnh"));
-
-    // Kiểm tra quyền sở hữu
-    if (!image.getUser().getId().equals(user.getId())) {
-      throw new BadRequestException("Bạn không có quyền xóa ảnh này");
+        } catch (Exception e) {
+            log.error("Cannot upload QR Code to S3: {}", e.getMessage());
+            throw new RuntimeException("Cannot upload QR Code to S3", e);
+        }
     }
 
-    // Xóa ảnh khỏi S3
-    try {
-      s3Service.deleteFileByUrl(image.getUrl());
-    } catch (Exception e) {
-      log.warn("Không thể xóa file từ S3: " + e.getMessage());
+    private void validateFile(MultipartFile file) {
+        // Kiểm tra tên file
+        String fileName = file.getOriginalFilename();
+        if (fileName == null || fileName.isEmpty()) {
+            throw new BadRequestException("File name không được để trống");
+        }
+
+        String fileExtension = getFileExtensiton(fileName);
+        if (!checkFileExtension(fileExtension)) {
+            throw new BadRequestException("File không đúng định dạng");
+        }
+
+        // Kiểm tra dung lượng file (<= 2MB)
+        if (extractSize(file) > 2.0) {
+            throw new BadRequestException("File không được vượt quá 2MB");
+        }
     }
 
-    // Xóa record khỏi database
-    imageRepository.delete(image);
-  }
+    private String getFileExtensiton(String fileName) {
+        int lastIndexOf = fileName.lastIndexOf(".");
+        return fileName.substring(lastIndexOf + 1);
+    }
+
+    private boolean checkFileExtension(String fileExtension) {
+        List<String> extensions = new ArrayList<>(List.of("png", "jpg", "jpeg"));
+        return extensions.contains(fileExtension.toLowerCase());
+    }
+
+    // Tính toán kích thước của file
+    public double extractSize(MultipartFile file) {
+        long sizeInBytes = file.getSize();
+
+        // làm tròn 2 dấu phay động
+        return Math.round((double) sizeInBytes / (1024 * 1024) * 100) / 100.0;
+    }
+
+    public Image getImageById(String id) {
+        return imageRepository.findById(id).orElse(null);
+    }
+
+//  public byte[] getImageData(Image image) {
+//    Path rootPath = Paths.get(uploadDir);
+//    Path filePath = rootPath.resolve(image.getId());
+//
+//    try {
+//      return Files.readAllBytes(filePath);
+//    } catch (IOException e) {
+//      log.error("Cannot read file: {}", filePath);
+//      log.error(e.getMessage());
+//      throw new RuntimeException("Cannot read file: " + filePath);
+//    }
+//  }
+
+    public void deleteImage(String imageId) {
+        User user = SecurityUtils.getCurrentUserLogin();
+        Image image =
+                imageRepository
+                        .findById(imageId)
+                        .orElseThrow(() -> new BadRequestException("Không tìm thấy ảnh"));
+
+        // Kiểm tra quyền sở hữu
+        if (!image.getUser().getId().equals(user.getId())) {
+            throw new BadRequestException("Bạn không có quyền xóa ảnh này");
+        }
+
+        // Xóa ảnh khỏi S3
+        try {
+            s3Service.deleteFileByUrl(image.getUrl());
+        } catch (Exception e) {
+            log.warn("Không thể xóa file từ S3: " + e.getMessage());
+        }
+
+        // Xóa record khỏi database
+        imageRepository.delete(image);
+    }
 }

@@ -3,6 +3,8 @@ package vn.edu.iuh.fit.controller;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import jakarta.servlet.http.HttpServletRequest;
 import java.io.IOException;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -21,6 +23,7 @@ import vn.edu.iuh.fit.entity.Order;
 import vn.edu.iuh.fit.model.enums.OrderStatus;
 import vn.edu.iuh.fit.model.request.CreateOrderRequest;
 import vn.edu.iuh.fit.model.response.PaymentResponse;
+import vn.edu.iuh.fit.repository.OrderRepository;
 import vn.edu.iuh.fit.service.OrderService;
 import vn.edu.iuh.fit.service.PayOSService;
 import vn.edu.iuh.fit.service.VNPayService;
@@ -33,6 +36,7 @@ public class OrderController {
   private final OrderService orderService;
   private final VNPayService vnPayService;
   private final PayOSService payOSService;
+  private final OrderRepository orderRepository;
 
   @Value("${app.frontend.host}")
   private String frontendHost;
@@ -59,74 +63,78 @@ public class OrderController {
     return ResponseEntity.ok(response);
   }
 
-  @GetMapping("/orders/vnpay-payment")
-  public ResponseEntity<?> GetMapping(HttpServletRequest request) throws Exception {
-    int paymentStatus = vnPayService.orderReturn(request);
+    @GetMapping("/orders/vnpay-payment")
+    public ResponseEntity<?> handleVnPayReturn(HttpServletRequest request) throws Exception {
+        int paymentStatus = vnPayService.orderReturn(request);
 
-    String orderInfo = request.getParameter("vnp_OrderInfo");
-    String paymentTime = request.getParameter("vnp_PayDate");
-    String transactionId = request.getParameter("vnp_TransactionNo");
-    String totalPrice = request.getParameter("vnp_Amount");
+        String orderInfo = request.getParameter("vnp_OrderInfo");
+        Integer orderId = Integer.valueOf(orderInfo);
 
-    if (paymentStatus == 1) {
-      orderService.updateOrderStatus(Integer.valueOf(orderInfo), OrderStatus.CONFIRMED);
-    } else {
-      orderService.updateOrderStatus(Integer.valueOf(orderInfo), OrderStatus.CANCELLED);
+        if (paymentStatus == 1) {
+            orderService.updateOrderStatus(orderId, OrderStatus.CONFIRMED);
+        } else {
+            orderService.updateOrderStatus(orderId, OrderStatus.CANCELLED);
+        }
+
+        String statusParam = paymentStatus == 1 ? "success" : "failed";
+
+        // Lấy order sau khi cập nhật để lấy pdfPath
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy order với id " + orderId));
+
+        String pdfUrl = order.getPdfPath() != null ? URLEncoder.encode(order.getPdfPath(), StandardCharsets.UTF_8) : "";
+
+        String redirectUrl = "%s:%s/thanh-toan-don-hang/%s?status=%s&pdfUrl=%s"
+                .formatted(frontendHost, frontendPort, orderId, statusParam, pdfUrl);
+
+        return ResponseEntity.status(HttpStatus.FOUND)
+                .header("Location", redirectUrl)
+                .build();
     }
 
-    String statusParam = paymentStatus == 1 ? "success" : "failed";
-    String redirectUrl =
-        "%s:%s/thanh-toan-don-hang/%s?status=%s"
-            .formatted(frontendHost, frontendPort, orderInfo, statusParam);
 
-    return ResponseEntity.status(HttpStatus.FOUND).header("Location", redirectUrl).build();
-  }
+    @GetMapping("/orders/payos-payment")
+    public ResponseEntity<?> handlePayOSReturn(HttpServletRequest request) throws Exception {
+        Map<String, String> params = new HashMap<>();
+        request.getParameterMap().forEach((k, v) -> params.put(k, v[0]));
 
-  @GetMapping("/orders/payos-payment")
-  public ResponseEntity<?> handlePayOSReturn(HttpServletRequest request) throws Exception {
-    Map<String, String> params = new HashMap<>();
-    request.getParameterMap().forEach((k, v) -> params.put(k, v[0]));
+        String orderCode = params.get("orderCode");
+        Integer orderId = Integer.valueOf(orderCode);
 
-    String orderCode = params.get("orderCode");
-    boolean valid = payOSService.verifyReturn(params);
+        boolean valid = payOSService.verifyReturn(params);
 
-    if (valid) {
-      orderService.updateOrderStatus(Integer.valueOf(orderCode), OrderStatus.CONFIRMED);
-    } else {
-      orderService.updateOrderStatus(Integer.valueOf(orderCode), OrderStatus.CANCELLED);
+        if (valid) {
+            orderService.updateOrderStatus(orderId, OrderStatus.CONFIRMED);
+        } else {
+            orderService.updateOrderStatus(orderId, OrderStatus.CANCELLED);
+        }
+
+        String statusParam = valid ? "success" : "failed";
+
+        // Lấy order sau khi cập nhật để lấy pdfPath
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy order với id " + orderId));
+
+        String pdfUrl = order.getPdfPath() != null ? URLEncoder.encode(order.getPdfPath(), StandardCharsets.UTF_8) : "";
+
+        String redirectUrl = "%s:%s/thanh-toan-don-hang/%s?status=%s&pdfUrl=%s"
+                .formatted(frontendHost, frontendPort, orderId, statusParam, pdfUrl);
+
+        return ResponseEntity.status(HttpStatus.FOUND)
+                .header("Location", redirectUrl)
+                .build();
     }
 
-    String statusParam = valid ? "success" : "failed";
-    String redirectUrl =
-        "%s:%s/thanh-toan-don-hang/%s?status=%s"
-            .formatted(frontendHost, frontendPort, orderCode, statusParam);
+    @GetMapping("/orders/{id}/pdf")
+    public ResponseEntity<String> getOrderPdf(@PathVariable Integer id) {
+        Order order = orderService.getOrderById(id);
+        if (order.getPdfPath() == null) {
+            return ResponseEntity.notFound().build();
+        }
 
-    return ResponseEntity.status(HttpStatus.FOUND).header("Location", redirectUrl).build();
-  }
-
-  @GetMapping("/orders/{id}/pdf")
-  public ResponseEntity<Resource> downloadOrderPdf(@PathVariable Integer id) throws IOException {
-    Order order = orderService.getOrderById(id);
-    if (order.getPdfPath() == null) {
-      return ResponseEntity.notFound().build();
+        String pdfUrl = order.getPdfPath();
+        return ResponseEntity.ok(pdfUrl);
     }
-
-    Path filePath = Paths.get(order.getPdfPath());
-    if (!Files.exists(filePath)) {
-      return ResponseEntity.notFound().build();
-    }
-
-    Resource resource = new UrlResource(filePath.toUri());
-    if (!resource.exists() || !resource.isReadable()) {
-      return ResponseEntity.status(500).build();
-    }
-
-    return ResponseEntity.ok()
-        .contentType(MediaType.APPLICATION_PDF)
-        .header(
-            "Content-Disposition", "inline; filename=\"" + filePath.getFileName().toString() + "\"")
-        .body(resource);
-  }
 
   @GetMapping("/admin/orders")
   public ResponseEntity<?> getAllOrders() {

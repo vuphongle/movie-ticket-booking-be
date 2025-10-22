@@ -27,16 +27,16 @@ public class ImageController {
     return new ResponseEntity<>(imageService.uploadImage(file), HttpStatus.CREATED);
   }
 
-  @GetMapping("/public/images/{id}")
-  public ResponseEntity<?> readImage(@PathVariable String id) {
-    Image image = imageService.getImageById(id);
-    if (image == null) {
-      return ResponseEntity.notFound().build();
-    }
-    return ResponseEntity.ok()
-        .contentType(MediaType.parseMediaType(image.getType()))
-        .body(imageService.getImageData(image));
-  }
+//  @GetMapping("/public/images/{id}")
+//  public ResponseEntity<?> readImage(@PathVariable String id) {
+//    Image image = imageService.getImageById(id);
+//    if (image == null) {
+//      return ResponseEntity.notFound().build();
+//    }
+//    return ResponseEntity.ok()
+//        .contentType(MediaType.parseMediaType(image.getType()))
+//        .body(imageService.getImageData(image));
+//  }
 
   @DeleteMapping("/admin/images/{id}")
   public ResponseEntity<?> deleteImage(@PathVariable String id) {

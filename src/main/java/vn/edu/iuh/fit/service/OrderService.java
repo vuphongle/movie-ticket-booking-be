@@ -158,174 +158,173 @@ public class OrderService {
     return PaymentResponse.builder().url(paymentUrl).build();
   }
 
-  @Transactional
-  public void updateOrderStatus(Integer orderId, OrderStatus status) throws Exception {
-    Order order =
-        orderRepository
-            .findById(orderId)
-            .orElseThrow(
-                () -> new ResourceNotFoundException("Không tìm thấy đơn hàng với id " + orderId));
-
-    // Ensure discount is never null
-    if (order.getDiscount() == null) {
-      order.setDiscount(0);
-    }
-
-    order.setStatus(status);
-
-    // Nếu thanh toán thành công, tạo QR code và đặt ghế
-    if (status == OrderStatus.CONFIRMED) {
-      String qrCodeContent = String.valueOf(order.getId());
-      byte[] qrCodeImage = qrCodeService.generateQRCodeImage(qrCodeContent, 400, 400);
-      ImageResponse imageResponse = imageService.uploadQRCodeImage(qrCodeImage);
-      order.setQrCodePath(imageResponse.getUrl());
-
-      // Cập nhật trạng thái ghế đã được đặt
-      Integer showtimeId = order.getShowtime().getId();
-      for (OrderTicketItem ticketItem : order.getTicketItems()) {
-        SeatReservation seatReservation =
-            seatReservationRepository
-                .findBySeat_IdAndShowtime_Id(ticketItem.getSeat().getId(), showtimeId)
-                .orElseThrow(
-                    () ->
-                        new ResourceNotFoundException(
-                            "Không tìm thấy vé với id " + ticketItem.getSeat().getId()));
-        seatReservation.setStatus(SeatReservationStatus.BOOKED);
-        seatReservationRepository.save(seatReservation);
-      }
-
-      // Cập nhật số lượng đã dùng của coupon
-      if (order.getDiscount() > 0 && order.getRequestSnapshot() != null) {
-        try {
-          ObjectMapper objectMapper = new ObjectMapper();
-          CreateOrderRequest originalRequest =
-              objectMapper.readValue(order.getRequestSnapshot(), CreateOrderRequest.class);
-
-          log.info("Original request discounts: {}", originalRequest.getDiscounts().getCoupons());
-
-          if (originalRequest.getDiscounts() != null
-              && originalRequest.getDiscounts().getCoupons() != null) {
-            for (CouponDetailRequest couponRequest : originalRequest.getDiscounts().getCoupons()) {
-              if (couponRequest.getDetailId() != null) {
-                CouponDetailTerms term =
-                    couponDetailTermRepository
-                        .findById(couponRequest.getDetailId())
+    @Transactional
+    public void updateOrderStatus(Integer orderId, OrderStatus status) throws Exception {
+        Order order =
+                orderRepository
+                        .findById(orderId)
                         .orElseThrow(
-                            () ->
-                                new ResourceNotFoundException(
-                                    "Không tìm thấy điều kiện coupon với id "
-                                        + couponRequest.getDetailId()));
-                // Tăng số lượng đã dùng
-                log.info(
-                    "Cập nhật coupon detail id {}: current used count = {}, increment by 1",
-                    term.getId(),
-                    term.getDetailUsedCount());
-                term.setDetailUsedCount(term.getDetailUsedCount() + 1);
-                couponDetailTermRepository.save(term);
-              }
-            }
-          }
-        } catch (Exception e) {
-          log.error("Lỗi khi đọc requestSnapshot để cập nhật coupon usage: {}", e.getMessage());
+                                () -> new ResourceNotFoundException("Không tìm thấy đơn hàng với id " + orderId));
+
+        // Ensure discount is never null
+        if (order.getDiscount() == null) {
+            order.setDiscount(0);
         }
-      }
 
-      // Cập nhật lại kho hàng cho các sản phẩm trong dịch vụ kèm theo
-      for (OrderServiceItem serviceItem : order.getServiceItems()) {
-        AdditionalService additionalService = serviceItem.getAdditionalService();
-        int orderedQty = serviceItem.getQuantity();
+        order.setStatus(status);
 
-        if (additionalService.getType() == AdditionalServiceType.COMBO) {
-          List<AdditionalServiceItem> items =
-              additionalServiceItemRepository.findByAdditionalServiceId(additionalService.getId());
+        // Nếu thanh toán thành công, tạo QR code và đặt ghế
+        if (status == OrderStatus.CONFIRMED) {
+            String qrCodeContent = String.valueOf(order.getId());
+            byte[] qrCodeImage = qrCodeService.generateQRCodeImage(qrCodeContent, 400, 400);
+            ImageResponse imageResponse = imageService.uploadQRCodeImage(qrCodeImage);
+            order.setQrCodePath(imageResponse.getUrl());
 
-          for (AdditionalServiceItem item : items) {
-            Product product = item.getProduct();
-            if (product.getQuantity() != null) {
-              int totalUsed = item.getQuantity() * orderedQty;
-              int newStock = product.getQuantity() - totalUsed;
-              product.setQuantity(Math.max(newStock, 0));
-              productRepository.save(product);
-
-              log.info(
-                  "Cập nhật kho sản phẩm id {}: trừ {} => new stock = {}",
-                  product.getId(),
-                  totalUsed,
-                  product.getQuantity());
+            // Cập nhật trạng thái ghế đã được đặt
+            Integer showtimeId = order.getShowtime().getId();
+            for (OrderTicketItem ticketItem : order.getTicketItems()) {
+                SeatReservation seatReservation =
+                        seatReservationRepository
+                                .findBySeat_IdAndShowtime_Id(ticketItem.getSeat().getId(), showtimeId)
+                                .orElseThrow(
+                                        () ->
+                                                new ResourceNotFoundException(
+                                                        "Không tìm thấy vé với id " + ticketItem.getSeat().getId()));
+                seatReservation.setStatus(SeatReservationStatus.BOOKED);
+                seatReservationRepository.save(seatReservation);
             }
-          }
-        } else if (additionalService.getType() == AdditionalServiceType.SINGLE) {
-          if (additionalService.getProductId() != null) {
-            Product product =
-                productRepository
-                    .findById(additionalService.getProductId())
-                    .orElseThrow(
-                        () ->
-                            new ResourceNotFoundException(
-                                "Không tìm thấy product với id "
-                                    + additionalService.getProductId()));
-            if (product.getQuantity() != null) {
-              int newStock = product.getQuantity() - orderedQty;
-              product.setQuantity(Math.max(newStock, 0));
-              productRepository.save(product);
 
-              log.info(
-                  "Cập nhật kho sản phẩm id {} (SINGLE): trừ {} => new stock = {}",
-                  product.getId(),
-                  orderedQty,
-                  product.getQuantity());
+            // Cập nhật số lượng đã dùng của coupon
+            if (order.getDiscount() > 0 && order.getRequestSnapshot() != null) {
+                try {
+                    ObjectMapper objectMapper = new ObjectMapper();
+                    CreateOrderRequest originalRequest =
+                            objectMapper.readValue(order.getRequestSnapshot(), CreateOrderRequest.class);
+
+                    log.info("Original request discounts: {}", originalRequest.getDiscounts().getCoupons());
+
+                    if (originalRequest.getDiscounts() != null
+                            && originalRequest.getDiscounts().getCoupons() != null) {
+                        for (CouponDetailRequest couponRequest : originalRequest.getDiscounts().getCoupons()) {
+                            if (couponRequest.getDetailId() != null) {
+                                CouponDetailTerms term =
+                                        couponDetailTermRepository
+                                                .findById(couponRequest.getDetailId())
+                                                .orElseThrow(
+                                                        () ->
+                                                                new ResourceNotFoundException(
+                                                                        "Không tìm thấy điều kiện coupon với id "
+                                                                                + couponRequest.getDetailId()));
+                                // Tăng số lượng đã dùng
+                                log.info(
+                                        "Cập nhật coupon detail id {}: current used count = {}, increment by 1",
+                                        term.getId(),
+                                        term.getDetailUsedCount());
+                                term.setDetailUsedCount(term.getDetailUsedCount() + 1);
+                                couponDetailTermRepository.save(term);
+                            }
+                        }
+                    }
+                } catch (Exception e) {
+                    log.error("Lỗi khi đọc requestSnapshot để cập nhật coupon usage: {}", e.getMessage());
+                }
             }
-          }
+
+            // Cập nhật lại kho hàng cho các sản phẩm trong dịch vụ kèm theo
+            for (OrderServiceItem serviceItem : order.getServiceItems()) {
+                AdditionalService additionalService = serviceItem.getAdditionalService();
+                int orderedQty = serviceItem.getQuantity();
+
+                if (additionalService.getType() == AdditionalServiceType.COMBO) {
+                    List<AdditionalServiceItem> items =
+                            additionalServiceItemRepository.findByAdditionalServiceId(additionalService.getId());
+
+                    for (AdditionalServiceItem item : items) {
+                        Product product = item.getProduct();
+                        if (product.getQuantity() != null) {
+                            int totalUsed = item.getQuantity() * orderedQty;
+                            int newStock = product.getQuantity() - totalUsed;
+                            product.setQuantity(Math.max(newStock, 0));
+                            productRepository.save(product);
+
+                            log.info(
+                                    "Cập nhật kho sản phẩm id {}: trừ {} => new stock = {}",
+                                    product.getId(),
+                                    totalUsed,
+                                    product.getQuantity());
+                        }
+                    }
+                } else if (additionalService.getType() == AdditionalServiceType.SINGLE) {
+                    if (additionalService.getProductId() != null) {
+                        Product product =
+                                productRepository
+                                        .findById(additionalService.getProductId())
+                                        .orElseThrow(
+                                                () ->
+                                                        new ResourceNotFoundException(
+                                                                "Không tìm thấy product với id "
+                                                                        + additionalService.getProductId()));
+                        if (product.getQuantity() != null) {
+                            int newStock = product.getQuantity() - orderedQty;
+                            product.setQuantity(Math.max(newStock, 0));
+                            productRepository.save(product);
+
+                            log.info(
+                                    "Cập nhật kho sản phẩm id {} (SINGLE): trừ {} => new stock = {}",
+                                    product.getId(),
+                                    orderedQty,
+                                    product.getQuantity());
+                        }
+                    }
+                }
+            }
+
+            // --- Force load các collection để tránh LazyInitializationException ---
+            order.getServiceItems().size();
+            order.getTicketItems().size();
+
+            String qrCodeBase64 = Base64.getEncoder().encodeToString(qrCodeImage);
+            String pdfUrl = pdfService.generateOrderPdfToS3(order, qrCodeBase64);
+            order.setPdfPath(pdfUrl);
+            orderRepository.save(order);
+
+            // --- Gửi email vé điện tử ---
+            Map<String, Object> mailData = new HashMap<>();
+            mailData.put("order", order);
+            mailData.put("user", order.getUser());
+            // Trích xuất thông tin coupon và quà tặng (nếu có)
+            if (order.getRequestSnapshot() != null) {
+                try {
+                    ObjectMapper objectMapper = new ObjectMapper();
+                    CreateOrderRequest request =
+                            objectMapper.readValue(order.getRequestSnapshot(), CreateOrderRequest.class);
+
+                    if (request.getDiscounts() != null && request.getDiscounts().getCoupons() != null) {
+                        mailData.put("coupons", request.getDiscounts().getCoupons());
+                        log.info("Gửi email với thông tin coupon: {}", request.getDiscounts().getCoupons());
+                    }
+                } catch (Exception e) {
+                    log.error("Lỗi khi đọc thông tin coupon từ requestSnapshot: {}", e.getMessage());
+                }
+            }
+            mailService.sendMailConfirmOrder(mailData, qrCodeImage);
         }
-      }
+        // Nếu hủy thanh toán, Xóa trạng thái ghế đang held
+        else if (status == OrderStatus.CANCELLED) {
+            Integer showtimeId = order.getShowtime().getId();
+            // Xóa các vé đã đặt
+            for (OrderTicketItem ticketItem : order.getTicketItems()) {
+                seatReservationRepository
+                        .findBySeat_IdAndShowtime_Id(ticketItem.getSeat().getId(), showtimeId)
+                        .ifPresent(seatReservationRepository::delete);
+            }
 
-      // --- Force load các collection để tránh LazyInitializationException ---
-      order.getServiceItems().size();
-      order.getTicketItems().size();
-
-      String qrCodeBase64 = Base64.getEncoder().encodeToString(qrCodeImage);
-      String pdfPath = pdfService.generateOrderPdf(order, qrCodeBase64);
-      order.setPdfPath(pdfPath);
-      orderRepository.save(order);
-
-      // --- Gửi email vé điện tử ---
-      Map<String, Object> mailData = new HashMap<>();
-      mailData.put("order", order);
-      mailData.put("user", order.getUser());
-      // Trích xuất thông tin coupon và quà tặng (nếu có)
-      if (order.getRequestSnapshot() != null) {
-        try {
-          ObjectMapper objectMapper = new ObjectMapper();
-          CreateOrderRequest request =
-              objectMapper.readValue(order.getRequestSnapshot(), CreateOrderRequest.class);
-
-          if (request.getDiscounts() != null && request.getDiscounts().getCoupons() != null) {
-            mailData.put("coupons", request.getDiscounts().getCoupons());
-            log.info("Gửi email với thông tin coupon: {}", request.getDiscounts().getCoupons());
-          }
-        } catch (Exception e) {
-          log.error("Lỗi khi đọc thông tin coupon từ requestSnapshot: {}", e.getMessage());
+            // Không tạo QR code khi hủy
+            order.setQrCodePath(null);
         }
-      }
 
-      mailService.sendMailConfirmOrder(mailData, qrCodeImage);
+        orderRepository.save(order);
     }
-    // Nếu hủy thanh toán, Xóa trạng thái ghế đang held
-    else if (status == OrderStatus.CANCELLED) {
-      Integer showtimeId = order.getShowtime().getId();
-      // Xóa các vé đã đặt
-      for (OrderTicketItem ticketItem : order.getTicketItems()) {
-        seatReservationRepository
-            .findBySeat_IdAndShowtime_Id(ticketItem.getSeat().getId(), showtimeId)
-            .ifPresent(seatReservationRepository::delete);
-      }
-
-      // Không tạo QR code khi hủy
-      order.setQrCodePath(null);
-    }
-
-    orderRepository.save(order);
-  }
 
   // Generate order id has 8 digits
   private Integer generateOrderId() {
