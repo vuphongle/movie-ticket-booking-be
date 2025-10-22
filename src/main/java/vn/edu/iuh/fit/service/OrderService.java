@@ -79,29 +79,41 @@ public class OrderService {
             discountValue = request.getDiscounts().getTotalDiscount();
         }
 
-        Order order =
-                Order.builder()
-                        .id(generateOrderId())
-                        .user(currentUser)
-                        .showtime(showtime)
-                        .status(OrderStatus.PENDING)
-                        .discount(discountValue)
-                        .ticketItems(new ArrayList<>())
-                        .serviceItems(new ArrayList<>())
-                        .requestSnapshot(objectMapper.writeValueAsString(request))
-                        .build();
+    Order savedOrder = orderRepository.save(order);
 
-        for (CreateOrderRequest.TicketItem ticketItem : request.getTicketItems()) {
-            Seat seat =
-                    seatRepository
-                            .findById(ticketItem.getSeatId())
-                            .orElseThrow(
-                                    () ->
-                                            new ResourceNotFoundException(
-                                                    "Không tìm thấy ghế với id " + ticketItem.getSeatId()));
-            order.addTicketItem(
-                    OrderTicketItem.builder().seat(seat).price(ticketItem.getPrice()).build());
-        }
+    log.info(
+        "Order created with ID: {}, Total Price: {}, Discount: {}",
+        savedOrder.getId(),
+        savedOrder.getTotalPrice(),
+        request.getDiscounts().getTotalDiscount());
+    String paymentUrl;
+    int expireSeconds = (request.getExpireSeconds() != null) ? request.getExpireSeconds() : 600;
+
+    // Build return URL - nếu backendExposePort rỗng hoặc null thì không thêm port (production)
+    String baseUrl =
+        (backendExposePort != null && !backendExposePort.trim().isEmpty())
+            ? "%s:%s".formatted(backendHost, backendExposePort)
+            : backendHost;
+
+    if ("VNPAY".equalsIgnoreCase(paymentMethod)) {
+      String returnUrl = "%s/api/orders/vnpay-payment".formatted(baseUrl);
+      paymentUrl =
+          vnpayService.createOrder(
+              savedOrder.getTotalPrice(),
+              String.valueOf(savedOrder.getId()),
+              returnUrl,
+              expireSeconds);
+    } else if ("PAYOS".equalsIgnoreCase(paymentMethod)) {
+      String returnUrl = "%s/api/orders/payos-payment".formatted(baseUrl);
+      paymentUrl =
+          payOSService.createOrder(
+              savedOrder.getTotalPrice(),
+              String.valueOf(savedOrder.getId()),
+              returnUrl,
+              expireSeconds);
+    } else {
+      throw new IllegalArgumentException("Unknown payment method: " + paymentMethod);
+    }
 
         if (request.getServiceItems() != null) {
             for (CreateOrderRequest.ServiceItem serviceItem : request.getServiceItems()) {
@@ -155,11 +167,59 @@ public class OrderService {
         return PaymentResponse.builder().url(paymentUrl).build();
     }
 
-    @Transactional
-    public void updateOrderStatus(Integer orderId, OrderStatus status) throws Exception {
-        Order order =
-                orderRepository
-                        .findById(orderId)
+    // IDEMPOTENCY CHECK: Nếu order đã có status này rồi, skip xử lý để tránh duplicate
+    if (order.getStatus() == status) {
+      log.info("Order {} already has status {}, skipping duplicate processing", orderId, status);
+      return;
+    }
+
+    // Kiểm tra transition hợp lệ: chỉ cho phép PENDING -> CONFIRMED hoặc PENDING -> CANCELLED
+    if (order.getStatus() == OrderStatus.CONFIRMED) {
+      log.warn(
+          "Order {} is already CONFIRMED, cannot change to {}. Ignoring update.", orderId, status);
+      return;
+    }
+
+    log.info("Updating order {} status from {} to {}", orderId, order.getStatus(), status);
+    order.setStatus(status);
+
+    // Nếu thanh toán thành công, tạo QR code và đặt ghế
+    if (status == OrderStatus.CONFIRMED) {
+      String qrCodeContent = String.valueOf(order.getId());
+      byte[] qrCodeImage = qrCodeService.generateQRCodeImage(qrCodeContent, 400, 400);
+      ImageResponse imageResponse = imageService.uploadQRCodeImage(qrCodeImage);
+      order.setQrCodePath(imageResponse.getUrl());
+
+      // Cập nhật trạng thái ghế đã được đặt
+      Integer showtimeId = order.getShowtime().getId();
+      for (OrderTicketItem ticketItem : order.getTicketItems()) {
+        SeatReservation seatReservation =
+            seatReservationRepository
+                .findBySeat_IdAndShowtime_Id(ticketItem.getSeat().getId(), showtimeId)
+                .orElseThrow(
+                    () ->
+                        new ResourceNotFoundException(
+                            "Không tìm thấy vé với id " + ticketItem.getSeat().getId()));
+        seatReservation.setStatus(SeatReservationStatus.BOOKED);
+        seatReservationRepository.save(seatReservation);
+      }
+
+      // Cập nhật số lượng đã dùng của coupon
+      if (order.getDiscount() > 0 && order.getRequestSnapshot() != null) {
+        try {
+          ObjectMapper objectMapper = new ObjectMapper();
+          CreateOrderRequest originalRequest =
+              objectMapper.readValue(order.getRequestSnapshot(), CreateOrderRequest.class);
+
+          log.info("Original request discounts: {}", originalRequest.getDiscounts().getCoupons());
+
+          if (originalRequest.getDiscounts() != null
+              && originalRequest.getDiscounts().getCoupons() != null) {
+            for (CouponDetailRequest couponRequest : originalRequest.getDiscounts().getCoupons()) {
+              if (couponRequest.getDetailId() != null) {
+                CouponDetailTerms term =
+                    couponDetailTermRepository
+                        .findById(couponRequest.getDetailId())
                         .orElseThrow(
                                 () -> new ResourceNotFoundException("Không tìm thấy đơn hàng với id " + orderId));
 

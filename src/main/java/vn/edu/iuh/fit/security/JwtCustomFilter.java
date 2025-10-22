@@ -32,6 +32,12 @@ public class JwtCustomFilter extends OncePerRequestFilter {
       return;
     }
 
+    // Skip JWT filter for PayOS webhook endpoint
+    if (request.getRequestURI().equals("/api/payos-webhook")) {
+      filterChain.doFilter(request, response);
+      return;
+    }
+
     String authHeader = request.getHeader("Authorization");
     if (authHeader == null || !authHeader.contains("Bearer ")) {
       filterChain.doFilter(request, response);
