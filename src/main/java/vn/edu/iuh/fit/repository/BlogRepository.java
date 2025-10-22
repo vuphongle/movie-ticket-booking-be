@@ -33,4 +33,8 @@ public interface BlogRepository extends JpaRepository<Blog, Integer> {
   @Query(
       "select new vn.edu.iuh.fit.model.dto.BlogViewDto(b.id, b.title, count(vh.id)) from Blog b join ViewHistory vh on b.id = vh.blog.id where vh.viewedAt between ?1 and ?2 group by b.id order by sum(vh.id) desc")
   List<BlogViewDto> findTopViewBlogs(LocalDateTime start, LocalDateTime end);
+
+  List<Blog> findByOrderByCreatedAtDesc();
+
+  List<Blog> findByUser_IdOrderByCreatedAtDesc(Integer id);
 }
