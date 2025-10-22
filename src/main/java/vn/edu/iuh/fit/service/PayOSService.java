@@ -73,9 +73,12 @@ public class PayOSService {
     try {
       PayOS payOS = payOSConfig.payOSClient();
 
+      // Parse webhook body thành Webhook object
+      vn.payos.type.Webhook webhook =
+          objectMapper.readValue(requestBody, vn.payos.type.Webhook.class);
+
       // Sử dụng PayOS SDK để verify webhook
-      // PayOS SDK có method verifyPaymentWebhookData
-      vn.payos.type.WebhookData webhookData = payOS.verifyPaymentWebhookData(requestBody);
+      vn.payos.type.WebhookData webhookData = payOS.verifyPaymentWebhookData(webhook);
 
       // Nếu verify thành công, webhookData sẽ không null
       if (webhookData != null) {
