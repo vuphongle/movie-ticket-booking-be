@@ -66,36 +66,27 @@ public class PayOSService {
   }
 
   /**
-   * Xác minh webhook signature từ PayOS. PayOS gửi signature trong webhook body, và tính signature
-   * dựa trên data WITHOUT signature field
+   * Xác minh webhook signature từ PayOS sử dụng PayOS SDK PayOS tính signature theo format: sort
+   * keys → convert to query string → HMAC SHA256
    */
   public boolean verifyWebhookSignature(String signature, String requestBody) {
     try {
-      // Parse webhook body and remove signature field before computing HMAC
-      JsonNode rootNode = objectMapper.readTree(requestBody);
+      PayOS payOS = payOSConfig.payOSClient();
 
-      // Create a copy without signature field
-      if (rootNode instanceof com.fasterxml.jackson.databind.node.ObjectNode) {
-        com.fasterxml.jackson.databind.node.ObjectNode objectNode =
-            (com.fasterxml.jackson.databind.node.ObjectNode) rootNode;
-        objectNode.remove("signature");
+      // Sử dụng PayOS SDK để verify webhook
+      // PayOS SDK có method verifyPaymentWebhookData
+      vn.payos.type.WebhookData webhookData = payOS.verifyPaymentWebhookData(requestBody);
 
-        // Convert back to string for HMAC computation
-        String dataWithoutSignature = objectMapper.writeValueAsString(objectNode);
-        log.info("Data for signature verification: {}", dataWithoutSignature);
-
-        String computedSignature = computeHmacSha256(dataWithoutSignature, checksumKey);
-        log.info("Computed signature: {}", computedSignature);
-        log.info("Received signature: {}", signature);
-
-        boolean isValid = computedSignature.equalsIgnoreCase(signature);
-        log.info("Webhook signature verification: {}", isValid ? "VALID" : "INVALID");
-        return isValid;
+      // Nếu verify thành công, webhookData sẽ không null
+      if (webhookData != null) {
+        log.info("Webhook signature verification: VALID");
+        return true;
+      } else {
+        log.warn("Webhook signature verification: INVALID");
+        return false;
       }
-
-      return false;
     } catch (Exception e) {
-      log.error("Error verifying webhook signature", e);
+      log.error("Error verifying webhook signature: {}", e.getMessage());
       return false;
     }
   }
