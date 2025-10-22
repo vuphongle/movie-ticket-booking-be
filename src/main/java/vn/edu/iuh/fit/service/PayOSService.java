@@ -65,13 +65,35 @@ public class PayOSService {
     }
   }
 
-  /** Xác minh webhook signature từ PayOS PayOS gửi signature trong header "x-payos-signature" */
+  /**
+   * Xác minh webhook signature từ PayOS. PayOS gửi signature trong webhook body, và tính signature
+   * dựa trên data WITHOUT signature field
+   */
   public boolean verifyWebhookSignature(String signature, String requestBody) {
     try {
-      String computedSignature = computeHmacSha256(requestBody, checksumKey);
-      boolean isValid = computedSignature.equalsIgnoreCase(signature);
-      log.info("Webhook signature verification: {}", isValid ? "VALID" : "INVALID");
-      return isValid;
+      // Parse webhook body and remove signature field before computing HMAC
+      JsonNode rootNode = objectMapper.readTree(requestBody);
+
+      // Create a copy without signature field
+      if (rootNode instanceof com.fasterxml.jackson.databind.node.ObjectNode) {
+        com.fasterxml.jackson.databind.node.ObjectNode objectNode =
+            (com.fasterxml.jackson.databind.node.ObjectNode) rootNode;
+        objectNode.remove("signature");
+
+        // Convert back to string for HMAC computation
+        String dataWithoutSignature = objectMapper.writeValueAsString(objectNode);
+        log.info("Data for signature verification: {}", dataWithoutSignature);
+
+        String computedSignature = computeHmacSha256(dataWithoutSignature, checksumKey);
+        log.info("Computed signature: {}", computedSignature);
+        log.info("Received signature: {}", signature);
+
+        boolean isValid = computedSignature.equalsIgnoreCase(signature);
+        log.info("Webhook signature verification: {}", isValid ? "VALID" : "INVALID");
+        return isValid;
+      }
+
+      return false;
     } catch (Exception e) {
       log.error("Error verifying webhook signature", e);
       return false;
