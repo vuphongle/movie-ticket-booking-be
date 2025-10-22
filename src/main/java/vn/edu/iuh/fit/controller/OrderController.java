@@ -1,6 +1,7 @@
 package vn.edu.iuh.fit.controller;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
 import jakarta.servlet.http.HttpServletRequest;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
@@ -132,19 +133,22 @@ public class OrderController {
    */
   @PostMapping("/payos-webhook")
   public ResponseEntity<?> handlePayOSWebhook(
-      @RequestHeader(value = "x-payos-signature", required = false) String signature,
-      @RequestHeader Map<String, String> headers,
+      @RequestHeader(value = "x-payos-signature", required = false) String headerSignature,
       @RequestBody String webhookBody) {
 
     log.info("Received PayOS webhook");
-    log.info("All headers: {}", headers);
     log.info("Webhook body: {}", webhookBody);
-    log.info("Signature header: {}", signature);
 
     try {
+      // Parse webhook body to get signature
+      JsonNode rootNode = new com.fasterxml.jackson.databind.ObjectMapper().readTree(webhookBody);
+      String signature = rootNode.path("signature").asText();
+
+      log.info("Signature from body: {}", signature);
+
       // 1. Verify webhook signature
       if (signature == null || signature.isEmpty()) {
-        log.warn("Missing webhook signature");
+        log.warn("Missing webhook signature in body");
         return ResponseEntity.ok().body(Map.of("error", "Missing signature", "success", false));
       }
 
