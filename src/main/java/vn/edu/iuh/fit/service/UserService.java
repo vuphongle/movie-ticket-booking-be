@@ -83,16 +83,52 @@ public class UserService {
   }
 
   public List<User> getAllUsers() {
-    return userRepository.findAll(Sort.by("createdAt").descending());
+    User currentUser = SecurityUtils.getCurrentUserLogin();
+    List<User> users = userRepository.findAll(Sort.by("createdAt").descending());
+
+    // Loại bỏ bản thân
+    users = users.stream().filter(user -> !user.getId().equals(currentUser.getId())).toList();
+
+    // Nếu là ADMIN, không xem được SUPER_ADMIN
+    if (currentUser.getRole() == vn.edu.iuh.fit.model.enums.UserRole.ADMIN) {
+      users =
+          users.stream()
+              .filter(user -> user.getRole() != vn.edu.iuh.fit.model.enums.UserRole.SUPER_ADMIN)
+              .toList();
+    }
+
+    return users;
   }
 
   public User getUserById(Integer id) {
-    return userRepository
-        .findById(id)
-        .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy user có id = " + id));
+    User currentUser = SecurityUtils.getCurrentUserLogin();
+    User targetUser =
+        userRepository
+            .findById(id)
+            .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy user có id = " + id));
+
+    // Nếu là ADMIN, không được xem thông tin của ADMIN hoặc SUPER_ADMIN
+    if (currentUser.getRole() == vn.edu.iuh.fit.model.enums.UserRole.ADMIN) {
+      if (targetUser.getRole() == vn.edu.iuh.fit.model.enums.UserRole.ADMIN
+          || targetUser.getRole() == vn.edu.iuh.fit.model.enums.UserRole.SUPER_ADMIN) {
+        throw new BadRequestException("Bạn không có quyền xem thông tin của tài khoản này");
+      }
+    }
+
+    return targetUser;
   }
 
   public User createUser(CreateUserRequest request) {
+    User currentUser = SecurityUtils.getCurrentUserLogin();
+
+    // Kiểm tra quyền tạo user
+    if (currentUser.getRole() == vn.edu.iuh.fit.model.enums.UserRole.ADMIN) {
+      // ADMIN chỉ được tạo USER
+      if (request.getRole() != vn.edu.iuh.fit.model.enums.UserRole.USER) {
+        throw new BadRequestException("Bạn không có quyền tạo tài khoản ADMIN hoặc SUPER_ADMIN");
+      }
+    }
+
     if (userRepository.findByEmail(request.getEmail()).isPresent()) {
       throw new BadRequestException("Email đã tồn tại");
     }
@@ -111,14 +147,32 @@ public class UserService {
   }
 
   public User updateUser(Integer id, UpdateUserRequest request) {
+    User currentUser = SecurityUtils.getCurrentUserLogin();
     User existingUser =
         userRepository
             .findById(id)
             .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy user có id = " + id));
 
+    // Kiểm tra quyền chỉnh sửa
+    if (currentUser.getRole() == vn.edu.iuh.fit.model.enums.UserRole.ADMIN) {
+      // ADMIN không được chỉnh sửa ADMIN hoặc SUPER_ADMIN
+      if (existingUser.getRole() == vn.edu.iuh.fit.model.enums.UserRole.ADMIN
+          || existingUser.getRole() == vn.edu.iuh.fit.model.enums.UserRole.SUPER_ADMIN) {
+        throw new BadRequestException(
+            "Bạn không có quyền chỉnh sửa tài khoản ADMIN hoặc SUPER_ADMIN");
+      }
+
+      // ADMIN không được đổi role của user
+      if (request.getRole() != null && !request.getRole().equals(existingUser.getRole())) {
+        throw new BadRequestException("Bạn không có quyền thay đổi quyền của user");
+      }
+    }
+
     existingUser.setName(request.getName());
     existingUser.setPhone(request.getPhone());
-    existingUser.setRole(request.getRole());
+    if (request.getRole() != null) {
+      existingUser.setRole(request.getRole());
+    }
     existingUser.setAvatar(request.getAvatar());
     existingUser.setEnabled(request.getEnabled());
     return userRepository.save(existingUser);
