@@ -83,9 +83,15 @@ public class OrderController {
             ? URLEncoder.encode(order.getPdfPath(), StandardCharsets.UTF_8)
             : "";
 
+    // Build frontend URL - không thêm port nếu frontendPort rỗng (production)
+    String frontendBaseUrl =
+        (frontendPort != null && !frontendPort.trim().isEmpty())
+            ? "%s:%s".formatted(frontendHost, frontendPort)
+            : frontendHost;
+
     String redirectUrl =
-        "%s:%s/thanh-toan-don-hang/%s?status=%s&pdfUrl=%s"
-            .formatted(frontendHost, frontendPort, orderId, statusParam, pdfUrl);
+        "%s/thanh-toan-don-hang/%s?status=%s&pdfUrl=%s"
+            .formatted(frontendBaseUrl, orderId, statusParam, pdfUrl);
 
     return ResponseEntity.status(HttpStatus.FOUND).header("Location", redirectUrl).build();
   }
@@ -119,9 +125,15 @@ public class OrderController {
             ? URLEncoder.encode(order.getPdfPath(), StandardCharsets.UTF_8)
             : "";
 
+    // Build frontend URL - không thêm port nếu frontendPort rỗng (production)
+    String frontendBaseUrl =
+        (frontendPort != null && !frontendPort.trim().isEmpty())
+            ? "%s:%s".formatted(frontendHost, frontendPort)
+            : frontendHost;
+
     String redirectUrl =
-        "%s:%s/thanh-toan-don-hang/%s?status=%s&pdfUrl=%s"
-            .formatted(frontendHost, frontendPort, orderId, statusParam, pdfUrl);
+        "%s/thanh-toan-don-hang/%s?status=%s&pdfUrl=%s"
+            .formatted(frontendBaseUrl, orderId, statusParam, pdfUrl);
 
     return ResponseEntity.status(HttpStatus.FOUND).header("Location", redirectUrl).build();
   }
