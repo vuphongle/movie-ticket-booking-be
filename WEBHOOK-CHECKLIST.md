@@ -10,10 +10,12 @@
 ## 🔧 NHỮNG GÌ ĐÃ SỬA (Vừa xong)
 
 ### 1. ✅ SecurityConfig.java - CRITICAL
+
 **Vấn đề:** Webhook bị block 401/403  
 **Đã sửa:** Thêm `.requestMatchers("/api/payos-webhook").permitAll()`
 
 ### 2. ✅ .env file
+
 **Vấn đề:** Thiếu PAYOS_WEBHOOK_URL  
 **Đã sửa:** Thêm `PAYOS_WEBHOOK_URL=http://localhost:8080/api/payos-webhook`
 
@@ -53,7 +55,7 @@ nano .env
 # 8. Monitor logs
 tail -f logs/application.log | grep webhook
 
-# 9. TEST THẬT: 
+# 9. TEST THẬT:
 # - Tạo order mới
 # - Thanh toán PayOS
 # - ĐÓNG TAB ngay
@@ -93,14 +95,16 @@ docker-compose logs -f backend | grep webhook
 ## 🧪 CÁCH VERIFY WEBHOOK HOẠT ĐỘNG
 
 ### Logs phải có:
+
 ```log
 ✅ INFO - Received PayOS webhook
-✅ INFO - Webhook signature verification: VALID  
+✅ INFO - Webhook signature verification: VALID
 ✅ INFO - Processing PayOS webhook - OrderCode: 123, Status: PAID
 ✅ INFO - Updating order 123 to CONFIRMED via webhook
 ```
 
 ### Nếu thấy:
+
 ```log
 ❌ "Missing webhook signature" → Check ngrok/nginx forward header
 ❌ "Invalid webhook signature" → Check PAYOS_CHECKSUM_KEY
@@ -140,6 +144,7 @@ docker-compose logs -f backend | grep webhook
 → Chạy local test với ngrok (OPTION 1 ở trên)
 
 **Files cần đọc:**
+
 1. File này (quick overview)
 2. `WEBHOOK-STATUS-AND-NEXT-STEPS.md` (chi tiết)
 3. `docs/PAYOS-WEBHOOK-QUICKSTART.md` (step-by-step)

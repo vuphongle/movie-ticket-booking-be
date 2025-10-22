@@ -14,6 +14,7 @@ TTL: Auto (hoặc 300)
 ```
 
 **Kiểm tra:** Sau 2-5 phút, test:
+
 ```bash
 dig +short api.gocinema.io.vn
 # Phải trả về: 159.223.38.127

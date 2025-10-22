@@ -18,6 +18,7 @@ TTL: 300 (hoặc Auto)
 Sau khi thêm, đợi 1-5 phút để DNS propagate.
 
 **Verify DNS:**
+
 ```bash
 # Trên máy local
 dig +short api.gocinema.io.vn
@@ -305,15 +306,15 @@ server {
     location /api/ {
         proxy_pass http://localhost:8080/api/;
         proxy_http_version 1.1;
-        
+
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
-        
+
         # Important for PayOS webhook signature
         proxy_set_header x-payos-signature $http_x_payos_signature;
-        
+
         proxy_connect_timeout 60s;
         proxy_send_timeout 60s;
         proxy_read_timeout 60s;

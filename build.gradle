@@ -85,7 +85,6 @@ dependencies {
     implementation 'com.openhtmltopdf:openhtmltopdf-pdfbox:1.0.10'
     implementation 'com.openhtmltopdf:openhtmltopdf-slf4j:1.0.10'
     implementation 'com.openhtmltopdf:openhtmltopdf-rtl-support:1.0.10'
-    implementation 'org.springframework.boot:spring-boot-starter-mail'
     implementation 'org.apache.commons:commons-text:1.10.0'
 
     // https://mvnrepository.com/artifact/org.apache.poi/poi

@@ -15,8 +15,6 @@ import vn.payos.PayOS;
 import vn.payos.type.CheckoutResponseData;
 import vn.payos.type.PaymentData;
 import vn.payos.type.PaymentLinkData;
-import vn.payos.type.Webhook;
-import vn.payos.type.WebhookData;
 
 @Slf4j
 @Service
@@ -67,10 +65,7 @@ public class PayOSService {
     }
   }
 
-  /**
-   * Xác minh webhook signature từ PayOS
-   * PayOS gửi signature trong header "x-payos-signature"
-   */
+  /** Xác minh webhook signature từ PayOS PayOS gửi signature trong header "x-payos-signature" */
   public boolean verifyWebhookSignature(String signature, String requestBody) {
     try {
       String computedSignature = computeHmacSha256(requestBody, checksumKey);
@@ -85,29 +80,40 @@ public class PayOSService {
 
   /**
    * Xử lý webhook data từ PayOS
+   *
    * @return orderCode nếu thanh toán thành công, null nếu thất bại
    */
   public Long processWebhook(String webhookBody) {
     try {
       JsonNode rootNode = objectMapper.readTree(webhookBody);
-      
-      // PayOS webhook structure: { "data": { "orderCode": ..., "amount": ..., "description": ..., ... }, "code": "00", "desc": "success" }
+
+      // PayOS webhook structure: { "data": { "orderCode": ..., "amount": ..., "description": ...,
+      // ... }, "code": "00", "desc": "success" }
       String code = rootNode.path("code").asText();
       JsonNode dataNode = rootNode.path("data");
-      
+
       Long orderCode = dataNode.path("orderCode").asLong();
       String status = dataNode.path("status").asText();
       int amount = dataNode.path("amount").asInt();
-      
-      log.info("Processing PayOS webhook - OrderCode: {}, Status: {}, Amount: {}, Code: {}", 
-               orderCode, status, amount, code);
-      
+
+      log.info(
+          "Processing PayOS webhook - OrderCode: {}, Status: {}, Amount: {}, Code: {}",
+          orderCode,
+          status,
+          amount,
+          code);
+
       // Kiểm tra code và status
-      if ("00".equals(code) && ("PAID".equalsIgnoreCase(status) || "SUCCESS".equalsIgnoreCase(status))) {
+      if ("00".equals(code)
+          && ("PAID".equalsIgnoreCase(status) || "SUCCESS".equalsIgnoreCase(status))) {
         log.info("Payment successful for order: {}", orderCode);
         return orderCode;
       } else {
-        log.warn("Payment not successful - OrderCode: {}, Status: {}, Code: {}", orderCode, status, code);
+        log.warn(
+            "Payment not successful - OrderCode: {}, Status: {}, Code: {}",
+            orderCode,
+            status,
+            code);
         return null;
       }
     } catch (Exception e) {
@@ -116,15 +122,13 @@ public class PayOSService {
     }
   }
 
-  /**
-   * Tính toán HMAC SHA256 signature
-   */
+  /** Tính toán HMAC SHA256 signature */
   private String computeHmacSha256(String data, String key) throws Exception {
     Mac sha256Hmac = Mac.getInstance("HmacSHA256");
     SecretKeySpec secretKey = new SecretKeySpec(key.getBytes("UTF-8"), "HmacSHA256");
     sha256Hmac.init(secretKey);
     byte[] hash = sha256Hmac.doFinal(data.getBytes("UTF-8"));
-    
+
     // Convert to hex string
     StringBuilder hexString = new StringBuilder();
     for (byte b : hash) {
@@ -135,9 +139,7 @@ public class PayOSService {
     return hexString.toString();
   }
 
-  /**
-   * Lấy thông tin payment từ PayOS API (optional - để verify)
-   */
+  /** Lấy thông tin payment từ PayOS API (optional - để verify) */
   public PaymentLinkData getPaymentInfo(Long orderCode) {
     try {
       PayOS payOS = payOSConfig.payOSClient();

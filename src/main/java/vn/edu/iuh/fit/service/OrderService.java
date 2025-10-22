@@ -284,8 +284,8 @@ public class OrderService {
       order.getTicketItems().size();
 
       String qrCodeBase64 = Base64.getEncoder().encodeToString(qrCodeImage);
-      String pdfPath = pdfService.generateOrderPdf(order, qrCodeBase64);
-      order.setPdfPath(pdfPath);
+      String pdfUrl = pdfService.generateOrderPdfToS3(order, qrCodeBase64);
+      order.setPdfPath(pdfUrl);
       orderRepository.save(order);
 
       // --- Gửi email vé điện tử ---
@@ -307,7 +307,6 @@ public class OrderService {
           log.error("Lỗi khi đọc thông tin coupon từ requestSnapshot: {}", e.getMessage());
         }
       }
-
       mailService.sendMailConfirmOrder(mailData, qrCodeImage);
     }
     // Nếu hủy thanh toán, Xóa trạng thái ghế đang held
