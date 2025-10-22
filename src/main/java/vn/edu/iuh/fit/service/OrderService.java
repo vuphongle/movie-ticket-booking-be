@@ -376,4 +376,8 @@ public class OrderService {
         .findById(id)
         .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy đơn hàng với id " + id));
   }
+
+  public List<Order> getOrdersByUserId(Integer userId) {
+    return orderRepository.findByUser_IdOrderByCreatedAtDesc(userId);
+  }
 }

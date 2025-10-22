@@ -34958,7 +34958,7 @@ CREATE TABLE `users` (
   `name` varchar(255) DEFAULT NULL,
   `password` varchar(255) NOT NULL,
   `phone` varchar(255) DEFAULT NULL,
-  `role` enum('ADMIN','USER') DEFAULT NULL,
+  `role` enum('SUPER_ADMIN','ADMIN','USER') DEFAULT NULL,
   `updated_at` datetime(6) DEFAULT NULL,
   `branch_id` int(11) DEFAULT NULL,
   PRIMARY KEY (`id`),
