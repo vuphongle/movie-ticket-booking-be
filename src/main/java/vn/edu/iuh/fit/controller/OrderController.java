@@ -143,15 +143,13 @@ public class OrderController {
       // 1. Verify webhook signature
       if (signature == null || signature.isEmpty()) {
         log.warn("Missing webhook signature");
-        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-            .body(Map.of("error", "Missing signature"));
+        return ResponseEntity.ok().body(Map.of("error", "Missing signature", "success", false));
       }
 
       boolean isValid = payOSService.verifyWebhookSignature(signature, webhookBody);
       if (!isValid) {
         log.error("Invalid webhook signature");
-        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-            .body(Map.of("error", "Invalid signature"));
+        return ResponseEntity.ok().body(Map.of("error", "Invalid signature", "success", false));
       }
 
       // 2. Process webhook data
