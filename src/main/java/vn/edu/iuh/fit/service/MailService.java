@@ -94,60 +94,61 @@ public class MailService {
     }
   }
 
-    @Async
-    public void sendMailConfirmOrder(Map<String, Object> data, byte[] qrCodeImage) {
-        try {
+  @Async
+  public void sendMailConfirmOrder(Map<String, Object> data, byte[] qrCodeImage) {
+    try {
 
-            User user = (User) data.get("user");
-            Order order = (Order) data.get("order");
+      User user = (User) data.get("user");
+      Order order = (Order) data.get("order");
 
-            // --- Format giá tiền bằng DecimalFormat ---
-            DecimalFormatSymbols symbols = new DecimalFormatSymbols();
-            symbols.setGroupingSeparator(',');
-            symbols.setDecimalSeparator(',');
-            DecimalFormat df = new DecimalFormat("#,###", symbols);
+      // --- Format giá tiền bằng DecimalFormat ---
+      DecimalFormatSymbols symbols = new DecimalFormatSymbols();
+      symbols.setGroupingSeparator(',');
+      symbols.setDecimalSeparator(',');
+      DecimalFormat df = new DecimalFormat("#,###", symbols);
 
-            GraphicsType graphicsTypeEnum = order.getShowtime().getGraphicsType();
-            String formattedGraphicsType = switch (graphicsTypeEnum) {
-                case _2D -> "2D";
-                case _3D -> "3D";
-            };
+      GraphicsType graphicsTypeEnum = order.getShowtime().getGraphicsType();
+      String formattedGraphicsType =
+          switch (graphicsTypeEnum) {
+            case _2D -> "2D";
+            case _3D -> "3D";
+          };
 
-            TranslationType translationTypeEnum = order.getShowtime().getTranslationType(); // enum
-            String formattedTranslationType = switch (translationTypeEnum) {
-                case DUBBING -> "Lồng tiếng";
-                case SUBTITLING -> "Phụ đề";
-            };
+      TranslationType translationTypeEnum = order.getShowtime().getTranslationType(); // enum
+      String formattedTranslationType =
+          switch (translationTypeEnum) {
+            case DUBBING -> "Lồng tiếng";
+            case SUBTITLING -> "Phụ đề";
+          };
 
-            Context context = new Context();
-            context.setVariable("userName", user.getName());
-            context.setVariable("userPhone", user.getPhone());
-            context.setVariable("orderId", order.getId());
-            context.setVariable("movieTitle", order.getShowtime().getMovie().getName());
-            context.setVariable("graphicsType", formattedGraphicsType);
-            context.setVariable("translationType", formattedTranslationType);
-            context.setVariable("showDate", order.getShowtime().getDate().toString());
-            context.setVariable("startTime", order.getShowtime().getStartTime().toString());
-            context.setVariable("endTime", order.getShowtime().getEndTime().toString());
-            context.setVariable("cinemaName", order.getShowtime().getAuditorium().getCinema().getName());
-            context.setVariable("auditoriumName", order.getShowtime().getAuditorium().getName());
-            context.setVariable("status", order.getStatus().name());
-            context.setVariable("totalPrice", df.format(order.getTotalPrice()) + " VNĐ");
-            context.setVariable("discountPrice", df.format(order.getDiscountPrice()) + " VNĐ");
-            context.setVariable("ticketItems", order.getTicketItems()); // danh sách ghế
-            context.setVariable("serviceItems", order.getServiceItems());
-            context.setVariable("coupons", data.get("coupons"));
+      Context context = new Context();
+      context.setVariable("userName", user.getName());
+      context.setVariable("userPhone", user.getPhone());
+      context.setVariable("orderId", order.getId());
+      context.setVariable("movieTitle", order.getShowtime().getMovie().getName());
+      context.setVariable("graphicsType", formattedGraphicsType);
+      context.setVariable("translationType", formattedTranslationType);
+      context.setVariable("showDate", order.getShowtime().getDate().toString());
+      context.setVariable("startTime", order.getShowtime().getStartTime().toString());
+      context.setVariable("endTime", order.getShowtime().getEndTime().toString());
+      context.setVariable("cinemaName", order.getShowtime().getAuditorium().getCinema().getName());
+      context.setVariable("auditoriumName", order.getShowtime().getAuditorium().getName());
+      context.setVariable("status", order.getStatus().name());
+      context.setVariable("totalPrice", df.format(order.getTotalPrice()) + " VNĐ");
+      context.setVariable("discountPrice", df.format(order.getDiscountPrice()) + " VNĐ");
+      context.setVariable("ticketItems", order.getTicketItems()); // danh sách ghế
+      context.setVariable("serviceItems", order.getServiceItems());
+      context.setVariable("coupons", data.get("coupons"));
 
-            context.setVariable("qrCodeUrl", order.getQrCodePath());
-            String htmlContent = templateEngine.process("mail-template/order-confirm", context);
+      context.setVariable("qrCodeUrl", order.getQrCodePath());
+      String htmlContent = templateEngine.process("mail-template/order-confirm", context);
 
+      // Send via SendPulse REST API
+      sendPulseClient.sendEmail(user.getEmail(), "Vé điện tử Go Cinema", htmlContent);
 
-            // Send via SendPulse REST API
-            sendPulseClient.sendEmail(user.getEmail(), "Vé điện tử Go Cinema", htmlContent);
-
-            log.info("Sent order confirmation email to {}", user.getEmail());
-        } catch (Exception e) {
-            log.error("Error sending order confirmation email: {}", e.getMessage());
-        }
+      log.info("Sent order confirmation email to {}", user.getEmail());
+    } catch (Exception e) {
+      log.error("Error sending order confirmation email: {}", e.getMessage());
     }
+  }
 }
