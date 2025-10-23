@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import vn.edu.iuh.fit.entity.Blog;
 import vn.edu.iuh.fit.entity.User;
+import vn.edu.iuh.fit.entity.ViewHistory;
 import vn.edu.iuh.fit.exception.ResourceNotFoundException;
 import vn.edu.iuh.fit.model.dto.BlogDto;
 import vn.edu.iuh.fit.model.enums.BlogType;
@@ -34,6 +35,34 @@ public class BlogService {
       return blogRepository.findByStatus(true, pageable);
     }
     return blogRepository.findByTypeAndStatus(BlogType.valueOf(type), true, pageable);
+  }
+
+  @Transactional
+  public Blog getBlogDetail(Integer blogId, String blogSlug) {
+    log.info("Get blog detail with id = {} and slug = {}", blogId, blogSlug);
+    Blog blog =
+        blogRepository
+            .findByIdAndSlugAndStatus(blogId, blogSlug, true)
+            .orElseThrow(
+                () ->
+                    new ResourceNotFoundException(
+                        String.format(
+                            "Không tìm thấy blog có id = %d và slug = %s", blogId, blogSlug)));
+
+    // Save view history
+    blog.setViewCount(blog.getViewCount() + 1);
+    ViewHistory viewHistory = ViewHistory.builder().blog(blog).build();
+    blog.addViewHistory(viewHistory);
+    return blogRepository.save(blog);
+  }
+
+  public List<BlogDto> getRecommendBlogs(Integer blogId, Integer limit) {
+    log.info("Get recommend blogs for blog id = {}", blogId);
+    List<BlogDto> blogs = blogRepository.findRecommendBlogs(blogId);
+    if (blogs.size() > limit) {
+      return blogs.subList(0, limit);
+    }
+    return blogs;
   }
 
   public Page<BlogDto> getBlogsLatest(String type, Integer page, Integer limit) {

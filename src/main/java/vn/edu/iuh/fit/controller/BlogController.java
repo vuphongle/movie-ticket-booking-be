@@ -23,6 +23,14 @@ public class BlogController {
     return ResponseEntity.ok(blogService.getAllBlogs(type, page, limit));
   }
 
+  @GetMapping("/public/blogs/load-more")
+  public ResponseEntity<?> loadMoreBlogs(
+      @RequestParam(required = false) String type,
+      @RequestParam(required = false, defaultValue = "1") Integer page,
+      @RequestParam(required = false, defaultValue = "10") Integer limit) {
+    return ResponseEntity.ok(blogService.getAllBlogs(type, page, limit));
+  }
+
   @GetMapping("/public/blogs/latest")
   public ResponseEntity<?> getBlogsLatest(
       @RequestParam(required = false) String type,
@@ -36,6 +44,17 @@ public class BlogController {
       @RequestParam(required = false) String type,
       @RequestParam(required = false, defaultValue = "5") Integer limit) {
     return ResponseEntity.ok(blogService.getMostViewBlogs(type, limit));
+  }
+
+  @GetMapping("/public/blogs/{id}/recommend")
+  public ResponseEntity<?> getRecommendBlogs(
+      @RequestParam(required = false, defaultValue = "5") Integer limit, @PathVariable Integer id) {
+    return ResponseEntity.ok(blogService.getRecommendBlogs(id, limit));
+  }
+
+  @GetMapping("/public/blogs/{id}/{slug}")
+  public ResponseEntity<?> getBlogDetail(@PathVariable Integer id, @PathVariable String slug) {
+    return ResponseEntity.ok(blogService.getBlogDetail(id, slug));
   }
 
   @GetMapping("/admin/blogs")
