@@ -38,16 +38,24 @@ public class OrderRepositoryCustomImpl implements OrderRepositoryCustom {
     HashMap<Integer, MovieRevenueDto> movieRevenueMap = new HashMap<>();
     for (Order order : orders) {
       Integer movieId = order.getShowtime().getMovie().getId();
+      String movieCode = "P" + String.format("%04d", movieId);
       String movieName = order.getShowtime().getMovie().getName();
       Integer ticketCount = order.getTicketItems().size();
+      Integer discount = order.getDiscount() != null ? order.getDiscount() : 0;
+      Integer tempPrice = order.getTempPrice();
       Integer totalRevenue = order.getTotalPrice();
 
       MovieRevenueDto movieRevenueDto = movieRevenueMap.get(movieId);
       if (movieRevenueDto == null) {
-        movieRevenueDto = new MovieRevenueDto(movieId, movieName, ticketCount, totalRevenue);
+        movieRevenueDto =
+            new MovieRevenueDto(
+                movieId, movieCode, movieName, ticketCount, discount, tempPrice, totalRevenue);
         movieRevenueMap.put(movieId, movieRevenueDto);
       } else {
         movieRevenueDto.setTotalTickets(movieRevenueDto.getTotalTickets() + ticketCount);
+        movieRevenueDto.setTotalDiscount(movieRevenueDto.getTotalDiscount() + discount);
+        movieRevenueDto.setRevenueBeforeDiscount(
+            movieRevenueDto.getRevenueBeforeDiscount() + tempPrice);
         movieRevenueDto.setTotalRevenue(movieRevenueDto.getTotalRevenue() + totalRevenue);
       }
     }

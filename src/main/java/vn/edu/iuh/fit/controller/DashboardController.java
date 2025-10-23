@@ -58,8 +58,13 @@ public class DashboardController {
       @RequestParam(required = false) String startDate,
       @RequestParam(required = false) String endDate) {
     byte[] data = reportService.exportRevenueByMovie(startDate, endDate);
+
+    String currentDate =
+        java.time.LocalDate.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd"));
+    String filename = "BaoCaoDoanhThuPhim_TongHop_" + currentDate + ".xlsx";
+
     return ResponseEntity.ok()
-        .header("Content-Disposition", "attachment; filename=reports_movie.xlsx")
+        .header("Content-Disposition", "attachment; filename=" + filename)
         .contentType(
             MediaType.parseMediaType(
                 "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))

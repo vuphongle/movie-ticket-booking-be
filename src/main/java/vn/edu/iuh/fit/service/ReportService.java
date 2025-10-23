@@ -86,26 +86,179 @@ public class ReportService {
 
   public byte[] exportRevenueByMovie(String startDate, String endDate) {
     try (Workbook workbook = new XSSFWorkbook()) {
-      // Create CellStyle for title row
-      CellStyle titleStyle = createTitleStyle(workbook);
-      // Create CellStyle for date row
-      CellStyle dateStyle = createDateStyle(workbook);
-      // Create CellStyle for header row
-      CellStyle headerStyle = createHeaderStyle(workbook);
-      // Create CellStyle for data cells
-      CellStyle dataStyle = createDataStyle(workbook);
+      Sheet sheet = workbook.createSheet("Doanh thu theo phim");
 
-      // Create "Báo cáo doanh thu" sheet
-      Sheet revenueSheet = workbook.createSheet("Báo cáo doanh thu");
-      createSheetHeaderOfRevenueMovieSheet(revenueSheet, startDate, endDate);
+      // Parse dates for display
+      String displayStartDate = startDate != null ? startDate.replace("-", "/") : "";
+      String displayEndDate = endDate != null ? endDate.replace("-", "/") : "";
+
+      // Get current date time for print date (including time)
+      java.time.LocalDateTime now = java.time.LocalDateTime.now();
+      String printDate =
+          String.format(
+              "%02d/%02d/%04d %02d:%02d:%02d",
+              now.getDayOfMonth(),
+              now.getMonthValue(),
+              now.getYear(),
+              now.getHour(),
+              now.getMinute(),
+              now.getSecond());
+
+      // Create styles
+      CellStyle printDateStyle = createPrintDateStyle(workbook);
+      CellStyle titleStyle = createTitleStyleForReport(workbook);
+      CellStyle dateRangeStyle = createDateRangeStyle(workbook);
+      CellStyle headerStyle = createHeaderStyleForReport(workbook);
+      CellStyle centerStyle = createCenterAlignStyle(workbook);
+      CellStyle leftStyle = createLeftAlignStyle(workbook);
+      CellStyle rightStyle = createRightAlignStyle(workbook);
+      CellStyle rightCurrencyStyle = createRightCurrencyStyle(workbook);
+      CellStyle totalStyle = createTotalStyle(workbook);
+      CellStyle totalCurrencyStyle = createTotalCurrencyStyle(workbook);
+      CellStyle totalLabelStyle = createTotalLabelStyle(workbook);
+
+      // Row 1: Print date at top left (A1:G1 merged)
+      sheet.addMergedRegion(new CellRangeAddress(0, 0, 0, 6));
+      Row printDateRow = sheet.createRow(0);
+      Cell printDateCell = printDateRow.createCell(0);
+      printDateCell.setCellValue("Ngày in: " + printDate);
+      printDateCell.setCellStyle(printDateStyle);
+
+      // Row 4: Title (A4:G4 merged)
+      sheet.addMergedRegion(new CellRangeAddress(3, 3, 0, 6));
+      Row titleRow = sheet.createRow(3);
+      Cell titleCell = titleRow.createCell(0);
+      titleCell.setCellValue("DOANH THU THEO PHIM");
+      titleCell.setCellStyle(titleStyle);
+
+      // Row 5: Date range (A5:G5 merged)
+      sheet.addMergedRegion(new CellRangeAddress(4, 4, 0, 6));
+      Row dateRow = sheet.createRow(4);
+      Cell dateCell = dateRow.createCell(0);
+      dateCell.setCellValue("Từ ngày: " + displayStartDate + " - Đến ngày: " + displayEndDate);
+      dateCell.setCellStyle(dateRangeStyle);
+
+      // Row 7: Headers
+      Row headerRow = sheet.createRow(6);
+      String[] headers = {
+        "STT",
+        "Mã phim",
+        "Tên phim",
+        "Tổng vé bán ra",
+        "Chiết khấu",
+        "Doanh thu trước CK",
+        "Doanh thu sau CK"
+      };
+      for (int i = 0; i < headers.length; i++) {
+        Cell cell = headerRow.createCell(i);
+        cell.setCellValue(headers[i]);
+        cell.setCellStyle(headerStyle);
+      }
+
+      // Get data
       List<MovieRevenueDto> movieRevenueDtos =
           dashboardService.getRevenueByMovie(startDate, endDate);
-      createSheetContentOfRevenueMovieSheet(revenueSheet, movieRevenueDtos);
 
-      // Apply styles to the sheets
-      applyStyles(revenueSheet, titleStyle, dateStyle, headerStyle, dataStyle);
+      // Data rows
+      int rowNum = 7;
+      int stt = 1;
+      long totalTickets = 0;
+      long totalDiscount = 0;
+      long totalRevenueBeforeDiscount = 0;
+      long totalRevenueAfterDiscount = 0;
 
-      // Write the workbook content to a ByteArrayOutputStream
+      for (MovieRevenueDto dto : movieRevenueDtos) {
+        Row row = sheet.createRow(rowNum++);
+
+        // STT (center)
+        Cell sttCell = row.createCell(0);
+        sttCell.setCellValue(stt++);
+        sttCell.setCellStyle(centerStyle);
+
+        // Mã phim (left)
+        Cell codeCell = row.createCell(1);
+        codeCell.setCellValue(dto.getMovieCode());
+        codeCell.setCellStyle(leftStyle);
+
+        // Tên phim (left)
+        Cell nameCell = row.createCell(2);
+        nameCell.setCellValue(dto.getMovieName());
+        nameCell.setCellStyle(leftStyle);
+
+        // Tổng vé bán ra (right)
+        Cell ticketsCell = row.createCell(3);
+        ticketsCell.setCellValue(formatNumber(dto.getTotalTickets()));
+        ticketsCell.setCellStyle(rightStyle);
+
+        // Chiết khấu (right with currency)
+        Cell discountCell = row.createCell(4);
+        discountCell.setCellValue(formatCurrency(dto.getTotalDiscount()));
+        discountCell.setCellStyle(rightStyle);
+
+        // Doanh thu trước CK (right with currency)
+        Cell revenueBeforeCell = row.createCell(5);
+        revenueBeforeCell.setCellValue(formatCurrency(dto.getRevenueBeforeDiscount()));
+        revenueBeforeCell.setCellStyle(rightStyle);
+
+        // Doanh thu sau CK (right with currency)
+        Cell revenueAfterCell = row.createCell(6);
+        revenueAfterCell.setCellValue(formatCurrency(dto.getTotalRevenue()));
+        revenueAfterCell.setCellStyle(rightStyle);
+
+        // Add borders
+        addBordersToRow(row, workbook);
+
+        // Calculate totals
+        totalTickets += dto.getTotalTickets();
+        totalDiscount += dto.getTotalDiscount();
+        totalRevenueBeforeDiscount += dto.getRevenueBeforeDiscount();
+        totalRevenueAfterDiscount += dto.getTotalRevenue();
+      }
+
+      // Total row (merge A+B)
+      Row totalRow = sheet.createRow(rowNum);
+      sheet.addMergedRegion(new CellRangeAddress(rowNum, rowNum, 0, 1));
+
+      Cell totalLabelCell = totalRow.createCell(0);
+      totalLabelCell.setCellValue("Tổng cộng");
+      totalLabelCell.setCellStyle(totalLabelStyle);
+
+      // Empty cell for merged region
+      totalRow.createCell(1).setCellStyle(totalLabelStyle);
+      totalRow.createCell(2).setCellStyle(totalLabelStyle);
+
+      // Total tickets
+      Cell totalTicketsCell = totalRow.createCell(3);
+      totalTicketsCell.setCellValue(formatNumber((int) totalTickets));
+      totalTicketsCell.setCellStyle(totalStyle);
+
+      // Total discount
+      Cell totalDiscountCell = totalRow.createCell(4);
+      totalDiscountCell.setCellValue(formatCurrency((int) totalDiscount));
+      totalDiscountCell.setCellStyle(totalCurrencyStyle);
+
+      // Total revenue before discount
+      Cell totalRevenueBeforeCell = totalRow.createCell(5);
+      totalRevenueBeforeCell.setCellValue(formatCurrency((int) totalRevenueBeforeDiscount));
+      totalRevenueBeforeCell.setCellStyle(totalCurrencyStyle);
+
+      // Total revenue after discount
+      Cell totalRevenueAfterCell = totalRow.createCell(6);
+      totalRevenueAfterCell.setCellValue(formatCurrency((int) totalRevenueAfterDiscount));
+      totalRevenueAfterCell.setCellStyle(totalCurrencyStyle);
+
+      // Add borders to total row
+      addBordersToRow(totalRow, workbook);
+
+      // Auto-size columns to fit content
+      for (int i = 0; i < headers.length; i++) {
+        sheet.autoSizeColumn(i);
+        // Add extra width for better readability
+        int currentWidth = sheet.getColumnWidth(i);
+        sheet.setColumnWidth(i, currentWidth + 1000);
+      }
+
+      // Write to output stream
       ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
       workbook.write(outputStream);
 
@@ -116,107 +269,152 @@ public class ReportService {
     }
   }
 
-  private void createSheetContentOfRevenueMovieSheet(
-      Sheet sheet, List<MovieRevenueDto> movieRevenueDtos) {
-    int rowNum = 3; // Starting row after title and header
-    for (MovieRevenueDto movie : movieRevenueDtos) {
-      Row row = sheet.createRow(rowNum++);
-      row.createCell(0).setCellValue(movie.getMovieName());
-      row.createCell(1).setCellValue(movie.getTotalTickets());
-      row.createCell(2).setCellValue(movie.getTotalRevenue());
-    }
+  private String formatNumber(int number) {
+    return String.format("%,d", number).replace(",", ".");
   }
 
-  private void createSheetHeaderOfRevenueMovieSheet(Sheet sheet, String startDate, String endDate) {
-    sheet.addMergedRegion(new CellRangeAddress(0, 0, 0, 6));
-    sheet.addMergedRegion(new CellRangeAddress(1, 1, 0, 6));
-
-    int rowNum = 0;
-    Row titleRow = sheet.createRow(rowNum++);
-    titleRow.createCell(0).setCellValue("Báo cáo doanh thu theo phim");
-
-    Row dateRow = sheet.createRow(rowNum++);
-    dateRow.createCell(0).setCellValue("Từ ngày");
-
-    Row headerRow = sheet.createRow(rowNum);
-    headerRow.createCell(0).setCellValue("Tên phim");
-    headerRow.createCell(1).setCellValue("Số vé bán ra");
-    headerRow.createCell(2).setCellValue("Doanh thu");
+  private String formatCurrency(int amount) {
+    return String.format("%,d VNĐ", amount).replace(",", ".");
   }
 
-  private CellStyle createTitleStyle(Workbook workbook) {
+  private CellStyle createPrintDateStyle(Workbook workbook) {
+    CellStyle style = workbook.createCellStyle();
+    Font font = workbook.createFont();
+    font.setFontName("Arial");
+    font.setFontHeightInPoints((short) 11);
+    style.setFont(font);
+    style.setAlignment(HorizontalAlignment.LEFT);
+    return style;
+  }
+
+  private CellStyle createTitleStyleForReport(Workbook workbook) {
     CellStyle style = workbook.createCellStyle();
     Font font = workbook.createFont();
     font.setFontName("Arial");
     font.setFontHeightInPoints((short) 16);
     font.setBold(true);
-    font.setColor(IndexedColors.BLACK.getIndex());
-    style.setAlignment(HorizontalAlignment.CENTER);
-    style.setFillForegroundColor(IndexedColors.LIGHT_ORANGE.getIndex());
-    style.setFillPattern(FillPatternType.SOLID_FOREGROUND);
     style.setFont(font);
+    style.setAlignment(HorizontalAlignment.CENTER);
+    style.setVerticalAlignment(VerticalAlignment.CENTER);
     return style;
   }
 
-  private CellStyle createDateStyle(Workbook workbook) {
+  private CellStyle createDateRangeStyle(Workbook workbook) {
     CellStyle style = workbook.createCellStyle();
     Font font = workbook.createFont();
     font.setFontName("Arial");
     font.setFontHeightInPoints((short) 12);
-    font.setItalic(true);
-    style.setAlignment(HorizontalAlignment.CENTER);
     style.setFont(font);
+    style.setAlignment(HorizontalAlignment.CENTER);
+    style.setVerticalAlignment(VerticalAlignment.CENTER);
     return style;
   }
 
-  private CellStyle createHeaderStyle(Workbook workbook) {
+  private CellStyle createHeaderStyleForReport(Workbook workbook) {
     CellStyle style = workbook.createCellStyle();
     Font font = workbook.createFont();
     font.setFontName("Arial");
-    font.setFontHeightInPoints((short) 12);
+    font.setFontHeightInPoints((short) 11);
     font.setBold(true);
+    style.setFont(font);
     style.setAlignment(HorizontalAlignment.CENTER);
+    style.setVerticalAlignment(VerticalAlignment.CENTER);
     style.setFillForegroundColor(IndexedColors.GREY_25_PERCENT.getIndex());
     style.setFillPattern(FillPatternType.SOLID_FOREGROUND);
-    style.setFont(font);
-    style.setBorderBottom(BorderStyle.MEDIUM);
+    style.setBorderTop(BorderStyle.THIN);
+    style.setBorderBottom(BorderStyle.THIN);
+    style.setBorderLeft(BorderStyle.THIN);
+    style.setBorderRight(BorderStyle.THIN);
     return style;
   }
 
-  private CellStyle createDataStyle(Workbook workbook) {
+  private CellStyle createCenterAlignStyle(Workbook workbook) {
     CellStyle style = workbook.createCellStyle();
     Font font = workbook.createFont();
     font.setFontName("Arial");
-    font.setFontHeightInPoints((short) 12);
-    style.setAlignment(HorizontalAlignment.LEFT);
+    font.setFontHeightInPoints((short) 11);
     style.setFont(font);
+    style.setAlignment(HorizontalAlignment.CENTER);
+    style.setVerticalAlignment(VerticalAlignment.CENTER);
     return style;
   }
 
-  private void applyStyles(
-      Sheet sheet,
-      CellStyle titleStyle,
-      CellStyle dateStyle,
-      CellStyle headerStyle,
-      CellStyle dataStyle) {
-    // Apply title style to the title row
-    sheet.getRow(0).getCell(0).setCellStyle(titleStyle);
+  private CellStyle createLeftAlignStyle(Workbook workbook) {
+    CellStyle style = workbook.createCellStyle();
+    Font font = workbook.createFont();
+    font.setFontName("Arial");
+    font.setFontHeightInPoints((short) 11);
+    style.setFont(font);
+    style.setAlignment(HorizontalAlignment.LEFT);
+    style.setVerticalAlignment(VerticalAlignment.CENTER);
+    return style;
+  }
 
-    // Apply date style to the date row
-    sheet.getRow(1).getCell(0).setCellStyle(dateStyle);
+  private CellStyle createRightAlignStyle(Workbook workbook) {
+    CellStyle style = workbook.createCellStyle();
+    Font font = workbook.createFont();
+    font.setFontName("Arial");
+    font.setFontHeightInPoints((short) 11);
+    style.setFont(font);
+    style.setAlignment(HorizontalAlignment.RIGHT);
+    style.setVerticalAlignment(VerticalAlignment.CENTER);
+    return style;
+  }
 
-    // Apply header style to the header row
-    Row headerRow = sheet.getRow(2);
-    for (int i = 0; i < headerRow.getPhysicalNumberOfCells(); i++) {
-      headerRow.getCell(i).setCellStyle(headerStyle);
-    }
+  private CellStyle createRightCurrencyStyle(Workbook workbook) {
+    CellStyle style = createRightAlignStyle(workbook);
+    return style;
+  }
 
-    // Apply data style to all data cells
-    for (int i = 3; i < sheet.getPhysicalNumberOfRows(); i++) {
-      Row row = sheet.getRow(i);
-      for (Cell cell : row) {
-        cell.setCellStyle(dataStyle);
-      }
+  private CellStyle createTotalStyle(Workbook workbook) {
+    CellStyle style = workbook.createCellStyle();
+    Font font = workbook.createFont();
+    font.setFontName("Arial");
+    font.setFontHeightInPoints((short) 11);
+    font.setBold(true);
+    style.setFont(font);
+    style.setAlignment(HorizontalAlignment.RIGHT);
+    style.setVerticalAlignment(VerticalAlignment.CENTER);
+    style.setFillForegroundColor(IndexedColors.LIGHT_YELLOW.getIndex());
+    style.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+    return style;
+  }
+
+  private CellStyle createTotalCurrencyStyle(Workbook workbook) {
+    CellStyle style = createTotalStyle(workbook);
+    return style;
+  }
+
+  private CellStyle createTotalLabelStyle(Workbook workbook) {
+    CellStyle style = workbook.createCellStyle();
+    Font font = workbook.createFont();
+    font.setFontName("Arial");
+    font.setFontHeightInPoints((short) 11);
+    font.setBold(true);
+    style.setFont(font);
+    style.setAlignment(HorizontalAlignment.LEFT);
+    style.setVerticalAlignment(VerticalAlignment.CENTER);
+    style.setFillForegroundColor(IndexedColors.LIGHT_YELLOW.getIndex());
+    style.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+    return style;
+  }
+
+  private void addBordersToRow(Row row, Workbook workbook) {
+    CellStyle borderStyle = workbook.createCellStyle();
+    borderStyle.cloneStyleFrom(row.getCell(0).getCellStyle());
+    borderStyle.setBorderTop(BorderStyle.THIN);
+    borderStyle.setBorderBottom(BorderStyle.THIN);
+    borderStyle.setBorderLeft(BorderStyle.THIN);
+    borderStyle.setBorderRight(BorderStyle.THIN);
+
+    for (Cell cell : row) {
+      CellStyle cellStyle = workbook.createCellStyle();
+      cellStyle.cloneStyleFrom(cell.getCellStyle());
+      cellStyle.setBorderTop(BorderStyle.THIN);
+      cellStyle.setBorderBottom(BorderStyle.THIN);
+      cellStyle.setBorderLeft(BorderStyle.THIN);
+      cellStyle.setBorderRight(BorderStyle.THIN);
+      cell.setCellStyle(cellStyle);
     }
   }
 }
