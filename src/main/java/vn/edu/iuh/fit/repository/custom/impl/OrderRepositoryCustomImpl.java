@@ -38,16 +38,24 @@ public class OrderRepositoryCustomImpl implements OrderRepositoryCustom {
     HashMap<Integer, MovieRevenueDto> movieRevenueMap = new HashMap<>();
     for (Order order : orders) {
       Integer movieId = order.getShowtime().getMovie().getId();
+      String movieCode = "P" + String.format("%04d", movieId);
       String movieName = order.getShowtime().getMovie().getName();
       Integer ticketCount = order.getTicketItems().size();
+      Integer discount = order.getDiscount() != null ? order.getDiscount() : 0;
+      Integer tempPrice = order.getTempPrice();
       Integer totalRevenue = order.getTotalPrice();
 
       MovieRevenueDto movieRevenueDto = movieRevenueMap.get(movieId);
       if (movieRevenueDto == null) {
-        movieRevenueDto = new MovieRevenueDto(movieId, movieName, ticketCount, totalRevenue);
+        movieRevenueDto =
+            new MovieRevenueDto(
+                movieId, movieCode, movieName, ticketCount, discount, tempPrice, totalRevenue);
         movieRevenueMap.put(movieId, movieRevenueDto);
       } else {
         movieRevenueDto.setTotalTickets(movieRevenueDto.getTotalTickets() + ticketCount);
+        movieRevenueDto.setTotalDiscount(movieRevenueDto.getTotalDiscount() + discount);
+        movieRevenueDto.setRevenueBeforeDiscount(
+            movieRevenueDto.getRevenueBeforeDiscount() + tempPrice);
         movieRevenueDto.setTotalRevenue(movieRevenueDto.getTotalRevenue() + totalRevenue);
       }
     }
@@ -69,16 +77,45 @@ public class OrderRepositoryCustomImpl implements OrderRepositoryCustom {
     HashMap<Integer, CinemaRevenueDto> cinemaRevenueMap = new HashMap<>();
     for (Order order : orders) {
       Integer cinemaId = order.getShowtime().getAuditorium().getCinema().getId();
+      String cinemaCode = "R" + String.format("%04d", cinemaId);
       String cinemaName = order.getShowtime().getAuditorium().getCinema().getName();
       Integer ticketCount = order.getTicketItems().size();
+      Integer discount = order.getDiscount() != null ? order.getDiscount() : 0;
+
+      // Calculate ticket revenue
+      Integer ticketRevenue =
+          order.getTicketItems().stream().map(item -> item.getPrice()).reduce(0, Integer::sum);
+
+      // Calculate service revenue
+      Integer serviceRevenue =
+          order.getServiceItems().stream()
+              .map(item -> item.getPrice() * item.getQuantity())
+              .reduce(0, Integer::sum);
+
+      Integer tempPrice = ticketRevenue + serviceRevenue;
       Integer totalRevenue = order.getTotalPrice();
 
       CinemaRevenueDto cinemaRevenueDto = cinemaRevenueMap.get(cinemaId);
       if (cinemaRevenueDto == null) {
-        cinemaRevenueDto = new CinemaRevenueDto(cinemaId, cinemaName, ticketCount, totalRevenue);
+        cinemaRevenueDto =
+            new CinemaRevenueDto(
+                cinemaId,
+                cinemaCode,
+                cinemaName,
+                ticketCount,
+                ticketRevenue,
+                serviceRevenue,
+                discount,
+                tempPrice,
+                totalRevenue);
         cinemaRevenueMap.put(cinemaId, cinemaRevenueDto);
       } else {
         cinemaRevenueDto.setTotalTickets(cinemaRevenueDto.getTotalTickets() + ticketCount);
+        cinemaRevenueDto.setTicketRevenue(cinemaRevenueDto.getTicketRevenue() + ticketRevenue);
+        cinemaRevenueDto.setServiceRevenue(cinemaRevenueDto.getServiceRevenue() + serviceRevenue);
+        cinemaRevenueDto.setTotalDiscount(cinemaRevenueDto.getTotalDiscount() + discount);
+        cinemaRevenueDto.setRevenueBeforeDiscount(
+            cinemaRevenueDto.getRevenueBeforeDiscount() + tempPrice);
         cinemaRevenueDto.setTotalRevenue(cinemaRevenueDto.getTotalRevenue() + totalRevenue);
       }
     }

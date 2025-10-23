@@ -1,5 +1,6 @@
 package vn.edu.iuh.fit.controller;
 
+import java.security.Principal;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
@@ -36,10 +37,16 @@ public class DashboardController {
   @GetMapping("/revenue/cinema/export")
   public ResponseEntity<?> exportRevenueByCinema(
       @RequestParam(required = false) String startDate,
-      @RequestParam(required = false) String endDate) {
-    byte[] data = reportService.exportRevenueByCinema(startDate, endDate);
+      @RequestParam(required = false) String endDate,
+      Principal principal) {
+    byte[] data = reportService.exportRevenueByCinema(startDate, endDate, principal.getName());
+
+    String currentDate =
+        java.time.LocalDate.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd"));
+    String filename = "Revenue_Report_Cinema_" + currentDate + ".xlsx";
+
     return ResponseEntity.ok()
-        .header("Content-Disposition", "attachment; filename=reports_cinema.xlsx")
+        .header("Content-Disposition", "attachment; filename=" + filename)
         .contentType(
             MediaType.parseMediaType(
                 "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
@@ -56,10 +63,16 @@ public class DashboardController {
   @GetMapping("/revenue/movie/export")
   public ResponseEntity<?> exportRevenueByMovie(
       @RequestParam(required = false) String startDate,
-      @RequestParam(required = false) String endDate) {
-    byte[] data = reportService.exportRevenueByMovie(startDate, endDate);
+      @RequestParam(required = false) String endDate,
+      Principal principal) {
+    byte[] data = reportService.exportRevenueByMovie(startDate, endDate, principal.getName());
+
+    String currentDate =
+        java.time.LocalDate.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd"));
+    String filename = "Revenue_Report_Movie_" + currentDate + ".xlsx";
+
     return ResponseEntity.ok()
-        .header("Content-Disposition", "attachment; filename=reports_movie.xlsx")
+        .header("Content-Disposition", "attachment; filename=" + filename)
         .contentType(
             MediaType.parseMediaType(
                 "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
