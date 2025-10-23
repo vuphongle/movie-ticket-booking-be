@@ -29,10 +29,10 @@ public interface BlogRepository extends JpaRepository<Blog, Integer> {
       "select new vn.edu.iuh.fit.model.dto.BlogDto(b.id, b.title, b.slug, b.description, b.thumbnail, b.publishedAt) from Blog b join ViewHistory vh on b.id = vh.blog.id where b.type = ?1 and b.status = true and vh.viewedAt between ?2 and ?3 group by b.id order by count(vh.id) desc")
   List<BlogDto> findMostViewBlogByType(BlogType blogType, LocalDateTime start, LocalDateTime end);
 
-  // join to view history to get view count in time range
+  // Get top blogs by stored viewCount. Use COALESCE to treat null as 0.
   @Query(
-      "select new vn.edu.iuh.fit.model.dto.BlogViewDto(b.id, b.title, count(vh.id)) from Blog b join ViewHistory vh on b.id = vh.blog.id where vh.viewedAt between ?1 and ?2 group by b.id order by sum(vh.id) desc")
-  List<BlogViewDto> findTopViewBlogs(LocalDateTime start, LocalDateTime end);
+      "select new vn.edu.iuh.fit.model.dto.BlogViewDto(b.id, b.title, coalesce(b.viewCount, 0)) from Blog b where b.status = true order by coalesce(b.viewCount, 0) desc")
+  List<BlogViewDto> findTopViewBlogs();
 
   List<Blog> findByOrderByCreatedAtDesc();
 

@@ -71,9 +71,8 @@ public class DashboardService {
 
   // Lấy danh sách blog có lượt xem cao nhất trong tháng (sắp xếp theo lượt xem giảm dần)
   public List<BlogViewDto> getTopViewBlogs(LocalDate startDate, LocalDate endDate, Integer limit) {
-    LocalDateTime start = DateUtils.atStartOfDay(startDate);
-    LocalDateTime end = DateUtils.atEndOfDay(endDate);
-    List<BlogViewDto> blogViewDtos = blogRepository.findTopViewBlogs(start, end);
+    // Currently use stored blog.viewCount to determine top viewed blogs.
+    List<BlogViewDto> blogViewDtos = blogRepository.findTopViewBlogs();
     if (limit != null && limit > 0) {
       return blogViewDtos.subList(0, Math.min(limit, blogViewDtos.size()));
     }
