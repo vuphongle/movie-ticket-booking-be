@@ -77,16 +77,45 @@ public class OrderRepositoryCustomImpl implements OrderRepositoryCustom {
     HashMap<Integer, CinemaRevenueDto> cinemaRevenueMap = new HashMap<>();
     for (Order order : orders) {
       Integer cinemaId = order.getShowtime().getAuditorium().getCinema().getId();
+      String cinemaCode = "R" + String.format("%04d", cinemaId);
       String cinemaName = order.getShowtime().getAuditorium().getCinema().getName();
       Integer ticketCount = order.getTicketItems().size();
+      Integer discount = order.getDiscount() != null ? order.getDiscount() : 0;
+
+      // Calculate ticket revenue
+      Integer ticketRevenue =
+          order.getTicketItems().stream().map(item -> item.getPrice()).reduce(0, Integer::sum);
+
+      // Calculate service revenue
+      Integer serviceRevenue =
+          order.getServiceItems().stream()
+              .map(item -> item.getPrice() * item.getQuantity())
+              .reduce(0, Integer::sum);
+
+      Integer tempPrice = ticketRevenue + serviceRevenue;
       Integer totalRevenue = order.getTotalPrice();
 
       CinemaRevenueDto cinemaRevenueDto = cinemaRevenueMap.get(cinemaId);
       if (cinemaRevenueDto == null) {
-        cinemaRevenueDto = new CinemaRevenueDto(cinemaId, cinemaName, ticketCount, totalRevenue);
+        cinemaRevenueDto =
+            new CinemaRevenueDto(
+                cinemaId,
+                cinemaCode,
+                cinemaName,
+                ticketCount,
+                ticketRevenue,
+                serviceRevenue,
+                discount,
+                tempPrice,
+                totalRevenue);
         cinemaRevenueMap.put(cinemaId, cinemaRevenueDto);
       } else {
         cinemaRevenueDto.setTotalTickets(cinemaRevenueDto.getTotalTickets() + ticketCount);
+        cinemaRevenueDto.setTicketRevenue(cinemaRevenueDto.getTicketRevenue() + ticketRevenue);
+        cinemaRevenueDto.setServiceRevenue(cinemaRevenueDto.getServiceRevenue() + serviceRevenue);
+        cinemaRevenueDto.setTotalDiscount(cinemaRevenueDto.getTotalDiscount() + discount);
+        cinemaRevenueDto.setRevenueBeforeDiscount(
+            cinemaRevenueDto.getRevenueBeforeDiscount() + tempPrice);
         cinemaRevenueDto.setTotalRevenue(cinemaRevenueDto.getTotalRevenue() + totalRevenue);
       }
     }
