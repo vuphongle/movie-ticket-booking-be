@@ -2,6 +2,7 @@ package vn.edu.iuh.fit.service;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.text.SimpleDateFormat;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -9,15 +10,18 @@ import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.ss.util.CellRangeAddress;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.stereotype.Service;
+import vn.edu.iuh.fit.entity.User;
 import vn.edu.iuh.fit.exception.BadRequestException;
 import vn.edu.iuh.fit.model.dto.CinemaRevenueDto;
 import vn.edu.iuh.fit.model.dto.MovieRevenueDto;
+import vn.edu.iuh.fit.repository.UserRepository;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class ReportService {
   private final DashboardService dashboardService;
+  private final UserRepository userRepository;
 
   public byte[] exportRevenueByCinema(String startDate, String endDate) {
     try {
@@ -84,9 +88,22 @@ public class ReportService {
     }
   }
 
-  public byte[] exportRevenueByMovie(String startDate, String endDate) {
+  public byte[] exportRevenueByMovie(String startDate, String endDate, String userEmail) {
     try (Workbook workbook = new XSSFWorkbook()) {
       Sheet sheet = workbook.createSheet("Doanh thu theo phim");
+
+      // Get user information
+      User user = userRepository.findByEmail(userEmail).orElse(null);
+      String userName = user != null ? user.getName() : "N/A";
+      String userDob = "N/A";
+      String userPhone = user != null && user.getPhone() != null ? user.getPhone() : "N/A";
+
+      if (user != null && user.getDob() != null) {
+        SimpleDateFormat dateFormat = new SimpleDateFormat("dd/MM/yyyy");
+        userDob = dateFormat.format(user.getDob());
+      }
+
+      String printedBy = String.format("Được in bởi: %s - %s - %s", userName, userDob, userPhone);
 
       // Parse dates for display
       String displayStartDate = startDate != null ? startDate.replace("-", "/") : "";
@@ -123,6 +140,13 @@ public class ReportService {
       Cell printDateCell = printDateRow.createCell(0);
       printDateCell.setCellValue("Ngày in: " + printDate);
       printDateCell.setCellStyle(printDateStyle);
+
+      // Row 2: Printed by (A2:G2 merged)
+      sheet.addMergedRegion(new CellRangeAddress(1, 1, 0, 6));
+      Row printedByRow = sheet.createRow(1);
+      Cell printedByCell = printedByRow.createCell(0);
+      printedByCell.setCellValue(printedBy);
+      printedByCell.setCellStyle(printDateStyle);
 
       // Row 4: Title (A4:G4 merged)
       sheet.addMergedRegion(new CellRangeAddress(3, 3, 0, 6));

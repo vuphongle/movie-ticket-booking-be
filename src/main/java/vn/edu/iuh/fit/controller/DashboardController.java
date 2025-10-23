@@ -1,5 +1,6 @@
 package vn.edu.iuh.fit.controller;
 
+import java.security.Principal;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
@@ -56,8 +57,9 @@ public class DashboardController {
   @GetMapping("/revenue/movie/export")
   public ResponseEntity<?> exportRevenueByMovie(
       @RequestParam(required = false) String startDate,
-      @RequestParam(required = false) String endDate) {
-    byte[] data = reportService.exportRevenueByMovie(startDate, endDate);
+      @RequestParam(required = false) String endDate,
+      Principal principal) {
+    byte[] data = reportService.exportRevenueByMovie(startDate, endDate, principal.getName());
 
     String currentDate =
         java.time.LocalDate.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd"));
