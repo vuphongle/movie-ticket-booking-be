@@ -26,6 +26,7 @@ public class ReportService {
   public byte[] exportRevenueByCinema(String startDate, String endDate, String userEmail) {
     try (Workbook workbook = new XSSFWorkbook()) {
       Sheet sheet = workbook.createSheet("Doanh thu theo rạp");
+      sheet.setDisplayGridlines(false);
 
       // Get user information
       User user = userRepository.findByEmail(userEmail).orElse(null);
@@ -256,6 +257,7 @@ public class ReportService {
   public byte[] exportRevenueByMovie(String startDate, String endDate, String userEmail) {
     try (Workbook workbook = new XSSFWorkbook()) {
       Sheet sheet = workbook.createSheet("Doanh thu theo phim");
+      sheet.setDisplayGridlines(false);
 
       // Get user information
       User user = userRepository.findByEmail(userEmail).orElse(null);
