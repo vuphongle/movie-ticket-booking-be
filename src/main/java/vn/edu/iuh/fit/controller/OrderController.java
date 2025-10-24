@@ -14,6 +14,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import vn.edu.iuh.fit.entity.Order;
+import vn.edu.iuh.fit.exception.ResourceNotFoundException;
 import vn.edu.iuh.fit.model.enums.OrderStatus;
 import vn.edu.iuh.fit.model.request.CreateOrderRequest;
 import vn.edu.iuh.fit.model.response.PaymentResponse;
@@ -213,5 +214,26 @@ public class OrderController {
   @GetMapping("/admin/orders/{id}")
   public ResponseEntity<?> getOrderById(@PathVariable Integer id) {
     return ResponseEntity.ok(orderService.getOrderById(id));
+  }
+
+  @PutMapping("/admin/orders/{id}/return")
+  public ResponseEntity<?> returnOrder(
+      @PathVariable Integer id, @RequestBody(required = false) java.util.Map<String, String> body) {
+    try {
+      String reason = null;
+      if (body != null) {
+        reason = body.get("reason");
+      }
+      orderService.returnOrder(id, reason);
+      return ResponseEntity.ok(Map.of("message", "Trả hàng thành công"));
+    } catch (IllegalStateException e) {
+      return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+    } catch (ResourceNotFoundException e) {
+      return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", e.getMessage()));
+    } catch (Exception e) {
+      log.error("Error returning order", e);
+      return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+          .body(Map.of("error", "Lỗi hệ thống: " + e.getMessage()));
+    }
   }
 }

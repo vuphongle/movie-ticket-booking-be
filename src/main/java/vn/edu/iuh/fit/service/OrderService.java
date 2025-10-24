@@ -380,4 +380,105 @@ public class OrderService {
   public List<Order> getOrdersByUserId(Integer userId) {
     return orderRepository.findByUser_IdOrderByCreatedAtDesc(userId);
   }
+
+  @Transactional
+  public void returnOrder(Integer orderId, String reason) throws Exception {
+    // 1. Lấy user hiện tại (đã được xác thực qua endpoint /admin/*)
+    User currentUser = SecurityUtils.getCurrentUserLogin();
+
+    // 2. Lấy order
+    Order order =
+        orderRepository
+            .findById(orderId)
+            .orElseThrow(
+                () -> new ResourceNotFoundException("Không tìm thấy đơn hàng với id " + orderId));
+
+    // 3. Validate: chỉ có thể trả đơn CONFIRMED
+    if (order.getStatus() != OrderStatus.CONFIRMED) {
+      throw new IllegalStateException("Chỉ có thể trả hàng cho đơn hàng đã thanh toán");
+    }
+
+    // 4. Validate: không được trả nếu suất chiếu đã qua hoặc đang diễn ra
+    java.time.LocalTime startTime = java.time.LocalTime.parse(order.getShowtime().getStartTime());
+    java.time.LocalDateTime showtimeDateTime =
+        java.time.LocalDateTime.of(order.getShowtime().getDate(), startTime);
+    if (showtimeDateTime.isBefore(java.time.LocalDateTime.now())
+        || showtimeDateTime.isEqual(java.time.LocalDateTime.now())) {
+      throw new IllegalStateException("Không thể trả hàng cho suất chiếu đã qua hoặc đang diễn ra");
+    }
+
+    // 5. Cập nhật trạng thái
+    order.setStatus(OrderStatus.RETURNED);
+    order.setReturnedByUser(currentUser);
+    order.setReturnedAt(java.time.LocalDateTime.now());
+    order.setReturnedReason(reason);
+
+    // 6. Giải phóng ghế (xóa reservation)
+    Integer showtimeId = order.getShowtime().getId();
+    for (OrderTicketItem ticketItem : order.getTicketItems()) {
+      seatReservationRepository
+          .findBySeat_IdAndShowtime_Id(ticketItem.getSeat().getId(), showtimeId)
+          .ifPresent(seatReservationRepository::delete);
+    }
+
+    // 7. Hoàn trả kho hàng (nếu có service items)
+    for (OrderServiceItem serviceItem : order.getServiceItems()) {
+      AdditionalService additionalService = serviceItem.getAdditionalService();
+      int orderedQty = serviceItem.getQuantity();
+
+      if (additionalService.getType() == AdditionalServiceType.COMBO) {
+        List<AdditionalServiceItem> items =
+            additionalServiceItemRepository.findByAdditionalServiceId(additionalService.getId());
+
+        for (AdditionalServiceItem item : items) {
+          Product product = item.getProduct();
+          if (product.getQuantity() != null) {
+            int totalReturn = item.getQuantity() * orderedQty;
+            int newStock = product.getQuantity() + totalReturn;
+            product.setQuantity(newStock);
+            productRepository.save(product);
+
+            log.info(
+                "Hoàn trả kho sản phẩm id {}: cộng {} => new stock = {}",
+                product.getId(),
+                totalReturn,
+                product.getQuantity());
+          }
+        }
+      } else if (additionalService.getType() == AdditionalServiceType.SINGLE) {
+        if (additionalService.getProductId() != null) {
+          Product product =
+              productRepository
+                  .findById(additionalService.getProductId())
+                  .orElseThrow(
+                      () ->
+                          new ResourceNotFoundException(
+                              "Không tìm thấy product với id " + additionalService.getProductId()));
+          if (product.getQuantity() != null) {
+            int newStock = product.getQuantity() + orderedQty;
+            product.setQuantity(newStock);
+            productRepository.save(product);
+
+            log.info(
+                "Hoàn trả kho sản phẩm id {} (SINGLE): cộng {} => new stock = {}",
+                product.getId(),
+                orderedQty,
+                product.getQuantity());
+          }
+        }
+      }
+    }
+
+    orderRepository.save(order);
+
+    log.info(
+        "Order {} returned by user {} at {} (reason={})",
+        orderId,
+        currentUser.getId(),
+        java.time.LocalDateTime.now(),
+        reason);
+
+    // 8. Gửi email thông báo cho khách hàng
+    mailService.sendMailReturnOrder(order);
+  }
 }

@@ -56,6 +56,15 @@ public class Order {
 
   private String pdfPath;
 
+  @ManyToOne
+  @JoinColumn(name = "returned_by_user_id")
+  User returnedByUser;
+
+  LocalDateTime returnedAt;
+
+  @Column(name = "returned_reason", columnDefinition = "TEXT")
+  String returnedReason;
+
   LocalDateTime createdAt;
   LocalDateTime updatedAt;
 
