@@ -122,6 +122,12 @@ public class CouponService {
     coupon.setStartDate(request.getStartDate());
     coupon.setEndDate(request.getEndDate());
 
+    // Nếu tắt coupon (status = false), tự động tắt tất cả coupon details
+    if (!request.getStatus()) {
+      couponDetailRepository.disableAllByCouponId(id);
+      log.info("Disabled all coupon details for coupon id: {}", id);
+    }
+
     Coupon savedCoupon = couponRepository.save(coupon);
     log.info("Updated coupon with code: {}", savedCoupon.getCode());
     return savedCoupon;
