@@ -14,6 +14,8 @@ import vn.edu.iuh.fit.entity.User;
 import vn.edu.iuh.fit.exception.BadRequestException;
 import vn.edu.iuh.fit.model.dto.CinemaMovieRevenueDto;
 import vn.edu.iuh.fit.model.dto.CinemaRevenueDto;
+import vn.edu.iuh.fit.model.dto.CustomerMovieRevenueDto;
+import vn.edu.iuh.fit.model.dto.CustomerRevenueDto;
 import vn.edu.iuh.fit.model.dto.MovieCinemaRevenueDto;
 import vn.edu.iuh.fit.model.dto.MovieRevenueDto;
 import vn.edu.iuh.fit.repository.UserRepository;
@@ -1077,6 +1079,426 @@ public class ReportService {
       }
 
       // Write to output stream
+      ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+      workbook.write(outputStream);
+
+      return outputStream.toByteArray();
+    } catch (IOException e) {
+      e.printStackTrace();
+      throw new BadRequestException("Có lỗi xảy ra khi tạo báo cáo: " + e.getMessage());
+    }
+  }
+
+  public byte[] exportRevenueByCustomer(String startDate, String endDate, String userEmail) {
+    try (Workbook workbook = new XSSFWorkbook()) {
+      Sheet sheet = workbook.createSheet("Doanh thu theo khách hàng");
+      sheet.setDisplayGridlines(false);
+
+      User user = userRepository.findByEmail(userEmail).orElse(null);
+      String userName = user != null ? user.getName() : "N/A";
+      String userDob = "N/A";
+      String userPhone = user != null && user.getPhone() != null ? user.getPhone() : "N/A";
+
+      if (user != null && user.getDob() != null) {
+        SimpleDateFormat dateFormat = new SimpleDateFormat("dd/MM/yyyy");
+        userDob = dateFormat.format(user.getDob());
+      }
+
+      String printedBy = String.format("Được in bởi: %s - %s - %s", userName, userDob, userPhone);
+      String displayStartDate = startDate != null ? startDate.replace("-", "/") : "";
+      String displayEndDate = endDate != null ? endDate.replace("-", "/") : "";
+
+      java.time.LocalDateTime now = java.time.LocalDateTime.now();
+      String printDate =
+          String.format(
+              "%02d/%02d/%04d %02d:%02d:%02d",
+              now.getDayOfMonth(),
+              now.getMonthValue(),
+              now.getYear(),
+              now.getHour(),
+              now.getMinute(),
+              now.getSecond());
+
+      CellStyle printDateStyle = createPrintDateStyle(workbook);
+      CellStyle titleStyle = createTitleStyleForReport(workbook);
+      CellStyle dateRangeStyle = createDateRangeStyle(workbook);
+      CellStyle headerStyle = createHeaderStyleForReport(workbook);
+      CellStyle centerStyle = createCenterAlignStyle(workbook);
+      CellStyle leftStyle = createLeftAlignStyle(workbook);
+      CellStyle rightStyle = createRightAlignStyle(workbook);
+      CellStyle totalStyle = createTotalStyle(workbook);
+      CellStyle totalCurrencyStyle = createTotalCurrencyStyle(workbook);
+      CellStyle totalLabelStyle = createTotalLabelStyle(workbook);
+
+      List<CustomerRevenueDto> customerRevenues =
+          dashboardService.getRevenueByCustomer(startDate, endDate);
+
+      sheet.addMergedRegion(new CellRangeAddress(0, 0, 0, 9));
+      Row printDateRow = sheet.createRow(0);
+      Cell printDateCell = printDateRow.createCell(0);
+      printDateCell.setCellValue("Ngày in: " + printDate);
+      printDateCell.setCellStyle(printDateStyle);
+
+      sheet.addMergedRegion(new CellRangeAddress(1, 1, 0, 9));
+      Row printedByRow = sheet.createRow(1);
+      Cell printedByCell = printedByRow.createCell(0);
+      printedByCell.setCellValue(printedBy);
+      printedByCell.setCellStyle(printDateStyle);
+
+      sheet.addMergedRegion(new CellRangeAddress(3, 3, 0, 9));
+      Row titleRow = sheet.createRow(3);
+      Cell titleCell = titleRow.createCell(0);
+      titleCell.setCellValue("DOANH THU THEO KHÁCH HÀNG");
+      titleCell.setCellStyle(titleStyle);
+
+      sheet.addMergedRegion(new CellRangeAddress(4, 4, 0, 9));
+      Row dateRow = sheet.createRow(4);
+      Cell dateCell = dateRow.createCell(0);
+      dateCell.setCellValue("Từ ngày: " + displayStartDate + " - Đến ngày: " + displayEndDate);
+      dateCell.setCellStyle(dateRangeStyle);
+
+      Row headerRow = sheet.createRow(6);
+      String[] headers = {
+        "STT",
+        "Mã KH",
+        "Tên khách hàng",
+        "Số đơn hàng",
+        "Tổng vé bán ra",
+        "Doanh thu vé",
+        "Doanh thu dịch vụ",
+        "Chiết khấu",
+        "Doanh thu trước CK",
+        "Doanh thu sau CK"
+      };
+      for (int i = 0; i < headers.length; i++) {
+        Cell cell = headerRow.createCell(i);
+        cell.setCellValue(headers[i]);
+        cell.setCellStyle(headerStyle);
+      }
+
+      int rowNum = 7;
+      int stt = 1;
+      long totalOrders = 0;
+      long totalTickets = 0;
+      long totalTicketRevenue = 0;
+      long totalServiceRevenue = 0;
+      long totalDiscount = 0;
+      long totalRevenueBeforeDiscount = 0;
+      long totalRevenueAfterDiscount = 0;
+
+      for (CustomerRevenueDto dto : customerRevenues) {
+        Row row = sheet.createRow(rowNum++);
+
+        Cell sttCell = row.createCell(0);
+        sttCell.setCellValue(stt++);
+        sttCell.setCellStyle(centerStyle);
+
+        Cell codeCell = row.createCell(1);
+        codeCell.setCellValue(dto.getCustomerCode());
+        codeCell.setCellStyle(leftStyle);
+
+        Cell nameCell = row.createCell(2);
+        nameCell.setCellValue(dto.getCustomerName());
+        nameCell.setCellStyle(leftStyle);
+
+        Cell ordersCell = row.createCell(3);
+        ordersCell.setCellValue(formatNumber(dto.getTotalOrders()));
+        ordersCell.setCellStyle(rightStyle);
+
+        Cell ticketsCell = row.createCell(4);
+        ticketsCell.setCellValue(formatNumber(dto.getTotalTickets()));
+        ticketsCell.setCellStyle(rightStyle);
+
+        Cell ticketRevenueCell = row.createCell(5);
+        ticketRevenueCell.setCellValue(formatCurrency(dto.getTicketRevenue()));
+        ticketRevenueCell.setCellStyle(rightStyle);
+
+        Cell serviceRevenueCell = row.createCell(6);
+        serviceRevenueCell.setCellValue(formatCurrency(dto.getServiceRevenue()));
+        serviceRevenueCell.setCellStyle(rightStyle);
+
+        Cell discountCell = row.createCell(7);
+        discountCell.setCellValue(formatCurrency(dto.getTotalDiscount()));
+        discountCell.setCellStyle(rightStyle);
+
+        Cell revenueBeforeCell = row.createCell(8);
+        revenueBeforeCell.setCellValue(formatCurrency(dto.getRevenueBeforeDiscount()));
+        revenueBeforeCell.setCellStyle(rightStyle);
+
+        Cell revenueAfterCell = row.createCell(9);
+        revenueAfterCell.setCellValue(formatCurrency(dto.getTotalRevenue()));
+        revenueAfterCell.setCellStyle(rightStyle);
+
+        addBordersToRow(row, workbook);
+
+        totalOrders += dto.getTotalOrders();
+        totalTickets += dto.getTotalTickets();
+        totalTicketRevenue += dto.getTicketRevenue();
+        totalServiceRevenue += dto.getServiceRevenue();
+        totalDiscount += dto.getTotalDiscount();
+        totalRevenueBeforeDiscount += dto.getRevenueBeforeDiscount();
+        totalRevenueAfterDiscount += dto.getTotalRevenue();
+      }
+
+      Row totalRow = sheet.createRow(rowNum);
+      sheet.addMergedRegion(new CellRangeAddress(rowNum, rowNum, 0, 1));
+
+      Cell totalLabelCell = totalRow.createCell(0);
+      totalLabelCell.setCellValue("Tổng cộng");
+      totalLabelCell.setCellStyle(totalLabelStyle);
+
+      totalRow.createCell(1).setCellStyle(totalLabelStyle);
+      totalRow.createCell(2).setCellStyle(totalLabelStyle);
+
+      Cell totalOrdersCell = totalRow.createCell(3);
+      totalOrdersCell.setCellValue(formatNumber((int) totalOrders));
+      totalOrdersCell.setCellStyle(totalStyle);
+
+      Cell totalTicketsCell = totalRow.createCell(4);
+      totalTicketsCell.setCellValue(formatNumber((int) totalTickets));
+      totalTicketsCell.setCellStyle(totalStyle);
+
+      Cell totalTicketRevenueCell = totalRow.createCell(5);
+      totalTicketRevenueCell.setCellValue(formatCurrency((int) totalTicketRevenue));
+      totalTicketRevenueCell.setCellStyle(totalCurrencyStyle);
+
+      Cell totalServiceRevenueCell = totalRow.createCell(6);
+      totalServiceRevenueCell.setCellValue(formatCurrency((int) totalServiceRevenue));
+      totalServiceRevenueCell.setCellStyle(totalCurrencyStyle);
+
+      Cell totalDiscountCell = totalRow.createCell(7);
+      totalDiscountCell.setCellValue(formatCurrency((int) totalDiscount));
+      totalDiscountCell.setCellStyle(totalCurrencyStyle);
+
+      Cell totalRevenueBeforeCell = totalRow.createCell(8);
+      totalRevenueBeforeCell.setCellValue(formatCurrency((int) totalRevenueBeforeDiscount));
+      totalRevenueBeforeCell.setCellStyle(totalCurrencyStyle);
+
+      Cell totalRevenueAfterCell = totalRow.createCell(9);
+      totalRevenueAfterCell.setCellValue(formatCurrency((int) totalRevenueAfterDiscount));
+      totalRevenueAfterCell.setCellStyle(totalCurrencyStyle);
+
+      addBordersToRow(totalRow, workbook);
+
+      for (int i = 0; i < headers.length; i++) {
+        sheet.autoSizeColumn(i);
+        int currentWidth = sheet.getColumnWidth(i);
+        sheet.setColumnWidth(i, currentWidth + 1000);
+      }
+
+      ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+      workbook.write(outputStream);
+
+      return outputStream.toByteArray();
+    } catch (IOException e) {
+      e.printStackTrace();
+      throw new BadRequestException("Có lỗi xảy ra khi tạo báo cáo: " + e.getMessage());
+    }
+  }
+
+  public byte[] exportRevenueByCustomerId(
+      Integer customerId, String startDate, String endDate, String userEmail) {
+    try (Workbook workbook = new XSSFWorkbook()) {
+      Sheet sheet = workbook.createSheet("Doanh thu theo khách hàng");
+      sheet.setDisplayGridlines(false);
+
+      User user = userRepository.findByEmail(userEmail).orElse(null);
+      String userName = user != null ? user.getName() : "N/A";
+      String userDob = "N/A";
+      String userPhone = user != null && user.getPhone() != null ? user.getPhone() : "N/A";
+
+      if (user != null && user.getDob() != null) {
+        SimpleDateFormat dateFormat = new SimpleDateFormat("dd/MM/yyyy");
+        userDob = dateFormat.format(user.getDob());
+      }
+
+      String printedBy = String.format("Được in bởi: %s - %s - %s", userName, userDob, userPhone);
+      String displayStartDate = startDate != null ? startDate.replace("-", "/") : "";
+      String displayEndDate = endDate != null ? endDate.replace("-", "/") : "";
+
+      java.time.LocalDateTime now = java.time.LocalDateTime.now();
+      String printDate =
+          String.format(
+              "%02d/%02d/%04d %02d:%02d:%02d",
+              now.getDayOfMonth(),
+              now.getMonthValue(),
+              now.getYear(),
+              now.getHour(),
+              now.getMinute(),
+              now.getSecond());
+
+      CellStyle printDateStyle = createPrintDateStyle(workbook);
+      CellStyle titleStyle = createTitleStyleForReport(workbook);
+      CellStyle dateRangeStyle = createDateRangeStyle(workbook);
+      CellStyle headerStyle = createHeaderStyleForReport(workbook);
+      CellStyle centerStyle = createCenterAlignStyle(workbook);
+      CellStyle leftStyle = createLeftAlignStyle(workbook);
+      CellStyle rightStyle = createRightAlignStyle(workbook);
+      CellStyle totalStyle = createTotalStyle(workbook);
+      CellStyle totalCurrencyStyle = createTotalCurrencyStyle(workbook);
+      CellStyle totalLabelStyle = createTotalLabelStyle(workbook);
+
+      List<CustomerMovieRevenueDto> customerMovieRevenues =
+          dashboardService.getRevenueByCustomerId(customerId, startDate, endDate);
+
+      String customerName =
+          customerMovieRevenues.isEmpty() ? "N/A" : customerMovieRevenues.get(0).getCustomerName();
+      String customerCode =
+          customerMovieRevenues.isEmpty() ? "N/A" : customerMovieRevenues.get(0).getCustomerCode();
+
+      sheet.addMergedRegion(new CellRangeAddress(0, 0, 0, 9));
+      Row printDateRow = sheet.createRow(0);
+      Cell printDateCell = printDateRow.createCell(0);
+      printDateCell.setCellValue("Ngày in: " + printDate);
+      printDateCell.setCellStyle(printDateStyle);
+
+      sheet.addMergedRegion(new CellRangeAddress(1, 1, 0, 9));
+      Row printedByRow = sheet.createRow(1);
+      Cell printedByCell = printedByRow.createCell(0);
+      printedByCell.setCellValue(printedBy);
+      printedByCell.setCellStyle(printDateStyle);
+
+      sheet.addMergedRegion(new CellRangeAddress(3, 3, 0, 9));
+      Row titleRow = sheet.createRow(3);
+      Cell titleCell = titleRow.createCell(0);
+      titleCell.setCellValue("DOANH THU THEO KHÁCH HÀNG: " + customerCode + " - " + customerName);
+      titleCell.setCellStyle(titleStyle);
+
+      sheet.addMergedRegion(new CellRangeAddress(4, 4, 0, 9));
+      Row dateRow = sheet.createRow(4);
+      Cell dateCell = dateRow.createCell(0);
+      dateCell.setCellValue("Từ ngày: " + displayStartDate + " - Đến ngày: " + displayEndDate);
+      dateCell.setCellStyle(dateRangeStyle);
+
+      Row headerRow = sheet.createRow(6);
+      String[] headers = {
+        "STT",
+        "Mã phim",
+        "Tên phim",
+        "Số đơn hàng",
+        "Tổng vé bán ra",
+        "Doanh thu vé",
+        "Doanh thu dịch vụ",
+        "Chiết khấu",
+        "Doanh thu trước CK",
+        "Doanh thu sau CK"
+      };
+      for (int i = 0; i < headers.length; i++) {
+        Cell cell = headerRow.createCell(i);
+        cell.setCellValue(headers[i]);
+        cell.setCellStyle(headerStyle);
+      }
+
+      int rowNum = 7;
+      int stt = 1;
+      long totalOrders = 0;
+      long totalTickets = 0;
+      long totalTicketRevenue = 0;
+      long totalServiceRevenue = 0;
+      long totalDiscount = 0;
+      long totalRevenueBeforeDiscount = 0;
+      long totalRevenueAfterDiscount = 0;
+
+      for (CustomerMovieRevenueDto dto : customerMovieRevenues) {
+        Row row = sheet.createRow(rowNum++);
+
+        Cell sttCell = row.createCell(0);
+        sttCell.setCellValue(stt++);
+        sttCell.setCellStyle(centerStyle);
+
+        Cell codeCell = row.createCell(1);
+        codeCell.setCellValue(dto.getMovieCode());
+        codeCell.setCellStyle(leftStyle);
+
+        Cell nameCell = row.createCell(2);
+        nameCell.setCellValue(dto.getMovieName());
+        nameCell.setCellStyle(leftStyle);
+
+        Cell ordersCell = row.createCell(3);
+        ordersCell.setCellValue(formatNumber(dto.getTotalOrders()));
+        ordersCell.setCellStyle(rightStyle);
+
+        Cell ticketsCell = row.createCell(4);
+        ticketsCell.setCellValue(formatNumber(dto.getTotalTickets()));
+        ticketsCell.setCellStyle(rightStyle);
+
+        Cell ticketRevenueCell = row.createCell(5);
+        ticketRevenueCell.setCellValue(formatCurrency(dto.getTicketRevenue()));
+        ticketRevenueCell.setCellStyle(rightStyle);
+
+        Cell serviceRevenueCell = row.createCell(6);
+        serviceRevenueCell.setCellValue(formatCurrency(dto.getServiceRevenue()));
+        serviceRevenueCell.setCellStyle(rightStyle);
+
+        Cell discountCell = row.createCell(7);
+        discountCell.setCellValue(formatCurrency(dto.getTotalDiscount()));
+        discountCell.setCellStyle(rightStyle);
+
+        Cell revenueBeforeCell = row.createCell(8);
+        revenueBeforeCell.setCellValue(formatCurrency(dto.getRevenueBeforeDiscount()));
+        revenueBeforeCell.setCellStyle(rightStyle);
+
+        Cell revenueAfterCell = row.createCell(9);
+        revenueAfterCell.setCellValue(formatCurrency(dto.getTotalRevenue()));
+        revenueAfterCell.setCellStyle(rightStyle);
+
+        addBordersToRow(row, workbook);
+
+        totalOrders += dto.getTotalOrders();
+        totalTickets += dto.getTotalTickets();
+        totalTicketRevenue += dto.getTicketRevenue();
+        totalServiceRevenue += dto.getServiceRevenue();
+        totalDiscount += dto.getTotalDiscount();
+        totalRevenueBeforeDiscount += dto.getRevenueBeforeDiscount();
+        totalRevenueAfterDiscount += dto.getTotalRevenue();
+      }
+
+      Row totalRow = sheet.createRow(rowNum);
+      sheet.addMergedRegion(new CellRangeAddress(rowNum, rowNum, 0, 1));
+
+      Cell totalLabelCell = totalRow.createCell(0);
+      totalLabelCell.setCellValue("Tổng cộng");
+      totalLabelCell.setCellStyle(totalLabelStyle);
+
+      totalRow.createCell(1).setCellStyle(totalLabelStyle);
+      totalRow.createCell(2).setCellStyle(totalLabelStyle);
+
+      Cell totalOrdersCell = totalRow.createCell(3);
+      totalOrdersCell.setCellValue(formatNumber((int) totalOrders));
+      totalOrdersCell.setCellStyle(totalStyle);
+
+      Cell totalTicketsCell = totalRow.createCell(4);
+      totalTicketsCell.setCellValue(formatNumber((int) totalTickets));
+      totalTicketsCell.setCellStyle(totalStyle);
+
+      Cell totalTicketRevenueCell = totalRow.createCell(5);
+      totalTicketRevenueCell.setCellValue(formatCurrency((int) totalTicketRevenue));
+      totalTicketRevenueCell.setCellStyle(totalCurrencyStyle);
+
+      Cell totalServiceRevenueCell = totalRow.createCell(6);
+      totalServiceRevenueCell.setCellValue(formatCurrency((int) totalServiceRevenue));
+      totalServiceRevenueCell.setCellStyle(totalCurrencyStyle);
+
+      Cell totalDiscountCell = totalRow.createCell(7);
+      totalDiscountCell.setCellValue(formatCurrency((int) totalDiscount));
+      totalDiscountCell.setCellStyle(totalCurrencyStyle);
+
+      Cell totalRevenueBeforeCell = totalRow.createCell(8);
+      totalRevenueBeforeCell.setCellValue(formatCurrency((int) totalRevenueBeforeDiscount));
+      totalRevenueBeforeCell.setCellStyle(totalCurrencyStyle);
+
+      Cell totalRevenueAfterCell = totalRow.createCell(9);
+      totalRevenueAfterCell.setCellValue(formatCurrency((int) totalRevenueAfterDiscount));
+      totalRevenueAfterCell.setCellStyle(totalCurrencyStyle);
+
+      addBordersToRow(totalRow, workbook);
+
+      for (int i = 0; i < headers.length; i++) {
+        sheet.autoSizeColumn(i);
+        int currentWidth = sheet.getColumnWidth(i);
+        sheet.setColumnWidth(i, currentWidth + 1000);
+      }
+
       ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
       workbook.write(outputStream);
 

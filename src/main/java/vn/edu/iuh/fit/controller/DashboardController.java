@@ -133,4 +133,61 @@ public class DashboardController {
                 "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
         .body(data);
   }
+
+  @GetMapping("/revenue/customer")
+  public ResponseEntity<?> getRevenueByCustomer(
+      @RequestParam(required = false) String startDate,
+      @RequestParam(required = false) String endDate) {
+    return ResponseEntity.ok(dashboardService.getRevenueByCustomer(startDate, endDate));
+  }
+
+  @GetMapping("/revenue/customer/export")
+  public ResponseEntity<?> exportRevenueByCustomer(
+      @RequestParam(required = false) String startDate,
+      @RequestParam(required = false) String endDate,
+      Principal principal) {
+    byte[] data = reportService.exportRevenueByCustomer(startDate, endDate, principal.getName());
+
+    String currentDate =
+        java.time.LocalDate.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd"));
+    String filename = "Revenue_Report_Customer_" + currentDate + ".xlsx";
+
+    return ResponseEntity.ok()
+        .header("Content-Disposition", "attachment; filename=" + filename)
+        .contentType(
+            MediaType.parseMediaType(
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+        .body(data);
+  }
+
+  @GetMapping("/revenue/customer/{customerId}")
+  public ResponseEntity<?> getRevenueByCustomerId(
+      @PathVariable Integer customerId,
+      @RequestParam(required = false) String startDate,
+      @RequestParam(required = false) String endDate) {
+    return ResponseEntity.ok(
+        dashboardService.getRevenueByCustomerId(customerId, startDate, endDate));
+  }
+
+  @GetMapping("/revenue/customer/{customerId}/export")
+  public ResponseEntity<?> exportRevenueByCustomerId(
+      @PathVariable Integer customerId,
+      @RequestParam(required = false) String startDate,
+      @RequestParam(required = false) String endDate,
+      Principal principal) {
+    byte[] data =
+        reportService.exportRevenueByCustomerId(
+            customerId, startDate, endDate, principal.getName());
+
+    String currentDate =
+        java.time.LocalDate.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd"));
+    String filename = "Revenue_Report_Customer_" + customerId + "_" + currentDate + ".xlsx";
+
+    return ResponseEntity.ok()
+        .header("Content-Disposition", "attachment; filename=" + filename)
+        .contentType(
+            MediaType.parseMediaType(
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+        .body(data);
+  }
 }

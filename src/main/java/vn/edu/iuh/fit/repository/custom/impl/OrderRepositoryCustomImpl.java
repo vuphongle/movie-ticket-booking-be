@@ -15,6 +15,8 @@ import org.springframework.stereotype.Repository;
 import vn.edu.iuh.fit.entity.Order;
 import vn.edu.iuh.fit.model.dto.CinemaMovieRevenueDto;
 import vn.edu.iuh.fit.model.dto.CinemaRevenueDto;
+import vn.edu.iuh.fit.model.dto.CustomerMovieRevenueDto;
+import vn.edu.iuh.fit.model.dto.CustomerRevenueDto;
 import vn.edu.iuh.fit.model.dto.MovieCinemaRevenueDto;
 import vn.edu.iuh.fit.model.dto.MovieRevenueDto;
 import vn.edu.iuh.fit.model.dto.RevenueDto;
@@ -318,6 +320,157 @@ public class OrderRepositoryCustomImpl implements OrderRepositoryCustom {
                 totalRevenue);
         revenueMap.put(movieId, dto);
       } else {
+        dto.setTotalTickets(dto.getTotalTickets() + ticketCount);
+        dto.setTicketRevenue(dto.getTicketRevenue() + ticketRevenue);
+        dto.setServiceRevenue(dto.getServiceRevenue() + serviceRevenue);
+        dto.setTotalDiscount(dto.getTotalDiscount() + discount);
+        dto.setRevenueBeforeDiscount(dto.getRevenueBeforeDiscount() + tempPrice);
+        dto.setTotalRevenue(dto.getTotalRevenue() + totalRevenue);
+      }
+    }
+
+    return new ArrayList<>(revenueMap.values());
+  }
+
+  @Override
+  public List<CustomerRevenueDto> findCustomerRevenues(
+      LocalDateTime startDate, LocalDateTime endDate) {
+    List<Order> orders =
+        entityManager
+            .createQuery(
+                "SELECT o FROM Order o WHERE o.createdAt BETWEEN :startDate AND :endDate AND o.status = 'CONFIRMED'",
+                Order.class)
+            .setParameter("startDate", startDate)
+            .setParameter("endDate", endDate)
+            .getResultList();
+
+    HashMap<Integer, CustomerRevenueDto> customerRevenueMap = new HashMap<>();
+    HashMap<Integer, Integer> orderCountMap = new HashMap<>();
+
+    for (Order order : orders) {
+      Integer customerId = order.getUser().getId();
+      String customerCode = "KH" + String.format("%04d", customerId);
+      String customerName = order.getUser().getName();
+      String customerEmail = order.getUser().getEmail();
+      String customerPhone = order.getUser().getPhone();
+
+      Integer ticketCount = order.getTicketItems().size();
+      Integer discount = order.getDiscount() != null ? order.getDiscount() : 0;
+
+      Integer ticketRevenue =
+          order.getTicketItems().stream().map(item -> item.getPrice()).reduce(0, Integer::sum);
+
+      Integer serviceRevenue =
+          order.getServiceItems().stream()
+              .map(item -> item.getPrice() * item.getQuantity())
+              .reduce(0, Integer::sum);
+
+      Integer tempPrice = ticketRevenue + serviceRevenue;
+      Integer totalRevenue = order.getTotalPrice();
+
+      // Count orders per customer
+      orderCountMap.put(customerId, orderCountMap.getOrDefault(customerId, 0) + 1);
+
+      CustomerRevenueDto customerRevenueDto = customerRevenueMap.get(customerId);
+      if (customerRevenueDto == null) {
+        customerRevenueDto =
+            new CustomerRevenueDto(
+                customerId,
+                customerCode,
+                customerName,
+                customerEmail,
+                customerPhone,
+                1, // totalOrders
+                ticketCount,
+                ticketRevenue,
+                serviceRevenue,
+                discount,
+                tempPrice,
+                totalRevenue);
+        customerRevenueMap.put(customerId, customerRevenueDto);
+      } else {
+        customerRevenueDto.setTotalOrders(orderCountMap.get(customerId));
+        customerRevenueDto.setTotalTickets(customerRevenueDto.getTotalTickets() + ticketCount);
+        customerRevenueDto.setTicketRevenue(customerRevenueDto.getTicketRevenue() + ticketRevenue);
+        customerRevenueDto.setServiceRevenue(
+            customerRevenueDto.getServiceRevenue() + serviceRevenue);
+        customerRevenueDto.setTotalDiscount(customerRevenueDto.getTotalDiscount() + discount);
+        customerRevenueDto.setRevenueBeforeDiscount(
+            customerRevenueDto.getRevenueBeforeDiscount() + tempPrice);
+        customerRevenueDto.setTotalRevenue(customerRevenueDto.getTotalRevenue() + totalRevenue);
+      }
+    }
+
+    return new ArrayList<>(customerRevenueMap.values());
+  }
+
+  @Override
+  public List<CustomerMovieRevenueDto> findCustomerMovieRevenues(
+      Integer customerId, LocalDateTime startDate, LocalDateTime endDate) {
+    List<Order> orders =
+        entityManager
+            .createQuery(
+                "SELECT o FROM Order o "
+                    + "WHERE o.user.id = :customerId "
+                    + "AND o.createdAt BETWEEN :startDate AND :endDate "
+                    + "AND o.status = 'CONFIRMED'",
+                Order.class)
+            .setParameter("customerId", customerId)
+            .setParameter("startDate", startDate)
+            .setParameter("endDate", endDate)
+            .getResultList();
+
+    HashMap<Integer, CustomerMovieRevenueDto> revenueMap = new HashMap<>();
+    HashMap<Integer, Integer> orderCountMap = new HashMap<>();
+
+    for (Order order : orders) {
+      Integer customerIdFromOrder = order.getUser().getId();
+      String customerCode = "KH" + String.format("%04d", customerIdFromOrder);
+      String customerName = order.getUser().getName();
+      String customerEmail = order.getUser().getEmail();
+
+      Integer movieId = order.getShowtime().getMovie().getId();
+      String movieCode = "P" + String.format("%04d", movieId);
+      String movieName = order.getShowtime().getMovie().getName();
+
+      Integer ticketCount = order.getTicketItems().size();
+      Integer discount = order.getDiscount() != null ? order.getDiscount() : 0;
+
+      Integer ticketRevenue =
+          order.getTicketItems().stream().map(item -> item.getPrice()).reduce(0, Integer::sum);
+
+      Integer serviceRevenue =
+          order.getServiceItems().stream()
+              .map(item -> item.getPrice() * item.getQuantity())
+              .reduce(0, Integer::sum);
+
+      Integer tempPrice = ticketRevenue + serviceRevenue;
+      Integer totalRevenue = order.getTotalPrice();
+
+      // Count orders per movie
+      orderCountMap.put(movieId, orderCountMap.getOrDefault(movieId, 0) + 1);
+
+      CustomerMovieRevenueDto dto = revenueMap.get(movieId);
+      if (dto == null) {
+        dto =
+            new CustomerMovieRevenueDto(
+                customerIdFromOrder,
+                customerCode,
+                customerName,
+                customerEmail,
+                movieId,
+                movieCode,
+                movieName,
+                1, // totalOrders
+                ticketCount,
+                ticketRevenue,
+                serviceRevenue,
+                discount,
+                tempPrice,
+                totalRevenue);
+        revenueMap.put(movieId, dto);
+      } else {
+        dto.setTotalOrders(orderCountMap.get(movieId));
         dto.setTotalTickets(dto.getTotalTickets() + ticketCount);
         dto.setTicketRevenue(dto.getTicketRevenue() + ticketRevenue);
         dto.setServiceRevenue(dto.getServiceRevenue() + serviceRevenue);

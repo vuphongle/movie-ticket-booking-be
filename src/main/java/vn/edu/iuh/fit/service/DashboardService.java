@@ -12,6 +12,8 @@ import org.springframework.stereotype.Service;
 import vn.edu.iuh.fit.model.dto.BlogViewDto;
 import vn.edu.iuh.fit.model.dto.CinemaMovieRevenueDto;
 import vn.edu.iuh.fit.model.dto.CinemaRevenueDto;
+import vn.edu.iuh.fit.model.dto.CustomerMovieRevenueDto;
+import vn.edu.iuh.fit.model.dto.CustomerRevenueDto;
 import vn.edu.iuh.fit.model.dto.MovieCinemaRevenueDto;
 import vn.edu.iuh.fit.model.dto.MovieRevenueDto;
 import vn.edu.iuh.fit.model.dto.RevenueDto;
@@ -156,5 +158,28 @@ public class DashboardService {
     LocalDateTime endDateTime = DateUtils.atEndOfDay(end);
 
     return orderRepository.findCinemaMovieRevenues(cinemaId, startDateTime, endDateTime);
+  }
+
+  // Thống kê theo khách hàng
+  public List<CustomerRevenueDto> getRevenueByCustomer(String startDate, String endDate) {
+    Map<String, LocalDate> dateMap = parseDate(startDate, endDate);
+    LocalDate start = dateMap.get("start");
+    LocalDate end = dateMap.get("end");
+    LocalDateTime startDateTime = DateUtils.atStartOfDay(start);
+    LocalDateTime endDateTime = DateUtils.atEndOfDay(end);
+
+    return orderRepository.findCustomerRevenues(startDateTime, endDateTime);
+  }
+
+  // Thống kê theo 1 khách hàng cụ thể
+  public List<CustomerMovieRevenueDto> getRevenueByCustomerId(
+      Integer customerId, String startDate, String endDate) {
+    Map<String, LocalDate> dateMap = parseDate(startDate, endDate);
+    LocalDate start = dateMap.get("start");
+    LocalDate end = dateMap.get("end");
+    LocalDateTime startDateTime = DateUtils.atStartOfDay(start);
+    LocalDateTime endDateTime = DateUtils.atEndOfDay(end);
+
+    return orderRepository.findCustomerMovieRevenues(customerId, startDateTime, endDateTime);
   }
 }
