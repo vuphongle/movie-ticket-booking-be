@@ -151,4 +151,65 @@ public class MailService {
       log.error("Error sending order confirmation email: {}", e.getMessage());
     }
   }
+
+  @Async
+  public void sendMailReturnOrder(Order order) {
+    try {
+      User user = order.getUser();
+
+      // --- Format giá tiền bằng DecimalFormat ---
+      DecimalFormatSymbols symbols = new DecimalFormatSymbols();
+      symbols.setGroupingSeparator(',');
+      symbols.setDecimalSeparator(',');
+      DecimalFormat df = new DecimalFormat("#,###", symbols);
+
+      GraphicsType graphicsTypeEnum = order.getShowtime().getGraphicsType();
+      String formattedGraphicsType =
+          switch (graphicsTypeEnum) {
+            case _2D -> "2D";
+            case _3D -> "3D";
+          };
+
+      TranslationType translationTypeEnum = order.getShowtime().getTranslationType();
+      String formattedTranslationType =
+          switch (translationTypeEnum) {
+            case DUBBING -> "Lồng tiếng";
+            case SUBTITLING -> "Phụ đề";
+          };
+
+      Context context = new Context();
+      context.setVariable("userName", user.getName());
+      context.setVariable("userPhone", user.getPhone());
+      context.setVariable("orderId", order.getId());
+      context.setVariable("movieTitle", order.getShowtime().getMovie().getName());
+      context.setVariable("graphicsType", formattedGraphicsType);
+      context.setVariable("translationType", formattedTranslationType);
+      context.setVariable("showDate", order.getShowtime().getDate().toString());
+      context.setVariable("startTime", order.getShowtime().getStartTime().toString());
+      context.setVariable("endTime", order.getShowtime().getEndTime().toString());
+      context.setVariable("cinemaName", order.getShowtime().getAuditorium().getCinema().getName());
+      context.setVariable("auditoriumName", order.getShowtime().getAuditorium().getName());
+      context.setVariable("returnedAt", order.getReturnedAt().toString());
+      context.setVariable(
+          "returnedByUserName",
+          order.getReturnedByUser() != null ? order.getReturnedByUser().getName() : "Hệ thống");
+      context.setVariable(
+          "returnedReason",
+          order.getReturnedReason() != null ? order.getReturnedReason() : "(Không có)");
+      context.setVariable("totalPrice", df.format(order.getTotalPrice()) + " VNĐ");
+      context.setVariable("discountPrice", df.format(order.getDiscountPrice()) + " VNĐ");
+      context.setVariable("ticketItems", order.getTicketItems());
+      context.setVariable("serviceItems", order.getServiceItems());
+
+      String htmlContent =
+          templateEngine.process("mail-template/return-order-notification", context);
+
+      // Send via SendPulse REST API
+      sendPulseClient.sendEmail(user.getEmail(), "Thông báo trả hàng - Go Cinema", htmlContent);
+
+      log.info("Sent return order notification email to {}", user.getEmail());
+    } catch (Exception e) {
+      log.error("Error sending return order notification email: {}", e.getMessage());
+    }
+  }
 }

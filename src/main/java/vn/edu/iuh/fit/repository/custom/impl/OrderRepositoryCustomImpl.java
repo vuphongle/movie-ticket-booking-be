@@ -33,7 +33,7 @@ public class OrderRepositoryCustomImpl implements OrderRepositoryCustom {
     List<Order> orders =
         entityManager
             .createQuery(
-                "SELECT o FROM Order o WHERE o.createdAt BETWEEN :startDate AND :endDate AND o.status = 'CONFIRMED'",
+                "SELECT o FROM Order o WHERE o.createdAt BETWEEN :startDate AND :endDate AND o.status = 'CONFIRMED' AND o.status != 'RETURNED'",
                 Order.class)
             .setParameter("startDate", startDate)
             .setParameter("endDate", endDate)
@@ -72,7 +72,7 @@ public class OrderRepositoryCustomImpl implements OrderRepositoryCustom {
     List<Order> orders =
         entityManager
             .createQuery(
-                "SELECT o FROM Order o WHERE o.createdAt BETWEEN :startDate AND :endDate AND o.status = 'CONFIRMED'",
+                "SELECT o FROM Order o WHERE o.createdAt BETWEEN :startDate AND :endDate AND o.status = 'CONFIRMED' AND o.status != 'RETURNED'",
                 Order.class)
             .setParameter("startDate", startDate)
             .setParameter("endDate", endDate)
@@ -162,6 +162,7 @@ public class OrderRepositoryCustomImpl implements OrderRepositoryCustom {
             + "FROM orders o "
             + "WHERE o.created_at BETWEEN ?1 AND ?2 "
             + "AND o.status = 'CONFIRMED' "
+            + "AND o.status != 'RETURNED' "
             + "GROUP BY EXTRACT(YEAR FROM o.created_at), EXTRACT(MONTH FROM o.created_at)";
 
     List<Object[]> results =
@@ -197,7 +198,8 @@ public class OrderRepositoryCustomImpl implements OrderRepositoryCustom {
                     + "JOIN o.showtime s "
                     + "WHERE s.movie.id = :movieId "
                     + "AND o.createdAt BETWEEN :startDate AND :endDate "
-                    + "AND o.status = 'CONFIRMED'",
+                    + "AND o.status = 'CONFIRMED' "
+                    + "AND o.status != 'RETURNED'",
                 Order.class)
             .setParameter("movieId", movieId)
             .setParameter("startDate", startDate)
@@ -270,7 +272,8 @@ public class OrderRepositoryCustomImpl implements OrderRepositoryCustom {
                     + "JOIN s.auditorium a "
                     + "WHERE a.cinema.id = :cinemaId "
                     + "AND o.createdAt BETWEEN :startDate AND :endDate "
-                    + "AND o.status = 'CONFIRMED'",
+                    + "AND o.status = 'CONFIRMED' "
+                    + "AND o.status != 'RETURNED'",
                 Order.class)
             .setParameter("cinemaId", cinemaId)
             .setParameter("startDate", startDate)
@@ -338,7 +341,7 @@ public class OrderRepositoryCustomImpl implements OrderRepositoryCustom {
     List<Order> orders =
         entityManager
             .createQuery(
-                "SELECT o FROM Order o WHERE o.createdAt BETWEEN :startDate AND :endDate AND o.status = 'CONFIRMED'",
+                "SELECT o FROM Order o WHERE o.createdAt BETWEEN :startDate AND :endDate AND o.status = 'CONFIRMED' AND o.status != 'RETURNED'",
                 Order.class)
             .setParameter("startDate", startDate)
             .setParameter("endDate", endDate)
@@ -413,7 +416,8 @@ public class OrderRepositoryCustomImpl implements OrderRepositoryCustom {
                 "SELECT o FROM Order o "
                     + "WHERE o.user.id = :customerId "
                     + "AND o.createdAt BETWEEN :startDate AND :endDate "
-                    + "AND o.status = 'CONFIRMED'",
+                    + "AND o.status = 'CONFIRMED' "
+                    + "AND o.status != 'RETURNED'",
                 Order.class)
             .setParameter("customerId", customerId)
             .setParameter("startDate", startDate)
