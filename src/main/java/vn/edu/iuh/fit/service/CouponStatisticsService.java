@@ -114,6 +114,7 @@ public class CouponStatisticsService {
       CellStyle dateRangeStyle = createDateRangeStyle(workbook);
       CellStyle headerStyle = createHeaderStyle(workbook);
       CellStyle centerStyle = createCenterStyle(workbook);
+      CellStyle leftStyle = createLeftStyle(workbook);
       CellStyle currencyStyle = createCurrencyStyle(workbook);
       CellStyle totalStyle = createTotalStyle(workbook);
       CellStyle totalCurrencyStyle = createTotalCurrencyStyle(workbook);
@@ -194,6 +195,7 @@ public class CouponStatisticsService {
         // Tên
         Cell nameCell = row.createCell(2);
         nameCell.setCellValue(perf.getCouponName());
+        nameCell.setCellStyle(leftStyle);
 
         // Loại
         Cell kindCell = row.createCell(3);
@@ -253,11 +255,15 @@ public class CouponStatisticsService {
       // Total row
       Row totalRow = sheet.createRow(rowNum);
 
-      // Label
+      // Label - Merge từ cột 0 đến 4 và set style cho tất cả cells
       sheet.addMergedRegion(new CellRangeAddress(rowNum, rowNum, 0, 4));
-      Cell totalLabelCell = totalRow.createCell(0);
-      totalLabelCell.setCellValue("TỔNG CỘNG");
-      totalLabelCell.setCellStyle(totalStyle);
+      for (int i = 0; i <= 4; i++) {
+        Cell cell = totalRow.createCell(i);
+        if (i == 0) {
+          cell.setCellValue("TỔNG CỘNG");
+        }
+        cell.setCellStyle(totalStyle);
+      }
 
       // Total usage
       Cell totalUsageCell = totalRow.createCell(5);
@@ -283,6 +289,15 @@ public class CouponStatisticsService {
       Cell totalRevAfterCell = totalRow.createCell(9);
       totalRevAfterCell.setCellValue(formatCurrency(totalRevAfter));
       totalRevAfterCell.setCellStyle(totalCurrencyStyle);
+
+      // Empty cells for columns 10 and 11 (Tỷ lệ giảm, Trạng thái) with border
+      Cell emptyCell10 = totalRow.createCell(10);
+      emptyCell10.setCellValue("");
+      emptyCell10.setCellStyle(totalStyle);
+
+      Cell emptyCell11 = totalRow.createCell(11);
+      emptyCell11.setCellValue("");
+      emptyCell11.setCellStyle(totalStyle);
 
       // Auto-size columns
       for (int i = 0; i < headers.length; i++) {
@@ -370,6 +385,17 @@ public class CouponStatisticsService {
   private CellStyle createCenterStyle(Workbook workbook) {
     CellStyle style = workbook.createCellStyle();
     style.setAlignment(HorizontalAlignment.CENTER);
+    style.setVerticalAlignment(VerticalAlignment.CENTER);
+    style.setBorderBottom(BorderStyle.THIN);
+    style.setBorderTop(BorderStyle.THIN);
+    style.setBorderLeft(BorderStyle.THIN);
+    style.setBorderRight(BorderStyle.THIN);
+    return style;
+  }
+
+  private CellStyle createLeftStyle(Workbook workbook) {
+    CellStyle style = workbook.createCellStyle();
+    style.setAlignment(HorizontalAlignment.LEFT);
     style.setVerticalAlignment(VerticalAlignment.CENTER);
     style.setBorderBottom(BorderStyle.THIN);
     style.setBorderTop(BorderStyle.THIN);
