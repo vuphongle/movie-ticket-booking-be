@@ -7,9 +7,10 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 import vn.edu.iuh.fit.entity.Coupon;
+import vn.edu.iuh.fit.repository.custom.CouponRepositoryCustom;
 
 @Repository
-public interface CouponRepository extends JpaRepository<Coupon, Integer> {
+public interface CouponRepository extends JpaRepository<Coupon, Integer>, CouponRepositoryCustom {
 
   boolean existsByCode(String code);
 
