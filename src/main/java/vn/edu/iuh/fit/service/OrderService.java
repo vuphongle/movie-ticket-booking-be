@@ -469,6 +469,37 @@ public class OrderService {
       }
     }
 
+    // 8. Hoàn trả số lượt sử dụng coupon (giảm detailUsedCount)
+    if (order.getDiscount() > 0 && order.getRequestSnapshot() != null) {
+      try {
+        ObjectMapper objectMapper = new ObjectMapper();
+        CreateOrderRequest originalRequest =
+            objectMapper.readValue(order.getRequestSnapshot(), CreateOrderRequest.class);
+
+        if (originalRequest.getDiscounts() != null
+            && originalRequest.getDiscounts().getCoupons() != null) {
+          for (CouponDetailRequest couponRequest : originalRequest.getDiscounts().getCoupons()) {
+            if (couponRequest.getDetailId() != null) {
+              CouponDetailTerms term =
+                  couponDetailTermRepository.findByCouponDetailId(couponRequest.getDetailId());
+
+              if (term != null && term.getDetailUsedCount() > 0) {
+                // Giảm số lượng đã dùng
+                log.info(
+                    "Hoàn trả coupon detail id {}: current used count = {}, decrement by 1",
+                    term.getId(),
+                    term.getDetailUsedCount());
+                term.setDetailUsedCount(term.getDetailUsedCount() - 1);
+                couponDetailTermRepository.save(term);
+              }
+            }
+          }
+        }
+      } catch (Exception e) {
+        log.error("Lỗi khi đọc requestSnapshot để hoàn trả coupon usage: {}", e.getMessage());
+      }
+    }
+
     orderRepository.save(order);
 
     log.info(
@@ -478,7 +509,7 @@ public class OrderService {
         java.time.LocalDateTime.now(),
         reason);
 
-    // 8. Gửi email thông báo cho khách hàng
+    // 9. Gửi email thông báo cho khách hàng
     mailService.sendMailReturnOrder(order);
   }
 }
