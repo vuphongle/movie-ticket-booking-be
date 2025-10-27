@@ -139,6 +139,10 @@ public class ChatRecommendationService {
       ChatRecommendationRequest request, User currentUser) {
     ChatMetadata metadata = enrichMetadataWithUser(extractMetadata(request), currentUser);
     String conversationId = resolveConversationId(request, currentUser);
+    String userName =
+        currentUser != null && StringUtils.hasText(currentUser.getName())
+            ? currentUser.getName()
+            : null;
     metadata = mergeWithCachedMetadata(conversationId, metadata);
     List<ChatMessage> recentHistory = chatMemoryService.getRecentMessages(conversationId);
     String recentHistoryBlock = buildHistoryBlock(recentHistory);
@@ -188,6 +192,7 @@ public class ChatRecommendationService {
             request,
             metadata,
             conversationId,
+            userName,
             recentHistoryBlock,
             immutableAges,
             groupMinAge,
@@ -368,6 +373,18 @@ public class ChatRecommendationService {
       RecommendationContext context, List<RecommendedMovieResponse> recommendations) {
     try {
       String language = determineLanguage(context.request());
+      String userName = context.userName();
+
+      String greetingInstruction = "";
+      if (StringUtils.hasText(userName)) {
+        greetingInstruction =
+            " Nếu đây là tin nhắn đầu tiên hoặc câu chào, hãy chào người dùng bằng tên '"
+                + userName
+                + "' một cách thân thiện (ví dụ: 'Chào "
+                + userName
+                + "!')."
+                + " Nếu đang trong cuộc hội thoại, không cần chào lại.";
+      }
 
       String systemPrompt =
           "Bạn là trợ lý tư vấn phim cho rạp chiếu phim Việt Nam. Chỉ sử dụng danh sách phim do hệ"
@@ -377,7 +394,8 @@ public class ChatRecommendationService {
               + " điệu thân thiện, súc tích và trả lời bằng ngôn ngữ người dùng yêu cầu. Luôn tôn"
               + " trọng hệ thống phân loại độ tuổi Việt Nam (P, K, T13, T16, T18) và không gợi ý"
               + " phim vượt giới hạn. Nếu câu hỏi lệch khỏi chủ đề phim, hãy khéo léo đưa người"
-              + " dùng trở lại với những gợi ý phim.";
+              + " dùng trở lại với những gợi ý phim."
+              + greetingInstruction;
 
       String userPrompt = buildUserPrompt(context, recommendations, language);
 
@@ -813,6 +831,11 @@ public class ChatRecommendationService {
             ? recentHistory
             : "Không có hội thoại gần đây hoặc chưa lưu được.";
 
+    String userNameInfo =
+        StringUtils.hasText(context.userName())
+            ? "Tên người dùng: " + context.userName() + "\n"
+            : "";
+
     String moviesContext =
         recommendations.stream()
             .map(
@@ -887,7 +910,9 @@ public class ChatRecommendationService {
 
     return "Lịch sử hội thoại gần đây (tối đa 5 lượt):\n"
         + historySection
-        + "\n\nNgười dùng hỏi bằng ngôn ngữ: "
+        + "\n\n"
+        + userNameInfo
+        + "Người dùng hỏi bằng ngôn ngữ: "
         + language
         + "\n"
         + "Tin nhắn của người dùng: "
@@ -975,6 +1000,7 @@ public class ChatRecommendationService {
       ChatRecommendationRequest request,
       ChatMetadata metadata,
       String conversationId,
+      String userName,
       String recentHistoryBlock,
       List<Integer> ageSamples,
       int groupMinimumAge,
