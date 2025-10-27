@@ -29,4 +29,8 @@ public class OrderServiceItem {
 
   Integer quantity;
   Integer price;
+
+  @ManyToOne
+  @JoinColumn(name = "price_id")
+  PriceItem priceItem;
 }

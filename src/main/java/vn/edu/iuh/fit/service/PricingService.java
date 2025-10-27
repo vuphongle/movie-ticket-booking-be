@@ -1,8 +1,6 @@
 package vn.edu.iuh.fit.service;
 
-import java.util.Date;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import vn.edu.iuh.fit.entity.PriceItem;
@@ -21,62 +19,78 @@ public class PricingService {
   }
 
   public Optional<Integer> getPriceForProduct(Integer productId, Date checkDate) {
-    List<PriceItem> priceItems =
-        priceItemRepository.findValidPriceItemsForProduct(productId, checkDate);
-
-    if (priceItems.isEmpty()) {
-      return Optional.empty();
-    }
-
-    // Lấy price item đầu tiên (đã được sắp xếp theo priority)
-    return Optional.of(priceItems.get(0).getPrice());
+    return priceItemRepository.findValidPriceItemsForProduct(productId, checkDate).stream()
+        .findFirst()
+        .map(PriceItem::getPrice);
   }
 
   // Tính giá cho additional service
-  public Optional<Integer> getPriceForAdditionalService(Integer serviceId) {
+  public Optional<PriceItem> getPriceForAdditionalService(Integer serviceId) {
     return getPriceForAdditionalService(serviceId, new Date());
   }
 
-  public Optional<Integer> getPriceForAdditionalService(Integer serviceId, Date checkDate) {
-    List<PriceItem> priceItems =
-        priceItemRepository.findValidPriceItemsForAdditionalService(serviceId, checkDate);
-
-    if (priceItems.isEmpty()) {
-      return Optional.empty();
+  // Lấy PriceItem cho additional service theo ngày
+  public Optional<PriceItem> getPriceForAdditionalService(Integer serviceId, Date checkDate) {
+    if (checkDate == null) {
+      throw new IllegalArgumentException("checkDate cannot be null");
     }
 
-    // Lấy price item đầu tiên (đã được sắp xếp theo priority)
-    return Optional.of(priceItems.get(0).getPrice());
+    return priceItemRepository
+        .findValidPriceItemsForAdditionalService(serviceId, checkDate)
+        .stream()
+        .findFirst();
   }
 
   // Tính giá cho vé xem phim
-  public Optional<Integer> getPriceForTicket(
+  public Optional<PriceItem> getPriceItemForTicket(
       SeatType seatType,
       GraphicsType graphicsType,
       ScreeningTimeType screeningTimeType,
       DayType dayType,
       AuditoriumType auditoriumType) {
-    return getPriceForTicket(
+    return getPriceItemForTicket(
         seatType, graphicsType, screeningTimeType, dayType, auditoriumType, new Date());
   }
 
-  public Optional<Integer> getPriceForTicket(
+  public Optional<PriceItem> getPriceItemForTicket(
       SeatType seatType,
       GraphicsType graphicsType,
       ScreeningTimeType screeningTimeType,
       DayType dayType,
       AuditoriumType auditoriumType,
       Date checkDate) {
+
+    if (checkDate == null) {
+      throw new IllegalArgumentException("checkDate cannot be null");
+    }
+
     List<PriceItem> priceItems =
         priceItemRepository.findValidPriceItemsForTicket(
             seatType, graphicsType, screeningTimeType, dayType, auditoriumType, checkDate);
 
-    if (priceItems.isEmpty()) {
+    if (priceItems == null || priceItems.isEmpty()) {
       return Optional.empty();
     }
 
-    // Lấy price item đầu tiên (đã được sắp xếp theo priority)
-    return Optional.of(priceItems.get(0).getPrice());
+    // Chọn PriceItem cụ thể nhất (ít null nhất)
+    PriceItem bestMatch =
+        priceItems.stream()
+            .filter(Objects::nonNull)
+            .max(Comparator.comparingInt(this::countNonNullAttributes))
+            .orElse(null);
+
+    return Optional.ofNullable(bestMatch);
+  }
+
+  /** Đếm số lượng thuộc tính không null trong PriceItem (dùng để xác định độ cụ thể). */
+  private int countNonNullAttributes(PriceItem pi) {
+    int count = 0;
+    if (pi.getSeatType() != null) count++;
+    if (pi.getGraphicsType() != null) count++;
+    if (pi.getScreeningTimeType() != null) count++;
+    if (pi.getDayType() != null) count++;
+    if (pi.getAuditoriumType() != null) count++;
+    return count;
   }
 
   // Tính giá với số lượng tối thiểu

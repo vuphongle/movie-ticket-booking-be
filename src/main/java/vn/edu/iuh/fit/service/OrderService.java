@@ -42,6 +42,7 @@ public class OrderService {
   private final ProductRepository productRepository;
   private final AdditionalServiceItemRepository additionalServiceItemRepository;
   private final PDFService pdfService;
+  private final PriceItemRepository priceItemRepository;
 
   @Autowired private CouponDetailTermsRepository couponDetailTermRepository;
 
@@ -102,8 +103,19 @@ public class OrderService {
                   () ->
                       new ResourceNotFoundException(
                           "Không tìm thấy ghế với id " + ticketItem.getSeatId()));
+      PriceItem priceItem =
+          priceItemRepository
+              .findById(ticketItem.getPriceId())
+              .orElseThrow(
+                  () ->
+                      new ResourceNotFoundException(
+                          "Không tìm thấy giá với id " + ticketItem.getPriceId()));
       order.addTicketItem(
-          OrderTicketItem.builder().seat(seat).price(ticketItem.getPrice()).build());
+          OrderTicketItem.builder()
+              .seat(seat)
+              .price(ticketItem.getPrice())
+              .priceItem(priceItem)
+              .build());
     }
 
     if (request.getServiceItems() != null) {
@@ -116,11 +128,19 @@ public class OrderService {
                         new ResourceNotFoundException(
                             "Không tìm thấy dịch vụ với id "
                                 + serviceItem.getAdditionalServiceId()));
+        PriceItem priceItem =
+            priceItemRepository
+                .findById(serviceItem.getPriceId())
+                .orElseThrow(
+                    () ->
+                        new ResourceNotFoundException(
+                            "Không tìm thấy giá với id " + serviceItem.getPriceId()));
         order.addServiceItem(
             OrderServiceItem.builder()
                 .additionalService(additionalService)
                 .quantity(serviceItem.getQuantity())
                 .price(serviceItem.getPrice())
+                .priceItem(priceItem)
                 .build());
       }
     }

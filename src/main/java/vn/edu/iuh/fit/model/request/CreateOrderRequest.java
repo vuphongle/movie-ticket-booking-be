@@ -38,6 +38,7 @@ public class CreateOrderRequest {
   public static class TicketItem {
     Integer seatId;
     Integer price;
+    Integer priceId;
   }
 
   @Getter
@@ -50,6 +51,7 @@ public class CreateOrderRequest {
     Integer additionalServiceId;
     Integer quantity;
     Integer price;
+    Integer priceId;
   }
 
   @Data

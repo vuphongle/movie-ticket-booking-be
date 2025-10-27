@@ -3,6 +3,7 @@ package vn.edu.iuh.fit.controller;
 import jakarta.validation.Valid;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -126,11 +127,11 @@ public class PriceItemController {
     return price.map(ResponseEntity::ok).orElse(ResponseEntity.notFound().build());
   }
 
-  @GetMapping("/public/price-items/additional-service/{serviceId}/price")
-  public ResponseEntity<?> getPriceForAdditionalService(@PathVariable Integer serviceId) {
-    Optional<Integer> price = pricingService.getPriceForAdditionalService(serviceId);
-    return price.map(ResponseEntity::ok).orElse(ResponseEntity.notFound().build());
-  }
+  //  @GetMapping("/public/price-items/additional-service/{serviceId}/price")
+  //  public ResponseEntity<?> getPriceForAdditionalService(@PathVariable Integer serviceId) {
+  //    Optional<Integer> price = pricingService.getPriceForAdditionalService(serviceId);
+  //    return price.map(ResponseEntity::ok).orElse(ResponseEntity.notFound().build());
+  //  }
 
   @GetMapping("/public/price-items/ticket/price")
   public ResponseEntity<?> getPriceForTicket(
@@ -140,11 +141,18 @@ public class PriceItemController {
       @RequestParam DayType dayType,
       @RequestParam AuditoriumType auditoriumType) {
 
-    Optional<Integer> price =
-        pricingService.getPriceForTicket(
-            seatType, graphicsType, screeningTimeType, dayType, auditoriumType);
+    Optional<PriceItem> priceItemOpt =
+        pricingService.getPriceItemForTicket(
+            seatType, graphicsType, screeningTimeType, dayType, auditoriumType, new Date());
 
-    return price.map(ResponseEntity::ok).orElse(ResponseEntity.notFound().build());
+    return priceItemOpt
+        .map(
+            pi ->
+                Map.of(
+                    "price", pi.getPrice(),
+                    "priceId", pi.getId()))
+        .map(ResponseEntity::ok)
+        .orElse(ResponseEntity.notFound().build());
   }
 
   @GetMapping("/public/price-items/ticket/price/at/{date}")
@@ -156,11 +164,18 @@ public class PriceItemController {
       @RequestParam DayType dayType,
       @RequestParam AuditoriumType auditoriumType) {
 
-    Optional<Integer> price =
-        pricingService.getPriceForTicket(
+    Optional<PriceItem> priceItemOpt =
+        pricingService.getPriceItemForTicket(
             seatType, graphicsType, screeningTimeType, dayType, auditoriumType, date);
 
-    return price.map(ResponseEntity::ok).orElse(ResponseEntity.notFound().build());
+    return priceItemOpt
+        .map(
+            pi ->
+                Map.of(
+                    "price", pi.getPrice(),
+                    "priceId", pi.getId()))
+        .map(ResponseEntity::ok)
+        .orElse(ResponseEntity.notFound().build());
   }
 
   // ============= PUBLIC EFFECTIVE PRICE ITEMS ENDPOINTS =============

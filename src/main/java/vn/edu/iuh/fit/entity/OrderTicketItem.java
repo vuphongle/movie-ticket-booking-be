@@ -28,4 +28,8 @@ public class OrderTicketItem {
   Seat seat;
 
   Integer price;
+
+  @ManyToOne
+  @JoinColumn(name = "price_id")
+  PriceItem priceItem;
 }

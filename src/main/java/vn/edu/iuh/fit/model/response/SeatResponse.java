@@ -19,5 +19,6 @@ public class SeatResponse {
   SeatType type;
   Boolean status;
   SeatReservationStatus reservationStatus;
+  Integer priceId;
   Integer price;
 }

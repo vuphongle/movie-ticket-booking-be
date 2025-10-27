@@ -50,9 +50,6 @@ public class PriceItem {
 
   Integer minQty; // Số lượng tối thiểu để áp dụng giá này
 
-  @Column(nullable = false)
-  Integer priority; // Độ ưu tiên (số cao hơn = ưu tiên cao hơn)
-
   @Builder.Default Boolean status = true; // Trạng thái kích hoạt
 
   // Helper method để kiểm tra price item có hiệu lực tại thời điểm hiện tại không
