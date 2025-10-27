@@ -84,19 +84,24 @@ public class SeatService {
                       .reservationStatus(seatStatusMap.getOrDefault(seat.getId(), null))
                       .build();
 
-              // Sử dụng PricingService thay vì BaseTicketPrice
-              Integer ticketPrice =
-                  pricingService
-                      .getPriceForTicket(
-                          seat.getType(),
-                          showtime.getGraphicsType(),
-                          screeningTimeType,
-                          dayType,
-                          auditorium.getType())
-                      .orElse(70000); // Giá mặc định nếu không tìm thấy
+                // Lấy PriceItem thay vì chỉ giá
+                Optional<PriceItem> priceItemOpt = pricingService.getPriceItemForTicket(
+                        seat.getType(),
+                        showtime.getGraphicsType(),
+                        screeningTimeType,
+                        dayType,
+                        auditorium.getType(),
+                        new Date() // ngày hiện tại
+                );
 
-              response.setPrice(ticketPrice);
-              return response;
+                priceItemOpt.ifPresentOrElse(pi -> {
+                    response.setPrice(pi.getPrice());
+                    response.setPriceId(pi.getId());
+                }, () -> {
+                    response.setPrice(0);
+                    response.setPriceId(null);
+                });
+                return response;
             })
         .collect(Collectors.toList());
   }

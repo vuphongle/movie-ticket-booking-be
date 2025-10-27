@@ -2,6 +2,7 @@ package vn.edu.iuh.fit.controller;
 
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -34,42 +35,54 @@ public class PricingController {
     return price.map(ResponseEntity::ok).orElse(ResponseEntity.notFound().build());
   }
 
-  @GetMapping("/public/pricing/additional-service/{serviceId}")
-  public ResponseEntity<?> getPriceForAdditionalService(@PathVariable Integer serviceId) {
-    Optional<Integer> price = pricingService.getPriceForAdditionalService(serviceId);
-    return price.map(ResponseEntity::ok).orElse(ResponseEntity.notFound().build());
-  }
+//  @GetMapping("/public/pricing/additional-service/{serviceId}")
+//  public ResponseEntity<?> getPriceForAdditionalService(@PathVariable Integer serviceId) {
+//    Optional<Integer> price = pricingService.getPriceForAdditionalService(serviceId);
+//    return price.map(ResponseEntity::ok).orElse(ResponseEntity.notFound().build());
+//  }
 
-  @GetMapping("/public/pricing/ticket")
-  public ResponseEntity<?> getPriceForTicket(
-      @RequestParam SeatType seatType,
-      @RequestParam GraphicsType graphicsType,
-      @RequestParam ScreeningTimeType screeningTimeType,
-      @RequestParam DayType dayType,
-      @RequestParam AuditoriumType auditoriumType) {
+    @GetMapping("/public/pricing/ticket")
+    public ResponseEntity<?> getPriceForTicket(
+            @RequestParam SeatType seatType,
+            @RequestParam GraphicsType graphicsType,
+            @RequestParam ScreeningTimeType screeningTimeType,
+            @RequestParam DayType dayType,
+            @RequestParam AuditoriumType auditoriumType) {
 
-    Optional<Integer> price =
-        pricingService.getPriceForTicket(
-            seatType, graphicsType, screeningTimeType, dayType, auditoriumType);
+        Optional<PriceItem> priceItemOpt = pricingService.getPriceItemForTicket(
+                seatType, graphicsType, screeningTimeType, dayType, auditoriumType, new Date()
+        );
 
-    return price.map(ResponseEntity::ok).orElse(ResponseEntity.notFound().build());
-  }
+        return priceItemOpt
+                .map(pi -> Map.of(
+                        "price", pi.getPrice(),
+                        "priceId", pi.getId()
+                ))
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
+    }
 
-  @GetMapping("/public/pricing/ticket/at/{date}")
-  public ResponseEntity<?> getPriceForTicketAt(
-      @PathVariable @DateTimeFormat(pattern = "yyyy-MM-dd") Date date,
-      @RequestParam SeatType seatType,
-      @RequestParam GraphicsType graphicsType,
-      @RequestParam ScreeningTimeType screeningTimeType,
-      @RequestParam DayType dayType,
-      @RequestParam AuditoriumType auditoriumType) {
+    @GetMapping("/public/pricing/ticket/at/{date}")
+    public ResponseEntity<?> getPriceForTicketAt(
+            @PathVariable @DateTimeFormat(pattern = "yyyy-MM-dd") Date date,
+            @RequestParam SeatType seatType,
+            @RequestParam GraphicsType graphicsType,
+            @RequestParam ScreeningTimeType screeningTimeType,
+            @RequestParam DayType dayType,
+            @RequestParam AuditoriumType auditoriumType) {
 
-    Optional<Integer> price =
-        pricingService.getPriceForTicket(
-            seatType, graphicsType, screeningTimeType, dayType, auditoriumType, date);
+        Optional<PriceItem> priceItemOpt = pricingService.getPriceItemForTicket(
+                seatType, graphicsType, screeningTimeType, dayType, auditoriumType, date
+        );
 
-    return price.map(ResponseEntity::ok).orElse(ResponseEntity.notFound().build());
-  }
+        return priceItemOpt
+                .map(pi -> Map.of(
+                        "price", pi.getPrice(),
+                        "priceId", pi.getId()
+                ))
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
+    }
 
   @GetMapping("/admin/pricing/product/{productId}/analysis")
   public ResponseEntity<?> getAllValidPriceItemsForProduct(@PathVariable Integer productId) {

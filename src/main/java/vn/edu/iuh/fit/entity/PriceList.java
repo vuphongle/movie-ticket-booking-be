@@ -24,9 +24,6 @@ public class PriceList {
 
   @Builder.Default Boolean status = true; // Trạng thái kích hoạt
 
-  @Column(nullable = false)
-  Integer priority; // Độ ưu tiên (số cao hơn = ưu tiên cao hơn)
-
   @Temporal(TemporalType.TIMESTAMP)
   Date validFrom; // Ngày bắt đầu hiệu lực
 

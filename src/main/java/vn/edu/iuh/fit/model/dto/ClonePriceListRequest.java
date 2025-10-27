@@ -17,8 +17,6 @@ public class ClonePriceListRequest {
   @Size(min = 3, max = 255, message = "Name must be between 3 and 255 characters")
   private String name;
 
-  private Integer priority;
-
   private Boolean status = false; // Default to inactive
 
   @JsonFormat(pattern = "yyyy-MM-dd")

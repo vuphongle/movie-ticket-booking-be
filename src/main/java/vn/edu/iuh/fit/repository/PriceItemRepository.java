@@ -24,8 +24,7 @@ public interface PriceItemRepository extends JpaRepository<PriceItem, Integer> {
           + "WHERE pi.targetType = 'PRODUCT' AND pi.targetId = :productId "
           + "AND pi.status = true AND pl.status = true "
           + "AND (pl.validFrom IS NULL OR pl.validFrom <= :checkDate) "
-          + "AND (pl.validTo IS NULL OR pl.validTo >= :checkDate) "
-          + "ORDER BY pl.priority DESC, pi.priority DESC")
+          + "AND (pl.validTo IS NULL OR pl.validTo >= :checkDate) ")
   List<PriceItem> findValidPriceItemsForProduct(
       @Param("productId") Integer productId, @Param("checkDate") Date checkDate);
 
@@ -35,8 +34,7 @@ public interface PriceItemRepository extends JpaRepository<PriceItem, Integer> {
           + "WHERE pi.targetType = 'ADDITIONAL_SERVICE' AND pi.targetId = :serviceId "
           + "AND pi.status = true AND pl.status = true "
           + "AND (pl.validFrom IS NULL OR pl.validFrom <= :checkDate) "
-          + "AND (pl.validTo IS NULL OR pl.validTo >= :checkDate) "
-          + "ORDER BY pl.priority DESC, pi.priority DESC")
+          + "AND (pl.validTo IS NULL OR pl.validTo >= :checkDate) ")
   List<PriceItem> findValidPriceItemsForAdditionalService(
       @Param("serviceId") Integer serviceId, @Param("checkDate") Date checkDate);
 
@@ -51,8 +49,7 @@ public interface PriceItemRepository extends JpaRepository<PriceItem, Integer> {
           + "AND (pi.graphicsType IS NULL OR pi.graphicsType = :graphicsType) "
           + "AND (pi.screeningTimeType IS NULL OR pi.screeningTimeType = :screeningTimeType) "
           + "AND (pi.dayType IS NULL OR pi.dayType = :dayType) "
-          + "AND (pi.auditoriumType IS NULL OR pi.auditoriumType = :auditoriumType) "
-          + "ORDER BY pl.priority DESC, pi.priority DESC")
+          + "AND (pi.auditoriumType IS NULL OR pi.auditoriumType = :auditoriumType) ")
   List<PriceItem> findValidPriceItemsForTicket(
       @Param("seatType") SeatType seatType,
       @Param("graphicsType") GraphicsType graphicsType,
@@ -75,7 +72,6 @@ public interface PriceItemRepository extends JpaRepository<PriceItem, Integer> {
       "SELECT pi FROM PriceItem pi JOIN pi.priceList pl "
           + "WHERE pi.status = true AND pl.status = true "
           + "AND (pl.validFrom IS NULL OR pl.validFrom <= :checkDate) "
-          + "AND (pl.validTo IS NULL OR pl.validTo >= :checkDate) "
-          + "ORDER BY pl.priority DESC, pi.priority DESC")
+          + "AND (pl.validTo IS NULL OR pl.validTo >= :checkDate) ")
   List<PriceItem> findEffectivePriceItemsAt(@Param("checkDate") Date checkDate);
 }

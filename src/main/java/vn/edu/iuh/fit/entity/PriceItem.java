@@ -2,6 +2,8 @@ package vn.edu.iuh.fit.entity;
 
 import jakarta.persistence.*;
 import java.util.Date;
+import java.util.List;
+
 import lombok.*;
 import lombok.experimental.FieldDefaults;
 import vn.edu.iuh.fit.model.enums.*;
@@ -49,9 +51,6 @@ public class PriceItem {
   Integer price; // Giá áp dụng
 
   Integer minQty; // Số lượng tối thiểu để áp dụng giá này
-
-  @Column(nullable = false)
-  Integer priority; // Độ ưu tiên (số cao hơn = ưu tiên cao hơn)
 
   @Builder.Default Boolean status = true; // Trạng thái kích hoạt
 

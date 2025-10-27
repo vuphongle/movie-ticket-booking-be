@@ -36,8 +36,5 @@ public class PriceItemRequest {
   @Min(value = 1, message = "Minimum quantity must be positive")
   Integer minQty; // nullable
 
-  @NotNull(message = "Priority is required")
-  Integer priority;
-
   @Builder.Default Boolean status = true; // Default to active
 }

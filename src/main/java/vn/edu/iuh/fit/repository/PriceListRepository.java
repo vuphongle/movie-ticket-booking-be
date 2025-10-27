@@ -18,16 +18,14 @@ public interface PriceListRepository extends JpaRepository<PriceList, Integer> {
   @Query(
       "SELECT pl FROM PriceList pl WHERE pl.status = true "
           + "AND (pl.validFrom IS NULL OR pl.validFrom <= :checkDate) "
-          + "AND (pl.validTo IS NULL OR pl.validTo >= :checkDate) "
-          + "ORDER BY pl.priority DESC")
+          + "AND (pl.validTo IS NULL OR pl.validTo >= :checkDate) ")
   List<PriceList> findValidPriceListsAt(@Param("checkDate") Date checkDate);
 
   // Tìm bảng giá hiệu lực có priority cao nhất
   @Query(
       "SELECT pl FROM PriceList pl WHERE pl.status = true "
           + "AND (pl.validFrom IS NULL OR pl.validFrom <= :checkDate) "
-          + "AND (pl.validTo IS NULL OR pl.validTo >= :checkDate) "
-          + "ORDER BY pl.priority DESC LIMIT 1")
+          + "AND (pl.validTo IS NULL OR pl.validTo >= :checkDate) ")
   PriceList findTopValidPriceListAt(@Param("checkDate") Date checkDate);
 
   // Tìm bảng giá theo khoảng thời gian

@@ -7,6 +7,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import vn.edu.iuh.fit.entity.AdditionalService;
 import vn.edu.iuh.fit.entity.AdditionalServiceItem;
+import vn.edu.iuh.fit.entity.PriceItem;
 import vn.edu.iuh.fit.entity.Product;
 import vn.edu.iuh.fit.exception.ResourceNotFoundException;
 import vn.edu.iuh.fit.model.enums.AdditionalServiceType;
@@ -101,10 +102,10 @@ public class AdditionalServices {
   }
 
   // Lấy giá cho additional service
-  public Integer getPriceForAdditionalService(Integer serviceId) {
-    return pricingService
-        .getPriceForAdditionalService(serviceId)
-        .orElse(null); // Trả về null nếu không tìm thấy giá
+  public PriceItem getPriceForAdditionalService(Integer serviceId) {
+      return pricingService
+              .getPriceForAdditionalService(serviceId)
+              .orElse(null); // Trả về null nếu không tìm thấy
   }
 
   // Lấy các items của combo service
