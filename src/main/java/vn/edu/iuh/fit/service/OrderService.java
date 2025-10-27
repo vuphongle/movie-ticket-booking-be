@@ -106,11 +106,16 @@ public class OrderService {
       PriceItem priceItem =
           priceItemRepository
               .findById(ticketItem.getPriceId())
-                  .orElseThrow(
-                          () -> new ResourceNotFoundException(
-                                          "Không tìm thấy giá với id " + ticketItem.getPriceId()));
+              .orElseThrow(
+                  () ->
+                      new ResourceNotFoundException(
+                          "Không tìm thấy giá với id " + ticketItem.getPriceId()));
       order.addTicketItem(
-          OrderTicketItem.builder().seat(seat).price(ticketItem.getPrice()).priceItem(priceItem).build());
+          OrderTicketItem.builder()
+              .seat(seat)
+              .price(ticketItem.getPrice())
+              .priceItem(priceItem)
+              .build());
     }
 
     if (request.getServiceItems() != null) {
@@ -123,12 +128,13 @@ public class OrderService {
                         new ResourceNotFoundException(
                             "Không tìm thấy dịch vụ với id "
                                 + serviceItem.getAdditionalServiceId()));
-          PriceItem priceItem =
-                  priceItemRepository
-                          .findById(serviceItem.getPriceId())
-                          .orElseThrow(
-                                  () -> new ResourceNotFoundException(
-                                          "Không tìm thấy giá với id " + serviceItem.getPriceId()));
+        PriceItem priceItem =
+            priceItemRepository
+                .findById(serviceItem.getPriceId())
+                .orElseThrow(
+                    () ->
+                        new ResourceNotFoundException(
+                            "Không tìm thấy giá với id " + serviceItem.getPriceId()));
         order.addServiceItem(
             OrderServiceItem.builder()
                 .additionalService(additionalService)

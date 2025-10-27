@@ -3,7 +3,6 @@ package vn.edu.iuh.fit.controller;
 import jakarta.validation.Valid;
 import java.util.List;
 import java.util.Map;
-
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -59,19 +58,19 @@ public class AdditionalServiceController {
   // API mới để lấy giá của additional service
   @GetMapping("/public/additional-services/{id}/price")
   public ResponseEntity<?> getAdditionalServicePrice(@PathVariable Integer id) {
-      PriceItem priceItem = additionalServices.getPriceForAdditionalService(id);
+    PriceItem priceItem = additionalServices.getPriceForAdditionalService(id);
 
-      if (priceItem == null) {
-          return ResponseEntity.notFound().build();
-      }
+    if (priceItem == null) {
+      return ResponseEntity.notFound().build();
+    }
 
-      // Trả về JSON chứa price và priceId
-      Map<String, Object> response = Map.of(
-              "price", priceItem.getPrice(),
-              "priceId", priceItem.getId()
-      );
+    // Trả về JSON chứa price và priceId
+    Map<String, Object> response =
+        Map.of(
+            "price", priceItem.getPrice(),
+            "priceId", priceItem.getId());
 
-      return ResponseEntity.ok(response);
+    return ResponseEntity.ok(response);
   }
 
   // API mới để lấy các items của combo service

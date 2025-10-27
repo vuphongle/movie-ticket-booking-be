@@ -4,5 +4,5 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import vn.edu.iuh.fit.entity.OrderServiceItem;
 
 public interface OrderServiceItemRepository extends JpaRepository<OrderServiceItem, Integer> {
-    OrderServiceItem findByPriceItemId(Integer priceItemId);
+  OrderServiceItem findByPriceItemId(Integer priceItemId);
 }

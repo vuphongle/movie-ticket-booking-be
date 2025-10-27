@@ -29,7 +29,7 @@ public class OrderTicketItem {
 
   Integer price;
 
-    @ManyToOne
-    @JoinColumn(name = "price_id")
-    PriceItem priceItem;
+  @ManyToOne
+  @JoinColumn(name = "price_id")
+  PriceItem priceItem;
 }

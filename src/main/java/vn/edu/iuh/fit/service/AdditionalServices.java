@@ -103,9 +103,9 @@ public class AdditionalServices {
 
   // Lấy giá cho additional service
   public PriceItem getPriceForAdditionalService(Integer serviceId) {
-      return pricingService
-              .getPriceForAdditionalService(serviceId)
-              .orElse(null); // Trả về null nếu không tìm thấy
+    return pricingService
+        .getPriceForAdditionalService(serviceId)
+        .orElse(null); // Trả về null nếu không tìm thấy
   }
 
   // Lấy các items của combo service
