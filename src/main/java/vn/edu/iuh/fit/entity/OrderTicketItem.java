@@ -30,6 +30,6 @@ public class OrderTicketItem {
   Integer price;
 
   @ManyToOne
-  @JoinColumn(name = "price_id")
+  @JoinColumn(name = "price_item_id")
   PriceItem priceItem;
 }
