@@ -32,6 +32,10 @@ public class UserService {
   private final ImageRepository imageRepository;
   private final ImageService imageService;
 
+  public User getCurrentUser() {
+    return SecurityUtils.getCurrentUserLogin();
+  }
+
   public void updatePassword(UpdatePasswordRequest request) {
     User user = SecurityUtils.getCurrentUserLogin();
 

@@ -32,6 +32,12 @@ public class UserController {
     return ResponseEntity.noContent().build();
   }
 
+  @GetMapping("/users/profile")
+  public ResponseEntity<?> getUserProfile() {
+    User user = userService.getCurrentUser();
+    return ResponseEntity.ok(user);
+  }
+
   @PutMapping("/users/update-profile")
   public ResponseEntity<?> updateProfile(@Valid @RequestBody UpdateProfileUserRequest request) {
     User user = userService.updateProfile(request);
