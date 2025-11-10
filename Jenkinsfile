@@ -66,9 +66,9 @@ pipeline {
     stage('Deploy to VPS') {
       steps {
         script {
-          withCredentials([sshUserPrivateKey(credentialsId: 'vps-ssh-key', keyFileVariable: 'SSH_KEY', usernameVariable: 'SSH_USER')]) {
+          withCredentials([usernamePassword(credentialsId: 'vps-ssh-password', usernameVariable: 'VPS_SSH_USER', passwordVariable: 'VPS_SSH_PASS')]) {
             sh """
-              ssh -i \${SSH_KEY} -o StrictHostKeyChecking=no ${VPS_USER}@${VPS_HOST} '
+              sshpass -p "\${VPS_SSH_PASS}" ssh -o StrictHostKeyChecking=no ${VPS_USER}@${VPS_HOST} '
                 cd ${DEPLOY_PATH} && \
                 docker compose pull backend && \
                 docker compose up -d backend && \
