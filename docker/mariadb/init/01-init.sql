@@ -1,6 +1,6 @@
 -- MySQL dump 10.13  Distrib 9.4.0, for macos15.4 (arm64)
 --
--- Host: 159.223.38.127    Database: db_movie_ticket_booking
+-- Host: 104.248.157.211    Database: db_movie_ticket_booking
 -- ------------------------------------------------------
 -- Server version	5.5.5-10.11.14-MariaDB-ubu2204
 
