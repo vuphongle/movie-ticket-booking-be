@@ -72,6 +72,8 @@ public class Order {
   @Column(columnDefinition = "TEXT")
   private String requestSnapshot;
 
+  private String platform;
+
   public int getTempPrice() {
     if (ticketItems == null || serviceItems == null) {
       return 0;
