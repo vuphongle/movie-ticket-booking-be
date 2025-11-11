@@ -54,8 +54,7 @@ public class OrderService {
 
   public List<Order> getOrdersByCurrentUser() {
     User currentUser = SecurityUtils.getCurrentUserLogin();
-    return orderRepository.findByUser_IdAndStatusOrderByCreatedAtDesc(
-        currentUser.getId(), OrderStatus.CONFIRMED);
+    return orderRepository.findByUser_IdOrderByCreatedAtDesc(currentUser.getId());
   }
 
   @Transactional
