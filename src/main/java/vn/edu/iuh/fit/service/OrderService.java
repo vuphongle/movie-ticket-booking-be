@@ -92,6 +92,7 @@ public class OrderService {
             .discount(discountValue)
             .ticketItems(new ArrayList<>())
             .serviceItems(new ArrayList<>())
+            .platform(request.getPlatform())
             .requestSnapshot(objectMapper.writeValueAsString(request))
             .build();
 
