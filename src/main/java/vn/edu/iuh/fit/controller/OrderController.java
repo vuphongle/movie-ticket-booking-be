@@ -58,106 +58,105 @@ public class OrderController {
     return ResponseEntity.ok(response);
   }
 
-  @GetMapping("/orders/vnpay-payment")
-  public ResponseEntity<?> handleVnPayReturn(HttpServletRequest request) throws Exception {
-    int paymentStatus = vnPayService.orderReturn(request);
+    @GetMapping("/orders/vnpay-payment")
+    public ResponseEntity<?> handleVnPayReturn(HttpServletRequest request) throws Exception {
+        int paymentStatus = vnPayService.orderReturn(request);
 
-    String orderInfo = request.getParameter("vnp_OrderInfo");
-    Integer orderId = Integer.valueOf(orderInfo);
+        String orderInfo = request.getParameter("vnp_OrderInfo");
+        Integer orderId = Integer.valueOf(orderInfo);
 
-    // Cập nhật trạng thái đơn
-    if (paymentStatus == 1) {
-      orderService.updateOrderStatus(orderId, OrderStatus.CONFIRMED);
-    } else {
-      orderService.updateOrderStatus(orderId, OrderStatus.CANCELLED);
+        // Cập nhật trạng thái đơn
+        if (paymentStatus == 1) {
+            orderService.updateOrderStatus(orderId, OrderStatus.CONFIRMED);
+        } else {
+            orderService.updateOrderStatus(orderId, OrderStatus.CANCELLED);
+        }
+
+        String statusParam = paymentStatus == 1 ? "success" : "failed";
+
+        // Lấy order
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy order với id " + orderId));
+
+        String pdfUrl = order.getPdfPath() != null
+                ? URLEncoder.encode(order.getPdfPath(), StandardCharsets.UTF_8)
+                : "";
+
+        String redirectUrl;
+        String platform = order.getPlatform(); // "app" hoặc "web"
+
+        if ("app".equals(platform)) {
+            // Redirect tới trang trung gian
+            String frontendBaseUrl = frontendHost;
+            if (frontendPort != null && !frontendPort.trim().isEmpty()) {
+                frontendBaseUrl += ":" + frontendPort;
+            }
+            redirectUrl = "%s/deep-link?orderId=%s&status=%s&pdfUrl=%s"
+                    .formatted(frontendBaseUrl, orderId, statusParam, pdfUrl);
+        } else {
+            // Redirect thẳng tới web nếu platform là web
+            String frontendBaseUrl = frontendHost;
+            if (frontendPort != null && !frontendPort.trim().isEmpty()) {
+                frontendBaseUrl += ":" + frontendPort;
+            }
+            redirectUrl = "%s/thanh-toan-don-hang/%s?status=%s&pdfUrl=%s"
+                    .formatted(frontendBaseUrl, orderId, statusParam, pdfUrl);
+        }
+
+        return ResponseEntity.status(HttpStatus.FOUND).header("Location", redirectUrl).build();
     }
 
-    String statusParam = paymentStatus == 1 ? "success" : "failed";
+    @GetMapping("/orders/payos-payment")
+    public ResponseEntity<?> handlePayOSReturn(HttpServletRequest request) throws Exception {
+        Map<String, String> params = new HashMap<>();
+        request.getParameterMap().forEach((k, v) -> params.put(k, v[0]));
 
-    // Lấy order để kiểm tra pdfPath và platform
-    Order order =
-        orderRepository
-            .findById(orderId)
-            .orElseThrow(() -> new RuntimeException("Không tìm thấy order với id " + orderId));
+        String orderCode = params.get("orderCode");
+        Integer orderId = Integer.valueOf(orderCode);
 
-    String pdfUrl =
-        order.getPdfPath() != null
-            ? URLEncoder.encode(order.getPdfPath(), StandardCharsets.UTF_8)
-            : "";
+        boolean valid = payOSService.verifyReturn(params);
 
-    String redirectUrl;
-    String platform = order.getPlatform(); // "app" hoặc "web"
+        // Cập nhật trạng thái đơn
+        if (valid) {
+            orderService.updateOrderStatus(orderId, OrderStatus.CONFIRMED);
+        } else {
+            orderService.updateOrderStatus(orderId, OrderStatus.CANCELLED);
+        }
 
-    if ("app".equals(platform)) {
-      // Redirect về deep link app
-      redirectUrl =
-          "gocinema://thanh-toan-don-hang/%s?status=%s&pdfUrl=%s"
-              .formatted(orderId, statusParam, pdfUrl);
-    } else {
-      String frontendBaseUrl =
-          (frontendPort != null && !frontendPort.trim().isEmpty())
-              ? "%s:%s".formatted(frontendHost, frontendPort)
-              : frontendHost;
+        String statusParam = valid ? "success" : "failed";
 
-      redirectUrl =
-          "%s/thanh-toan-don-hang/%s?status=%s&pdfUrl=%s"
-              .formatted(frontendBaseUrl, orderId, statusParam, pdfUrl);
+        // Lấy order
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy order với id " + orderId));
+
+        String pdfUrl = order.getPdfPath() != null
+                ? URLEncoder.encode(order.getPdfPath(), StandardCharsets.UTF_8)
+                : "";
+
+        String redirectUrl;
+        String platform = order.getPlatform();
+
+        if ("app".equals(platform)) {
+            // Redirect tới trang trung gian
+            String frontendBaseUrl = frontendHost;
+            if (frontendPort != null && !frontendPort.trim().isEmpty()) {
+                frontendBaseUrl += ":" + frontendPort;
+            }
+            redirectUrl = "%s/deep-link?orderId=%s&status=%s&pdfUrl=%s"
+                    .formatted(frontendBaseUrl, orderId, statusParam, pdfUrl);
+        } else {
+            // Redirect thẳng tới web
+            String frontendBaseUrl = frontendHost;
+            if (frontendPort != null && !frontendPort.trim().isEmpty()) {
+                frontendBaseUrl += ":" + frontendPort;
+            }
+            redirectUrl = "%s/thanh-toan-don-hang/%s?status=%s&pdfUrl=%s"
+                    .formatted(frontendBaseUrl, orderId, statusParam, pdfUrl);
+        }
+
+        return ResponseEntity.status(HttpStatus.FOUND).header("Location", redirectUrl).build();
     }
 
-    return ResponseEntity.status(HttpStatus.FOUND).header("Location", redirectUrl).build();
-  }
-
-  @GetMapping("/orders/payos-payment")
-  public ResponseEntity<?> handlePayOSReturn(HttpServletRequest request) throws Exception {
-    Map<String, String> params = new HashMap<>();
-    request.getParameterMap().forEach((k, v) -> params.put(k, v[0]));
-
-    String orderCode = params.get("orderCode");
-    Integer orderId = Integer.valueOf(orderCode);
-
-    boolean valid = payOSService.verifyReturn(params);
-
-    // Cập nhật trạng thái đơn
-    if (valid) {
-      orderService.updateOrderStatus(orderId, OrderStatus.CONFIRMED);
-    } else {
-      orderService.updateOrderStatus(orderId, OrderStatus.CANCELLED);
-    }
-
-    String statusParam = valid ? "success" : "failed";
-
-    // Lấy order để kiểm tra pdfPath và platform
-    Order order =
-        orderRepository
-            .findById(orderId)
-            .orElseThrow(() -> new RuntimeException("Không tìm thấy order với id " + orderId));
-
-    String pdfUrl =
-        order.getPdfPath() != null
-            ? URLEncoder.encode(order.getPdfPath(), StandardCharsets.UTF_8)
-            : "";
-
-    String redirectUrl;
-    String platform = order.getPlatform();
-
-    if ("app".equals(platform)) {
-      // Redirect về deep link app
-      redirectUrl =
-          "gocinema://thanh-toan-don-hang/%s?status=%s&pdfUrl=%s"
-              .formatted(orderId, statusParam, pdfUrl);
-    } else {
-      String frontendBaseUrl =
-          (frontendPort != null && !frontendPort.trim().isEmpty())
-              ? "%s:%s".formatted(frontendHost, frontendPort)
-              : frontendHost;
-
-      redirectUrl =
-          "%s/thanh-toan-don-hang/%s?status=%s&pdfUrl=%s"
-              .formatted(frontendBaseUrl, orderId, statusParam, pdfUrl);
-    }
-
-    return ResponseEntity.status(HttpStatus.FOUND).header("Location", redirectUrl).build();
-  }
 
   /**
    * PayOS Webhook endpoint - Nhận thông báo thanh toán từ PayOS Endpoint này được gọi trực tiếp từ
