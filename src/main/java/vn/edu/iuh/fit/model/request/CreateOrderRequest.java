@@ -29,6 +29,8 @@ public class CreateOrderRequest {
 
   private Discounts discounts;
 
+  private String platform;
+
   @Getter
   @Setter
   @NoArgsConstructor
