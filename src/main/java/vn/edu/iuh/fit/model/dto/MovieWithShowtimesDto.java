@@ -23,6 +23,7 @@ public class MovieWithShowtimesDto {
   private String trailer;
   private Boolean status;
   private String slug;
+  private List<String> genres;
   private Date createdAt;
   private Date updatedAt;
   private String graphics; // JSON string
