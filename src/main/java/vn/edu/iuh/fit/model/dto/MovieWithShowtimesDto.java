@@ -6,6 +6,7 @@ import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import net.datafaker.providers.base.Gender;
 
 @Data
 @AllArgsConstructor
@@ -23,7 +24,7 @@ public class MovieWithShowtimesDto {
   private String trailer;
   private Boolean status;
   private String slug;
-  private List<String> genres;
+  private Gender genres;
   private Date createdAt;
   private Date updatedAt;
   private String graphics; // JSON string
