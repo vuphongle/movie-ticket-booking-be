@@ -84,7 +84,6 @@ public class ReviewService {
     return review;
   }
 
-  // Xóa 1 review của user về 1 phim
   @Transactional
   public void deleteReviewByUser(Integer reviewId) {
     Review review =
@@ -92,10 +91,12 @@ public class ReviewService {
             .findById(reviewId)
             .orElseThrow(
                 () -> new ResourceNotFoundException("Không tìm thấy review có id = " + reviewId));
-    reviewRepository.delete(review);
 
-    // update rating of movie
-    updateRatingOfMovie(review.getMovie());
+    Movie movie = review.getMovie();
+    movie.getReviews().remove(review);
+    movieRepository.save(movie);
+
+    updateRatingOfMovie(movie);
   }
 
   // Cập nhật đánh giá của user về 1 phim
@@ -187,8 +188,9 @@ public class ReviewService {
             .findById(id)
             .orElseThrow(
                 () -> new ResourceNotFoundException("Không tìm thấy review có id = " + id));
-    reviewRepository.delete(review);
-    reviewRepository.flush();
+    Movie movie = review.getMovie();
+    movie.getReviews().remove(review);
+    movieRepository.save(movie);
 
     // update rating of movie
     updateRatingOfMovie(review.getMovie());
