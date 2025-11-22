@@ -188,6 +188,7 @@ public class ReviewService {
             .orElseThrow(
                 () -> new ResourceNotFoundException("Không tìm thấy review có id = " + id));
     reviewRepository.delete(review);
+    reviewRepository.flush();
 
     // update rating of movie
     updateRatingOfMovie(review.getMovie());
