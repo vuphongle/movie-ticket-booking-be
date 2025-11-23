@@ -32,7 +32,7 @@ public class ReservationController {
     return new ResponseEntity<>(HttpStatus.NO_CONTENT);
   }
 
-  @PostMapping("/seat-reservations/cancel-multiple")
+  @PostMapping("/public/seat-reservations/cancel-multiple")
   public ResponseEntity<?> cancelMultipleReservations(
       @Valid @RequestBody CancelMultipleSeatsRequest request) {
     reservationService.cancelMultipleReservations(request);
