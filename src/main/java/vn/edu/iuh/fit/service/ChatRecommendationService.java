@@ -31,6 +31,8 @@ import org.springframework.ai.openai.OpenAiChatOptions;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
+import vn.edu.iuh.fit.entity.Auditorium;
+import vn.edu.iuh.fit.entity.Cinema;
 import vn.edu.iuh.fit.entity.Genre;
 import vn.edu.iuh.fit.entity.Movie;
 import vn.edu.iuh.fit.entity.Showtime;
@@ -39,6 +41,7 @@ import vn.edu.iuh.fit.model.enums.MovieAge;
 import vn.edu.iuh.fit.model.request.ChatRecommendationRequest;
 import vn.edu.iuh.fit.model.response.ChatRecommendationResponse;
 import vn.edu.iuh.fit.model.response.RecommendedMovieResponse;
+import vn.edu.iuh.fit.model.response.RecommendedShowtimeResponse;
 import vn.edu.iuh.fit.repository.MovieRepository;
 import vn.edu.iuh.fit.repository.ShowtimeRepository;
 import vn.edu.iuh.fit.security.SecurityUtils;
@@ -468,9 +471,15 @@ public class ChatRecommendationService {
       builder.append(", genres: ").append(String.join(", ", movie.getGenreDisplayNames()));
     }
     if (!CollectionUtils.isEmpty(movie.getShowtimes())) {
-      builder
-          .append(isEnglish ? ", showtimes: " : ", suất chiếu: ")
-          .append(String.join("; ", movie.getShowtimes()));
+      String showtimeText =
+          movie.getShowtimes().stream()
+              .map(this::formatShowtimeDisplay)
+              .filter(StringUtils::hasText)
+              .limit(MAX_SHOWTIMES)
+              .collect(Collectors.joining("; "));
+      if (StringUtils.hasText(showtimeText)) {
+        builder.append(isEnglish ? ", showtimes: " : ", suất chiếu: ").append(showtimeText);
+      }
     }
     return builder.toString();
   }
@@ -607,6 +616,15 @@ public class ChatRecommendationService {
             ? Collections.emptyList()
             : movie.getGenres().stream().map(Genre::getName).filter(StringUtils::hasText).toList();
 
+    List<RecommendedShowtimeResponse> showtimeDetails =
+        showtimes == null
+            ? Collections.emptyList()
+            : showtimes.stream()
+                .map(this::mapShowtimeToRecommendation)
+                .filter(Objects::nonNull)
+                .limit(MAX_SHOWTIMES)
+                .toList();
+
     return RecommendedMovieResponse.builder()
         .movieId(movie.getId())
         .name(movie.getName())
@@ -620,7 +638,32 @@ public class ChatRecommendationService {
         .genres(genreSlugs)
         .genreDisplayNames(genreDisplayNames)
         .reasons(reasons)
-        .showtimes(showtimeSummaries)
+        .showtimes(showtimeDetails)
+        .build();
+  }
+
+  private RecommendedShowtimeResponse mapShowtimeToRecommendation(Showtime showtime) {
+    if (showtime == null || showtime.getId() == null) {
+      return null;
+    }
+    Auditorium auditorium = showtime.getAuditorium();
+    Cinema cinema = auditorium == null ? null : auditorium.getCinema();
+
+    return RecommendedShowtimeResponse.builder()
+        .id(showtime.getId())
+        .date(showtime.getDate())
+        .startTime(showtime.getStartTime())
+        .endTime(showtime.getEndTime())
+        .graphicsType(showtime.getGraphicsType() != null ? showtime.getGraphicsType().name() : null)
+        .translationType(
+            showtime.getTranslationType() != null ? showtime.getTranslationType().name() : null)
+        .cinemaId(cinema != null ? cinema.getId() : null)
+        .cinemaName(cinema != null ? cinema.getName() : null)
+        .cinemaAddress(cinema != null ? cinema.getAddress() : null)
+        .auditoriumId(auditorium != null ? auditorium.getId() : null)
+        .auditoriumName(auditorium != null ? auditorium.getName() : null)
+        .auditoriumType(
+            auditorium != null && auditorium.getType() != null ? auditorium.getType().name() : null)
         .build();
   }
 
@@ -791,6 +834,30 @@ public class ChatRecommendationService {
     return builder.toString();
   }
 
+  private String formatShowtimeDisplay(RecommendedShowtimeResponse showtime) {
+    if (showtime == null || showtime.getDate() == null) {
+      return null;
+    }
+    LocalTime time = parseStartTime(showtime.getStartTime());
+    ZonedDateTime start =
+        ZonedDateTime.of(
+            showtime.getDate(), time == null ? LocalTime.MIDNIGHT : time, DEFAULT_ZONE);
+    StringBuilder builder = new StringBuilder(SHOWTIME_FORMATTER.format(start));
+    if (StringUtils.hasText(showtime.getCinemaName())) {
+      builder.append(" • ").append(showtime.getCinemaName());
+    }
+    if (StringUtils.hasText(showtime.getAuditoriumName())) {
+      builder.append(" • ").append(showtime.getAuditoriumName());
+    }
+    if (StringUtils.hasText(showtime.getGraphicsType())) {
+      builder.append(" • ").append(showtime.getGraphicsType());
+    }
+    if (StringUtils.hasText(showtime.getTranslationType())) {
+      builder.append(" • ").append(showtime.getTranslationType());
+    }
+    return builder.toString();
+  }
+
   private String buildNoShowtimeFallback(Set<LocalDate> requestedDates, CinemaMatch cinemaMatch) {
     String cinemaText =
         cinemaMatch == null || cinemaMatch.cinema() == null ? null : cinemaMatch.cinema().getName();
@@ -852,10 +919,21 @@ public class ChatRecommendationService {
                       movie.getRating() != null
                           ? String.format(Locale.US, ", rating %.1f", movie.getRating())
                           : "";
-                  String showtimeText =
-                      CollectionUtils.isEmpty(movie.getShowtimes())
-                          ? "suất chiếu: chưa xác định"
-                          : "suất chiếu: " + String.join("; ", movie.getShowtimes());
+                  String showtimeText;
+                  if (CollectionUtils.isEmpty(movie.getShowtimes())) {
+                    showtimeText = "suất chiếu: chưa xác định";
+                  } else {
+                    String formattedShowtimes =
+                        movie.getShowtimes().stream()
+                            .map(this::formatShowtimeDisplay)
+                            .filter(StringUtils::hasText)
+                            .limit(MAX_SHOWTIMES)
+                            .collect(Collectors.joining("; "));
+                    showtimeText =
+                        StringUtils.hasText(formattedShowtimes)
+                            ? "suất chiếu: " + formattedShowtimes
+                            : "suất chiếu: chưa xác định";
+                  }
                   return "- "
                       + movie.getName()
                       + " ("
