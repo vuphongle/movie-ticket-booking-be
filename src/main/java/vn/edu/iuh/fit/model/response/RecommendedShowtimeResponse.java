@@ -2,14 +2,13 @@ package vn.edu.iuh.fit.model.response;
 
 import static lombok.AccessLevel.PRIVATE;
 
-import java.util.List;
+import java.time.LocalDate;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.FieldDefaults;
-import vn.edu.iuh.fit.model.enums.MovieAge;
 
 @Getter
 @Setter
@@ -17,15 +16,17 @@ import vn.edu.iuh.fit.model.enums.MovieAge;
 @AllArgsConstructor
 @Builder
 @FieldDefaults(level = PRIVATE)
-public class RecommendedMovieResponse {
-  Integer movieId;
-  String name;
-  String slug;
-  String poster;
-  MovieAge ageRating;
-  Double rating;
-  List<String> genres;
-  List<String> genreDisplayNames;
-  List<String> reasons;
-  List<RecommendedShowtimeResponse> showtimes;
+public class RecommendedShowtimeResponse {
+  Integer id;
+  LocalDate date;
+  String startTime;
+  String endTime;
+  String graphicsType;
+  String translationType;
+  Integer cinemaId;
+  String cinemaName;
+  String cinemaAddress;
+  Integer auditoriumId;
+  String auditoriumName;
+  String auditoriumType;
 }

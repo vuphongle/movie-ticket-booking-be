@@ -56,6 +56,11 @@ public class MovieController {
     return showtimeService.getMovieByShowtimeId(id);
   }
 
+  @GetMapping("/public/showtimes/{id}")
+  public ResponseEntity<?> getShowtimeDetail(@PathVariable Integer id) {
+    return ResponseEntity.ok(showtimeService.getShowtimeDetail(id));
+  }
+
   @GetMapping("/public/cinemas/{cinemaId}/movies-showtimes")
   public ResponseEntity<List<MovieWithShowtimesDto>> getMoviesWithShowtimesByCinema(
       @PathVariable Integer cinemaId) {

@@ -24,6 +24,7 @@ import vn.edu.iuh.fit.model.enums.TranslationType;
 import vn.edu.iuh.fit.model.request.BulkShowtimeRequest;
 import vn.edu.iuh.fit.model.request.UpsertShowtimeRequest;
 import vn.edu.iuh.fit.model.response.BulkShowtimeResponse;
+import vn.edu.iuh.fit.model.response.ShowtimeDetailResponse;
 import vn.edu.iuh.fit.model.response.ShowtimeResponse;
 import vn.edu.iuh.fit.repository.*;
 import vn.edu.iuh.fit.specification.ShowtimeSpecification;
@@ -214,6 +215,44 @@ public class ShowtimeService {
 
   public Movie getMovieByShowtimeId(Integer showtimeId) {
     return showtimeRepository.findById(showtimeId).map(Showtime::getMovie).orElse(null);
+  }
+
+  public ShowtimeDetailResponse getShowtimeDetail(Integer id) {
+    Showtime showtime =
+        showtimeRepository
+            .findById(id)
+            .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy suất chiếu"));
+
+    Movie movie = showtime.getMovie();
+    Auditorium auditorium = showtime.getAuditorium();
+    Cinema cinema = auditorium != null ? auditorium.getCinema() : null;
+
+    return ShowtimeDetailResponse.builder()
+        .id(showtime.getId())
+        .date(showtime.getDate())
+        .startTime(showtime.getStartTime())
+        .endTime(showtime.getEndTime())
+        .graphicsType(showtime.getGraphicsType() != null ? showtime.getGraphicsType().name() : null)
+        .translationType(
+            showtime.getTranslationType() != null ? showtime.getTranslationType().name() : null)
+        .cinemaId(cinema != null ? cinema.getId() : null)
+        .cinemaName(cinema != null ? cinema.getName() : null)
+        .cinemaAddress(cinema != null ? cinema.getAddress() : null)
+        .auditoriumId(auditorium != null ? auditorium.getId() : null)
+        .auditoriumName(auditorium != null ? auditorium.getName() : null)
+        .auditoriumTotalSeats(auditorium != null ? auditorium.getTotalSeats() : null)
+        .auditoriumTotalRows(auditorium != null ? auditorium.getTotalRows() : null)
+        .auditoriumTotalColumns(auditorium != null ? auditorium.getTotalColumns() : null)
+        .auditoriumType(
+            auditorium != null && auditorium.getType() != null ? auditorium.getType().name() : null)
+        .movieId(movie != null ? movie.getId() : null)
+        .movieName(movie != null ? movie.getName() : null)
+        .movieSlug(movie != null ? movie.getSlug() : null)
+        .moviePoster(movie != null ? movie.getPoster() : null)
+        .movieAge(movie != null ? movie.getAge() : null)
+        .movieRating(movie != null ? movie.getRating() : null)
+        .movieDuration(movie != null ? movie.getDuration() : null)
+        .build();
   }
 
   public List<MovieWithShowtimesDto> getShowtimesByCinema(Integer cinemaId) {
