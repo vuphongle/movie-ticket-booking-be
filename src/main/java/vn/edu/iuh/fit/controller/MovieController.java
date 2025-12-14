@@ -11,9 +11,12 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 import vn.edu.iuh.fit.entity.Movie;
 import vn.edu.iuh.fit.model.dto.MovieWithShowtimesDto;
 import vn.edu.iuh.fit.model.request.UpsertMovieRequest;
+import vn.edu.iuh.fit.model.response.BaseResponse;
+import vn.edu.iuh.fit.model.response.MovieResponse;
 import vn.edu.iuh.fit.service.MovieService;
 import vn.edu.iuh.fit.service.ShowtimeService;
 
@@ -76,6 +79,14 @@ public class MovieController {
   @GetMapping("/public/movies/search")
   public ResponseEntity<?> searchMovies(@RequestParam String keyword) {
     return ResponseEntity.ok(movieService.searchShowingOrComingMovies(keyword));
+  }
+
+  @PostMapping(value = "/public/movies/search-by-image", consumes = "multipart/form-data")
+  public ResponseEntity<BaseResponse<List<MovieResponse>>> searchByImage(
+      @RequestPart("file") MultipartFile file) {
+    List<MovieResponse> results = movieService.searchByImage(file);
+    return ResponseEntity.ok(
+        BaseResponse.<List<MovieResponse>>builder().success(true).data(results).build());
   }
 
   @GetMapping("/admin/movies/in-schedule")

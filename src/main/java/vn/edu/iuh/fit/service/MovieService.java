@@ -1,19 +1,27 @@
 package vn.edu.iuh.fit.service;
 
 import com.github.slugify.Slugify;
+import com.google.gson.Gson;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.core.io.ByteArrayResource;
+import org.springframework.core.io.Resource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
+import org.springframework.util.MimeType;
+import org.springframework.util.MimeTypeUtils;
+import org.springframework.web.multipart.MultipartFile;
 import vn.edu.iuh.fit.entity.*;
 import vn.edu.iuh.fit.exception.ResourceNotFoundException;
 import vn.edu.iuh.fit.model.request.UpsertMovieRequest;
+import vn.edu.iuh.fit.model.response.MovieResponse;
 import vn.edu.iuh.fit.repository.*;
 import vn.edu.iuh.fit.utils.StringUtils;
 
@@ -28,6 +36,8 @@ public class MovieService {
   private final ActorRepository actorRepository;
   private final CountryRepository countryRepository;
   private final Slugify slugify;
+  private final ChatClient chatClient;
+  private final Gson gson = new Gson();
 
   public List<Movie> getShowingNowMovies() {
     log.info("Get showing now movies");
@@ -176,5 +186,93 @@ public class MovieService {
       return List.of();
     }
     return movieRepository.searchMovies(keyword.trim());
+  }
+
+  private Optional<String> extractMovieTitleFromImage(MultipartFile file) {
+    try {
+      String prompt =
+          """
+Bạn là hệ thống trích xuất chữ LIÊN QUAN ĐẾN PHIM từ ảnh.
+Ảnh có thể là poster, frame trailer, hoặc ảnh chụp màn hình (app/web).
+Chỉ lấy chữ NHÌN THẤY TRÊN ẢNH, không suy đoán, không tự dịch.
+Ưu tiên:
+(1) Tên phim
+(2) Dòng chữ mô tả ngắn / tagline / tiêu đề
+Chỉ trả DUY NHẤT JSON:
+{"movie_title":"...", "confidence":0-1}
+Nếu không rõ: {"movie_title":"","confidence":0}
+""";
+
+      MimeType mime =
+          "image/png".equalsIgnoreCase(file.getContentType())
+              ? MimeTypeUtils.IMAGE_PNG
+              : MimeTypeUtils.IMAGE_JPEG;
+
+      Resource imageResource =
+          new ByteArrayResource(file.getBytes()) {
+            @Override
+            public String getFilename() {
+              return file.getOriginalFilename();
+            }
+          };
+
+      String content =
+          chatClient.prompt().user(u -> u.text(prompt).media(mime, imageResource)).call().content();
+
+      String cleaned =
+          content == null
+              ? ""
+              : content
+                  .trim()
+                  .replaceAll("^```json\\s*", "")
+                  .replaceAll("^```\\s*", "")
+                  .replaceAll("\\s*```$", "")
+                  .trim();
+
+      int l = cleaned.indexOf('{');
+      int r = cleaned.lastIndexOf('}');
+      if (l >= 0 && r > l) cleaned = cleaned.substring(l, r + 1);
+
+      // parse movie_title
+      var obj = gson.fromJson(cleaned, Map.class);
+      Object t = obj == null ? null : obj.get("movie_title");
+      String title = t == null ? "" : t.toString().trim();
+
+      return title.isEmpty() ? Optional.empty() : Optional.of(title);
+
+    } catch (Exception e) {
+      log.error("extractMovieTitleFromImage failed", e);
+      return Optional.empty();
+    }
+  }
+
+  public List<MovieResponse> searchByImage(MultipartFile file) {
+    if (file == null || file.isEmpty()) return List.of();
+
+    try {
+
+      Optional<String> titleOpt = extractMovieTitleFromImage(file);
+      if (titleOpt.isEmpty()) return List.of();
+
+      List<Movie> movies = movieRepository.searchMoviesAll(titleOpt.get());
+      return movies.stream().map(this::toMovieResponse).toList();
+
+    } catch (Exception e) {
+      log.error("searchByImage failed", e);
+      return List.of();
+    }
+  }
+
+  private MovieResponse toMovieResponse(Movie m) {
+    return MovieResponse.builder()
+        .id(m.getId())
+        .name(m.getName())
+        .slug(m.getSlug())
+        .poster(m.getPoster())
+        .rating(m.getRating())
+        .duration(m.getDuration())
+        .age(m.getAge())
+        .graphics(m.getGraphics())
+        .build();
   }
 }
