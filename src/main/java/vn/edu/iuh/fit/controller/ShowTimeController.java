@@ -33,4 +33,10 @@ public class ShowTimeController {
   public ResponseEntity<?> createBulkShowtimes(@Valid @RequestBody BulkShowtimeRequest request) {
     return ResponseEntity.ok(showtimeService.createBulkShowtimes(request));
   }
+
+  @DeleteMapping("/admin/showtimes/{id}")
+  public ResponseEntity<?> deleteShowtime(@PathVariable Integer id) {
+    showtimeService.deleteShowtime(id);
+    return ResponseEntity.noContent().build();
+  }
 }

@@ -11,7 +11,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import vn.edu.iuh.fit.entity.*;
+import vn.edu.iuh.fit.entity.SeatReservation;
 import vn.edu.iuh.fit.exception.BadRequestException;
 import vn.edu.iuh.fit.exception.BulkShowtimeConflictException;
 import vn.edu.iuh.fit.exception.ResourceNotFoundException;
@@ -20,6 +22,7 @@ import vn.edu.iuh.fit.model.dto.MovieWithShowtimesDto;
 import vn.edu.iuh.fit.model.dto.ShowtimeDto;
 import vn.edu.iuh.fit.model.enums.ConflictPolicy;
 import vn.edu.iuh.fit.model.enums.GraphicsType;
+import vn.edu.iuh.fit.model.enums.SeatReservationStatus;
 import vn.edu.iuh.fit.model.enums.TranslationType;
 import vn.edu.iuh.fit.model.request.BulkShowtimeRequest;
 import vn.edu.iuh.fit.model.request.UpsertShowtimeRequest;
@@ -38,6 +41,8 @@ public class ShowtimeService {
   private final AuditoriumRepository auditoriumRepository;
   private final MovieRepository movieRepository;
   private final ScheduleRepository scheduleRepository;
+  private final SeatReservationRepository seatReservationRepository;
+  private final OrderRepository orderRepository;
   private final SlotValidationService slotValidationService;
 
   public List<ShowtimeResponse> getAllShowtimes(
@@ -640,5 +645,32 @@ public class ShowtimeService {
             .build();
 
     return showtimeRepository.save(showtime);
+  }
+
+  @Transactional
+  public void deleteShowtime(Integer id) {
+    Showtime showtime =
+        showtimeRepository
+            .findById(id)
+            .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy suất chiếu"));
+
+    // Chặn xóa nếu tồn tại bất kỳ đơn hàng nào (kể cả đã hủy/hoàn) để tránh mất lịch sử và vi phạm
+    if (orderRepository.existsByShowtime_Id(id)) {
+      throw new BadRequestException("Không thể xóa suất chiếu đã phát sinh đơn hàng.");
+    }
+
+    // Chặn xóa nếu có ghế đang được giữ hoặc đã đặt
+    if (seatReservationRepository.existsByShowtime_IdAndStatusIn(
+        id, List.of(SeatReservationStatus.HELD, SeatReservationStatus.BOOKED))) {
+      throw new BadRequestException("Không thể xóa suất chiếu có ghế đang được giữ hoặc đã đặt.");
+    }
+
+    // Xóa các giữ ghế đã hủy (nếu còn) để tránh lỗi ràng buộc khóa ngoại
+    List<SeatReservation> reservations = seatReservationRepository.findByShowtime_Id(id);
+    if (!reservations.isEmpty()) {
+      seatReservationRepository.deleteAll(reservations);
+    }
+
+    showtimeRepository.delete(showtime);
   }
 }
