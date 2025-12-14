@@ -14,6 +14,8 @@ public interface SeatReservationRepository extends JpaRepository<SeatReservation
   boolean existsBySeat_IdAndShowtime_IdAndStatusIn(
       Integer seatId, Integer showtimeId, List<SeatReservationStatus> status);
 
+  boolean existsByShowtime_IdAndStatusIn(Integer showtimeId, List<SeatReservationStatus> status);
+
   List<SeatReservation> findByStatusAndStartTimeBefore(
       SeatReservationStatus seatReservationStatus, LocalDateTime localDateTime);
 

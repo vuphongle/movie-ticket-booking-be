@@ -1,5 +1,8 @@
 package vn.edu.iuh.fit.service;
 
+import java.time.LocalDate;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -7,6 +10,8 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import vn.edu.iuh.fit.entity.Movie;
 import vn.edu.iuh.fit.entity.Schedule;
+import vn.edu.iuh.fit.entity.Showtime;
+import vn.edu.iuh.fit.exception.BadRequestException;
 import vn.edu.iuh.fit.exception.ResourceNotFoundException;
 import vn.edu.iuh.fit.model.request.UpsertScheduleRequest;
 import vn.edu.iuh.fit.repository.MovieRepository;
@@ -33,6 +38,10 @@ public class ScheduleService {
                 () ->
                     new ResourceNotFoundException(
                         "Không tìm thấy phim với id: " + request.getMovieId()));
+
+    LocalDate startDate = toLocalDate(request.getStartDate());
+    LocalDate endDate = toLocalDate(request.getEndDate());
+    validateDateRange(startDate, endDate);
 
     // Tìm kiếm xem movie có lịch chiếu nào đang chiếu hoặc sắp chiếu không
     // Nếu movie đang chiếu hoặc sắp chiếu thì không thể tạo lịch chiếu mới
@@ -87,9 +96,61 @@ public class ScheduleService {
                     new ResourceNotFoundException(
                         "Không tìm thấy phim với id: " + request.getMovieId()));
 
+    LocalDate startDate = toLocalDate(request.getStartDate());
+    LocalDate endDate = toLocalDate(request.getEndDate());
+    validateDateRange(startDate, endDate);
+
+    // Không cho phép đổi phim nếu phim hiện tại đã có suất chiếu
+    boolean isChangingMovie = !schedule.getMovie().getId().equals(movie.getId());
+    if (isChangingMovie && showtimeRepository.existsByMovie_Id(schedule.getMovie().getId())) {
+      throw new BadRequestException("Không thể đổi phim vì lịch chiếu đã có suất chiếu");
+    }
+
+    // Đảm bảo khoảng ngày mới bao phủ tất cả suất chiếu hiện có của phim
+    enforceShowtimeWindow(movie.getId(), startDate, endDate);
+
     schedule.setMovie(movie);
     schedule.setStartDate(request.getStartDate());
     schedule.setEndDate(request.getEndDate());
     return scheduleRepository.save(schedule);
+  }
+
+  private void validateDateRange(LocalDate startDate, LocalDate endDate) {
+    if (startDate == null || endDate == null) {
+      return;
+    }
+
+    if (!endDate.isAfter(startDate)) {
+      throw new BadRequestException("Ngày kết thúc phải lớn hơn ngày bắt đầu");
+    }
+  }
+
+  private LocalDate toLocalDate(java.util.Date date) {
+    return date.toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
+  }
+
+  private void enforceShowtimeWindow(Integer movieId, LocalDate startDate, LocalDate endDate) {
+    List<Showtime> showtimes = showtimeRepository.findByMovie_Id(movieId);
+    if (showtimes.isEmpty()) {
+      return;
+    }
+
+    LocalDate earliest =
+        showtimes.stream().map(Showtime::getDate).min(LocalDate::compareTo).orElse(null);
+    LocalDate latest =
+        showtimes.stream().map(Showtime::getDate).max(LocalDate::compareTo).orElse(null);
+
+    if (earliest == null || latest == null) {
+      return;
+    }
+
+    if (startDate.isAfter(earliest) || endDate.isBefore(latest)) {
+      DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+      throw new BadRequestException(
+          String.format(
+              "Không thể cập nhật lịch chiếu. Phim đã có suất chiếu từ %s đến %s. "
+                  + "Khoảng thời gian mới phải bao phủ các suất chiếu hiện có.",
+              earliest.format(formatter), latest.format(formatter)));
+    }
   }
 }
