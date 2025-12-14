@@ -92,6 +92,7 @@ dependencies {
 
     // https://mvnrepository.com/artifact/org.apache.poi/poi-ooxml
     implementation("org.apache.poi:poi-ooxml:5.4.1")
+    implementation 'com.google.code.gson:gson:2.10.1'
 }
 
 tasks.named('test') { useJUnitPlatform() }

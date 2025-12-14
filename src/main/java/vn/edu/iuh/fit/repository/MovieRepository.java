@@ -39,4 +39,23 @@ public interface MovieRepository extends JpaRepository<Movie, Integer> {
     """,
       nativeQuery = true)
   List<Movie> searchMovies(@Param("keyword") String keyword);
+
+  @Query(
+      value =
+          """
+      SELECT DISTINCT m.*
+      FROM movies m
+      JOIN schedules s ON s.movie_id = m.id
+      WHERE m.status = true
+        AND ( (s.start_date <= NOW() AND s.end_date >= NOW())
+              OR s.start_date > NOW() )
+        AND (
+          UPPER(m.name)       LIKE CONCAT('%', UPPER(:keyword), '%')
+          OR UPPER(m.name_en) LIKE CONCAT('%', UPPER(:keyword), '%')
+          OR UPPER(m.slug)    LIKE CONCAT('%', UPPER(:keyword), '%')
+          OR UPPER(m.description) LIKE CONCAT('%', UPPER(:keyword), '%')
+        )
+    """,
+      nativeQuery = true)
+  List<Movie> searchMoviesAll(@Param("keyword") String keyword);
 }
