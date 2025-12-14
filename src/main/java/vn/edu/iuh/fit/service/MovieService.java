@@ -267,6 +267,7 @@ Nếu không rõ: {"movie_title":"","confidence":0}
     return MovieResponse.builder()
         .id(m.getId())
         .name(m.getName())
+        .nameEn(m.getNameEn())
         .slug(m.getSlug())
         .poster(m.getPoster())
         .rating(m.getRating())
