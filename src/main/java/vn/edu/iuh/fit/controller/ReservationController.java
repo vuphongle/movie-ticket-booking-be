@@ -1,9 +1,11 @@
 package vn.edu.iuh.fit.controller;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -32,10 +34,15 @@ public class ReservationController {
     return new ResponseEntity<>(HttpStatus.NO_CONTENT);
   }
 
-  @PostMapping("/public/seat-reservations/cancel-multiple")
-  public ResponseEntity<?> cancelMultipleReservations(
-      @Valid @RequestBody CancelMultipleSeatsRequest request) {
+  @PostMapping(
+      value = "/public/seat-reservations/cancel-multiple",
+      consumes = MediaType.TEXT_PLAIN_VALUE)
+  public ResponseEntity<Void> cancelMultipleReservations(@RequestBody String body)
+      throws Exception {
+    CancelMultipleSeatsRequest request =
+        new ObjectMapper().readValue(body, CancelMultipleSeatsRequest.class);
+
     reservationService.cancelMultipleReservations(request);
-    return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+    return ResponseEntity.noContent().build();
   }
 }
