@@ -589,14 +589,11 @@ public class ShowtimeService {
     }
 
     if (!isDateValid) {
+      String start = formatScheduleDate(schedules.get(0).getStartDate());
+      String end = formatScheduleDate(schedules.get(0).getEndDate());
       return BulkShowtimeResponse.ConflictDetail.builder()
           .date(date)
-          .reason(
-              "Ngày không nằm trong lịch chiếu của phim (từ "
-                  + schedules.get(0).getStartDate()
-                  + " đến "
-                  + schedules.get(0).getEndDate()
-                  + ")")
+          .reason("Ngày không nằm trong lịch chiếu của phim (từ " + start + " đến " + end + ")")
           .build();
     }
 
@@ -618,6 +615,14 @@ public class ShowtimeService {
     }
 
     return null; // No conflict
+  }
+
+  private String formatScheduleDate(Date date) {
+    if (date == null) {
+      return "";
+    }
+    LocalDate localDate = date.toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
+    return localDate.format(DateTimeFormatter.ofPattern("dd-MM-yyyy"));
   }
 
   /**
