@@ -1,0 +1,26 @@
+package vn.edu.iuh.fit.controller;
+
+import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.NotNull;
+import java.util.Date;
+import lombok.*;
+import lombok.experimental.FieldDefaults;
+
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@ToString
+@FieldDefaults(level = AccessLevel.PRIVATE)
+public class UpsertActorRequest {
+  @NotEmpty(message = "Tên không được để trống")
+  String name;
+
+  @NotEmpty(message = "Mô tả không được để trống")
+  String description;
+
+  @NotNull(message = "Ngày sinh không được để trống")
+  Date birthday;
+
+  String avatar;
+}

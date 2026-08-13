@@ -1,38 +1,103 @@
 plugins {
     id 'java'
-    id 'org.springframework.boot' version '3.5.3'
+    id 'org.springframework.boot' version '3.2.3'
     id 'io.spring.dependency-management' version '1.1.7'
+    id 'com.diffplug.spotless' version '7.0.0'
+}
+
+spotless {
+    java {
+        googleJavaFormat()
+        target 'src/**/*.java'
+    }
 }
 
 group = 'vn.edu.iuh.fit'
 version = '0.0.1-SNAPSHOT'
 
 java {
-    toolchain {
-        languageVersion = JavaLanguageVersion.of(17)
-    }
+    toolchain { languageVersion = JavaLanguageVersion.of(17) }
 }
 
 configurations {
-    compileOnly {
-        extendsFrom annotationProcessor
-    }
+    compileOnly { extendsFrom annotationProcessor }
 }
 
 repositories {
+    // Chỉ cần Maven Central cho Spring AI 1.0.x
     mavenCentral()
 }
 
 dependencies {
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework.boot:spring-boot-starter-validation'
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+    implementation 'org.springframework.boot:spring-boot-starter-websocket'
+    implementation 'org.springframework.boot:spring-boot-starter-security'
+    implementation 'org.springframework.boot:spring-boot-starter-thymeleaf'
+    
+    // HTTP Client for SendPulse REST API
+    implementation 'org.springframework.boot:spring-boot-starter-webflux'
+    
+    // Netty DNS resolver for macOS (fix DNS warning)
+    if (System.getProperty("os.name").toLowerCase().contains("mac")) {
+        runtimeOnly 'io.netty:netty-resolver-dns-native-macos:4.1.100.Final:osx-aarch_64'
+    }
+
+    implementation "net.datafaker:datafaker:2.1.0"
+    implementation "com.github.slugify:slugify:3.0.6"
+    implementation "org.modelmapper:modelmapper:3.1.1"
+
+    implementation "io.hypersistence:hypersistence-utils-hibernate-60:3.5.2"
+    implementation "com.fasterxml.jackson.core:jackson-annotations"
+    implementation "com.fasterxml.jackson.datatype:jackson-datatype-hibernate6"
+    implementation "com.fasterxml.jackson.datatype:jackson-datatype-jsr310"
+
+    implementation "software.amazon.awssdk:s3:2.32.22"
+
+    implementation 'io.jsonwebtoken:jjwt-api:0.11.5'
+    runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.11.5'
+    runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.11.5'
+
+    // ZXing
+    implementation 'com.google.zxing:core:3.5.3'
+    implementation 'com.google.zxing:javase:3.5.3'
+
+    // Dotenv
+    implementation 'me.paulschwarz:spring-dotenv:4.0.0'
+
+    // ---- SPRING AI (GA) ----
+    implementation platform('org.springframework.ai:spring-ai-bom:1.0.1')
+    implementation 'org.springframework.ai:spring-ai-starter-model-openai'
+
     compileOnly 'org.projectlombok:lombok'
+    annotationProcessor 'org.projectlombok:lombok'
+
     developmentOnly 'org.springframework.boot:spring-boot-devtools'
     runtimeOnly 'org.mariadb.jdbc:mariadb-java-client'
-    annotationProcessor 'org.projectlombok:lombok'
+
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+
+    implementation group: 'vn.payos', name: 'payos-java', version: '1.0.3'
+
+    implementation 'com.openhtmltopdf:openhtmltopdf-core:1.0.10'
+    implementation 'com.openhtmltopdf:openhtmltopdf-pdfbox:1.0.10'
+    implementation 'com.openhtmltopdf:openhtmltopdf-slf4j:1.0.10'
+    implementation 'com.openhtmltopdf:openhtmltopdf-rtl-support:1.0.10'
+    implementation 'org.apache.commons:commons-text:1.10.0'
+
+    // https://mvnrepository.com/artifact/org.apache.poi/poi
+    implementation("org.apache.poi:poi:5.4.1")
+
+    // https://mvnrepository.com/artifact/org.apache.poi/poi-ooxml
+    implementation("org.apache.poi:poi-ooxml:5.4.1")
+    implementation 'com.google.code.gson:gson:2.10.1'
 }
 
-tasks.named('test') {
-    useJUnitPlatform()
+tasks.named('test') { useJUnitPlatform() }
+
+// Disable plain JAR, only build the executable Spring Boot JAR
+tasks.named('jar') {
+    enabled = false
 }

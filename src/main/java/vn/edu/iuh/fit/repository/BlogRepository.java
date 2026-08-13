@@ -1,0 +1,47 @@
+package vn.edu.iuh.fit.repository;
+
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Optional;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import vn.edu.iuh.fit.entity.Blog;
+import vn.edu.iuh.fit.model.dto.BlogDto;
+import vn.edu.iuh.fit.model.dto.BlogViewDto;
+import vn.edu.iuh.fit.model.enums.BlogType;
+
+public interface BlogRepository extends JpaRepository<Blog, Integer> {
+  @Query(
+      "select new vn.edu.iuh.fit.model.dto.BlogDto(b.id, b.title, b.slug, b.description, b.thumbnail, b.publishedAt) from Blog b where b.status = ?1")
+  Page<BlogDto> findByStatus(Boolean status, Pageable pageable);
+
+  Optional<Blog> findByIdAndSlugAndStatus(Integer id, String slug, Boolean status);
+
+  @Query(
+      "select new vn.edu.iuh.fit.model.dto.BlogDto(b.id, b.title, b.slug, b.description, b.thumbnail, b.publishedAt) from Blog b where b.type = ?1 and b.status = ?2")
+  Page<BlogDto> findByTypeAndStatus(BlogType type, boolean b, Pageable pageable);
+
+  // get most view blog in 2 months latest. Join to view history to get view count -> return blog
+  @Query(
+      "select new vn.edu.iuh.fit.model.dto.BlogDto(b.id, b.title, b.slug, b.description, b.thumbnail, b.publishedAt) from Blog b join ViewHistory vh on b.id = vh.blog.id where b.status = true and vh.viewedAt between ?1 and ?2 group by b.id order by count(vh.id) desc")
+  List<BlogDto> findMostViewBlog(LocalDateTime start, LocalDateTime end);
+
+  @Query(
+      "select new vn.edu.iuh.fit.model.dto.BlogDto(b.id, b.title, b.slug, b.description, b.thumbnail, b.publishedAt) from Blog b join ViewHistory vh on b.id = vh.blog.id where b.type = ?1 and b.status = true and vh.viewedAt between ?2 and ?3 group by b.id order by count(vh.id) desc")
+  List<BlogDto> findMostViewBlogByType(BlogType blogType, LocalDateTime start, LocalDateTime end);
+
+  @Query(
+      "select new vn.edu.iuh.fit.model.dto.BlogDto(b.id, b.title, b.slug, b.description, b.thumbnail, b.publishedAt) from Blog b left join ViewHistory vh on b.id = vh.blog.id where b.type = (select b.type from Blog b where b.id = ?1) and b.id != ?1 and b.status = true group by b.id order by count(vh.id) desc, b.publishedAt desc")
+  List<BlogDto> findRecommendBlogs(Integer blogId);
+
+  // join to view history to get view count in time range
+  @Query(
+      "select new vn.edu.iuh.fit.model.dto.BlogViewDto(b.id, b.title, coalesce(b.viewCount, 0)) from Blog b where b.status = true order by coalesce(b.viewCount, 0) desc")
+  List<BlogViewDto> findTopViewBlogs();
+
+  List<Blog> findByOrderByCreatedAtDesc();
+
+  List<Blog> findByUser_IdOrderByCreatedAtDesc(Integer id);
+}

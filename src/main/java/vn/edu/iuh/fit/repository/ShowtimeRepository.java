@@ -1,0 +1,27 @@
+package vn.edu.iuh.fit.repository;
+
+import java.time.LocalDate;
+import java.util.List;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
+import org.springframework.data.jpa.repository.JpaRepository;
+import vn.edu.iuh.fit.entity.Showtime;
+
+public interface ShowtimeRepository extends JpaRepository<Showtime, Integer> {
+  List<Showtime> findAll(Specification<Showtime> showtimeSpecification, Sort sort);
+
+  List<Showtime> findByAuditorium_IdAndDate(Integer id, LocalDate date);
+
+  List<Showtime> findByMovie_IdAndDate(Integer id, LocalDate date);
+
+  List<Showtime> findByAuditorium_Id(Integer id);
+
+  List<Showtime> findByMovie_Id(Integer id);
+
+  List<Showtime> findByMovie_IdAndDateGreaterThanEqualOrderByDateAscStartTimeAsc(
+      Integer id, LocalDate date);
+
+  boolean existsByMovie_IdAndDateBetween(Integer id, LocalDate currentDate, LocalDate endDate);
+
+  boolean existsByMovie_Id(Integer id);
+}

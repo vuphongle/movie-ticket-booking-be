@@ -1,0 +1,172 @@
+package vn.edu.iuh.fit.service;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import java.time.Instant;
+import java.util.Map;
+import javax.crypto.Mac;
+import javax.crypto.spec.SecretKeySpec;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+import vn.edu.iuh.fit.config.payment.payos.PayOSConfig;
+import vn.payos.PayOS;
+import vn.payos.type.CheckoutResponseData;
+import vn.payos.type.PaymentData;
+import vn.payos.type.PaymentLinkData;
+
+@Slf4j
+@Service
+@RequiredArgsConstructor
+public class PayOSService {
+
+  private final PayOSConfig payOSConfig;
+  private final ObjectMapper objectMapper = new ObjectMapper();
+
+  @Value("${payos.checksum_key}")
+  private String checksumKey;
+
+  public String createOrder(int amount, String orderCode, String returnUrl, Integer expireSeconds) {
+    try {
+      PayOS payOS = payOSConfig.payOSClient();
+
+      PaymentData.PaymentDataBuilder builder =
+          PaymentData.builder()
+              .orderCode(Long.valueOf(orderCode))
+              .amount(amount)
+              .description("ThanhToanVe " + orderCode)
+              .returnUrl(returnUrl)
+              .cancelUrl(returnUrl + "?status=cancelled");
+
+      if (expireSeconds != null && expireSeconds > 0) {
+        long expiredAt = Instant.now().getEpochSecond() + expireSeconds;
+        builder.expiredAt(expiredAt);
+      }
+
+      PaymentData paymentData = builder.build();
+      CheckoutResponseData response = payOS.createPaymentLink(paymentData);
+      log.info("Created PayOS payment link for order {}: {}", orderCode, response.getCheckoutUrl());
+      return response.getCheckoutUrl();
+    } catch (Exception e) {
+      log.error("Lỗi khi tạo liên kết thanh toán PayOS", e);
+      throw new RuntimeException("Không thể tạo link thanh toán PayOS", e);
+    }
+  }
+
+  /** Xác minh phản hồi từ PayOS redirect (nếu cần). */
+  public boolean verifyReturn(Map<String, String> params) {
+    try {
+      String status = params.get("status");
+      return "PAID".equalsIgnoreCase(status) || "SUCCESS".equalsIgnoreCase(status);
+    } catch (Exception e) {
+      log.error("Lỗi xác minh phản hồi PayOS", e);
+      return false;
+    }
+  }
+
+  /**
+   * Xác minh webhook signature từ PayOS sử dụng PayOS SDK PayOS tính signature theo format: sort
+   * keys → convert to query string → HMAC SHA256
+   */
+  public boolean verifyWebhookSignature(String signature, String requestBody) {
+    try {
+      PayOS payOS = payOSConfig.payOSClient();
+
+      // Parse webhook body thành Webhook object
+      vn.payos.type.Webhook webhook =
+          objectMapper.readValue(requestBody, vn.payos.type.Webhook.class);
+
+      // Sử dụng PayOS SDK để verify webhook
+      vn.payos.type.WebhookData webhookData = payOS.verifyPaymentWebhookData(webhook);
+
+      // Nếu verify thành công, webhookData sẽ không null
+      if (webhookData != null) {
+        log.info("Webhook signature verification: VALID");
+        return true;
+      } else {
+        log.warn("Webhook signature verification: INVALID");
+        return false;
+      }
+    } catch (Exception e) {
+      log.error("Error verifying webhook signature: {}", e.getMessage());
+      return false;
+    }
+  }
+
+  /**
+   * Xử lý webhook data từ PayOS
+   *
+   * @return orderCode nếu thanh toán thành công, null nếu thất bại
+   */
+  public Long processWebhook(String webhookBody) {
+    try {
+      JsonNode rootNode = objectMapper.readTree(webhookBody);
+
+      // PayOS webhook structure theo docs:
+      // { "code": "00", "desc": "success", "success": true, "data": {...}, "signature": "..." }
+      // code: "00" = Thành công, "01" = Invalid Params
+      // success: true = giao dịch thành công
+      String code = rootNode.path("code").asText();
+      String desc = rootNode.path("desc").asText();
+      boolean success = rootNode.path("success").asBoolean(false);
+      JsonNode dataNode = rootNode.path("data");
+
+      Long orderCode = dataNode.path("orderCode").asLong();
+      int amount = dataNode.path("amount").asInt();
+
+      log.info(
+          "Processing PayOS webhook - OrderCode: {}, Amount: {}, Code: {}, Success: {}, Desc: {}",
+          orderCode,
+          amount,
+          code,
+          success,
+          desc);
+
+      // Theo tài liệu PayOS: code "00" + success = true nghĩa là thanh toán thành công
+      if ("00".equals(code) && success) {
+        log.info("Payment successful for order: {}", orderCode);
+        return orderCode;
+      } else {
+        log.warn(
+            "Payment not successful - OrderCode: {}, Code: {}, Success: {}, Desc: {}",
+            orderCode,
+            code,
+            success,
+            desc);
+        return null;
+      }
+    } catch (Exception e) {
+      log.error("Error processing webhook body", e);
+      return null;
+    }
+  }
+
+  /** Tính toán HMAC SHA256 signature */
+  private String computeHmacSha256(String data, String key) throws Exception {
+    Mac sha256Hmac = Mac.getInstance("HmacSHA256");
+    SecretKeySpec secretKey = new SecretKeySpec(key.getBytes("UTF-8"), "HmacSHA256");
+    sha256Hmac.init(secretKey);
+    byte[] hash = sha256Hmac.doFinal(data.getBytes("UTF-8"));
+
+    // Convert to hex string
+    StringBuilder hexString = new StringBuilder();
+    for (byte b : hash) {
+      String hex = Integer.toHexString(0xff & b);
+      if (hex.length() == 1) hexString.append('0');
+      hexString.append(hex);
+    }
+    return hexString.toString();
+  }
+
+  /** Lấy thông tin payment từ PayOS API (optional - để verify) */
+  public PaymentLinkData getPaymentInfo(Long orderCode) {
+    try {
+      PayOS payOS = payOSConfig.payOSClient();
+      return payOS.getPaymentLinkInformation(orderCode);
+    } catch (Exception e) {
+      log.error("Error getting payment info for order: {}", orderCode, e);
+      return null;
+    }
+  }
+}

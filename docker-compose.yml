@@ -1,0 +1,81 @@
+services:
+  mariadb:
+    image: mariadb:10.11
+    container_name: movie-booking-mariadb
+    environment:
+      TZ: Asia/Ho_Chi_Minh
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-rootpassword}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-db_movie_ticket_booking}
+      MYSQL_USER: ${MYSQL_USER:-movie_user}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-movie_password}
+    ports:
+      - "3307:3306"
+    volumes:
+      - mariadb_data:/var/lib/mysql
+      - ./docker/mariadb/init:/docker-entrypoint-initdb.d
+    networks:
+      - movie-booking-network
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      start_period: 10s
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped
+
+  backend:
+    image: vuphongle23/movie-ticket-booking-be:latest
+    # Uncomment below to build locally instead of pulling from Docker Hub
+    # build:
+    #   context: .
+    #   dockerfile: Dockerfile
+    container_name: movie-booking-backend
+    environment:
+      TZ: Asia/Ho_Chi_Minh
+      SPRING_PROFILES_ACTIVE: docker
+      DB_USERNAME: ${MYSQL_USER:-movie_user}
+      DB_PASSWORD: ${MYSQL_PASSWORD:-movie_password}
+      JWT_SECRET: ${JWT_SECRET:-your-super-secret-jwt-key-for-development-only-32-chars}
+      MAIL_USERNAME: ${MAIL_USERNAME:-example_mail@gmail.com}
+      MAIL_PASSWORD: ${MAIL_PASSWORD:-your-app-password}
+      AWS_ACCESS_KEY: ${AWS_ACCESS_KEY:-your-aws-access-key}
+      AWS_SECRET_KEY: ${AWS_SECRET_KEY:-your-aws-secret-key}
+      SPRING_AI_OPENAI_API_KEY: ${SPRING_AI_OPENAI_API_KEY:-your-openai-key}
+      PAYOS_CLIENT_ID: ${PAYOS_CLIENT_ID}
+      PAYOS_API_KEY: ${PAYOS_API_KEY}
+      PAYOS_CHECKSUM_KEY: ${PAYOS_CHECKSUM_KEY}
+      PAYOS_WEBHOOK_URL: ${PAYOS_WEBHOOK_URL:-http://backend:8080/api/payos-webhook}
+      SENDPULSE_CLIENT_ID: ${SENDPULSE_CLIENT_ID}
+      SENDPULSE_CLIENT_SECRET: ${SENDPULSE_CLIENT_SECRET}
+      SENDPULSE_MAIL_FROM_EMAIL: ${SENDPULSE_MAIL_FROM_EMAIL:-contact@gocinema.io.vn}
+      FRONTEND_HOST: ${FRONTEND_HOST:-http://localhost}
+      FRONTEND_PORT: ${FRONTEND_PORT}
+      BACKEND_HOST: ${BACKEND_HOST:-http://localhost}
+      BACKEND_PORT: ${BACKEND_PORT}
+      VNP_IP_ADDRESS: ${VNP_IP_ADDRESS:-127.0.0.1}
+    ports:
+      - "8080:8080"
+    depends_on:
+      mariadb:
+        condition: service_healthy
+        restart: true
+    networks:
+      - movie-booking-network
+    volumes:
+      - ./logs:/app/logs
+      - ./image_uploads:/app/image_uploads
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    stop_grace_period: 30s
+    restart: unless-stopped
+
+volumes:
+  mariadb_data:
+
+networks:
+  movie-booking-network:
+    driver: bridge
